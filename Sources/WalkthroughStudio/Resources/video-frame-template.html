@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --cream: #FFFBF5;
+    --warm: #FFF7EE;
+    --soft: #FFF3E6;
+    --coral: #DA4F45;
+    --peach: #FFB088;
+    --golden: #F5A623;
+    --charcoal: #1A1612;
+    --muted: #5C5549;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden; }
+
+  .stage {
+    position: relative;
+    width: {{WIDTH}}px;
+    height: {{HEIGHT}}px;
+    overflow: hidden;
+    background:
+      radial-gradient(1400px 1000px at 78% -12%, rgba(255,176,136,0.28), transparent 60%),
+      radial-gradient(1200px 900px at -8% 20%, rgba(218,79,69,0.10), transparent 55%),
+      linear-gradient(135deg, var(--warm) 0%, var(--cream) 45%, var(--soft) 100%);
+    font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+  }
+
+  .orb { position: absolute; border-radius: 50%; filter: blur(100px); pointer-events: none; }
+  .orb.a { top: -160px; right: -100px; width: 680px; height: 680px; background: rgba(218,79,69,0.10); }
+  .orb.b { bottom: -180px; left: -160px; width: 620px; height: 620px; background: rgba(245,166,35,0.10); }
+
+  .text {
+    position: absolute;
+    left: {{TEXT_LEFT}}px;
+    top: {{TEXT_TOP}}px;
+    width: {{TEXT_W}}px;
+    z-index: 2;
+    text-align: {{TEXT_ALIGN}};
+  }
+  .wordmark { display: inline-flex; align-items: center; gap: 16px; }
+  .wordmark .icon {
+    width: 64px; height: 64px; border-radius: 18px; background: var(--coral);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wordmark .name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 40px; color: var(--charcoal); letter-spacing: -0.5px;
+  }
+  .wordmark .name b { font-weight: 700; }
+  .headline {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 78px;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    color: var(--charcoal);
+    margin-top: 48px;
+  }
+  .headline .accent { color: var(--coral); }
+  .sub {
+    margin-top: 30px;
+    font-size: 34px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  /* Device — the screen is left empty (charcoal); the video is composited
+     into it afterwards, so this HTML only draws the bezel + shadow. */
+  .phone {
+    position: absolute;
+    left: {{PHONE_LEFT}}px;
+    top: {{PHONE_TOP}}px;
+    width: {{PHONE_W}}px;
+    height: {{PHONE_H}}px;
+    background: var(--charcoal);
+    border-radius: {{BEZEL_R}}px;
+    padding: {{PAD}}px;
+    box-shadow:
+      0 50px 110px rgba(218,79,69,0.20),
+      0 24px 60px rgba(0,0,0,0.16),
+      inset 0 0 0 2px rgba(255,255,255,0.06);
+    z-index: 2;
+  }
+  .screen {
+    width: 100%; height: 100%;
+    border-radius: {{SCREEN_R}}px;
+    background: var(--charcoal);
+  }
+  {{THEME_CSS}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="orb a"></div>
+  <div class="orb b"></div>
+  <div class="text">
+    <div class="wordmark">
+      <div class="icon">
+        <svg width="32" height="32" viewBox="0 0 1024 1024" fill="none">
+          <rect x="310" y="442" width="56" height="140" rx="28" fill="white" opacity="0.7"/>
+          <rect x="398" y="362" width="56" height="300" rx="28" fill="white" opacity="0.85"/>
+          <rect x="486" y="302" width="56" height="420" rx="28" fill="white"/>
+          <rect x="574" y="382" width="56" height="260" rx="28" fill="white" opacity="0.8"/>
+          <rect x="662" y="462" width="56" height="100" rx="28" fill="white" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="name">{{WORDMARK}}</div>
+    </div>
+    <div class="headline">{{HEADLINE}}</div>
+    <div class="sub">{{SUB}}</div>
+  </div>
+  <div class="phone"><div class="screen"></div></div>
+</div>
+</body>
+</html>
