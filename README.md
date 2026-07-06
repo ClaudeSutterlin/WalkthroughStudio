@@ -8,16 +8,16 @@
 > the environment landmines, and a reviewed backlog. Point your agent at it.
 
 A native macOS app (SwiftUI) that turns **one recorded product walkthrough**
-into three polished, on-brand LiveAgain deliverables:
+into three polished, on-brand deliverables:
 
 - **A — Narrated video**: the recording with a clean ElevenLabs voice-over
   replacing the original narration, exported as H.264 `.mp4` + `.srt` captions.
 - **B — Step screenshots + copy**: one clean frame per step with title/body in
-  the LiveAgain voice, exported as slug-named PNGs plus a copy-paste-ready
-  `tutorialSteps` payload for the web app's `/pilot` page.
-- **C — Branded App Store screenshots**: each screen wrapped in the LiveAgain
-  marketing frame (device mockup, cream gradient, orbs, wordmark, serif
-  headline) at the App Store sizes for the recording's device (iPhone or iPad).
+  your product's voice, exported as slug-named PNGs plus a copy-paste-ready
+  `tutorialSteps` payload for a web tutorial page.
+- **C — Branded App Store screenshots**: each screen wrapped in a branded
+  marketing frame (device mockup, warm gradient, wordmark, serif headline) at
+  the App Store sizes for the recording's device (iPhone or iPad).
 
 ## Build & run
 
@@ -55,7 +55,7 @@ Requires macOS 14+, Xcode 15+. No third-party dependencies.
    - **Tutorial Steps…** — slug-named PNGs + `tutorialSteps.ts`/`.json`/`.md`
      for `public/pilot/`.
    - **App Store Shots…** — both sizes for the recording's device (iPhone
-     6.9″/6.5″, iPad 13″/12.9″), each screen in the LiveAgain frame.
+     6.9″/6.5″, iPad 13″/12.9″), each screen in the branded frame.
 
 **Status-bar cleanup:** by default exports replace the recording's status bar
 with Apple's pristine marketing bar (9:41, full signal/battery, Dynamic Island
@@ -137,7 +137,7 @@ plus a CUSTOMIZING.md guide written for exactly that workflow.
 ## Non-goals (per spec)
 
 - Doesn't drive the iOS Simulator (that's the Fastlane/Maestro pipeline).
-- Doesn't render the web app's `/pilot` page — it only produces its content.
+- Doesn't render the destination web tutorial page — it only produces its content.
 - Lives in its own repo; not part of the web app.
 
 ## License

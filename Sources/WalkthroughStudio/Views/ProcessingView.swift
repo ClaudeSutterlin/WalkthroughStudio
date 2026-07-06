@@ -103,7 +103,7 @@ struct ProcessingView: View {
     }
 }
 
-/// The LiveAgain mark with its five voice bars gently pulsing.
+/// The app mark: five voice bars gently pulsing.
 private struct VoiceBarsMark: View {
     @State private var animating = false
 

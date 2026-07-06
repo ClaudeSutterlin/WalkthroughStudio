@@ -23,7 +23,7 @@ struct ThemeEditorView: View {
 
             Section("Background") {
                 Picker("Style", selection: binding(\.backgroundMode)) {
-                    Text("LiveAgain gradient").tag("brand")
+                    Text("Default gradient").tag("brand")
                     Text("Solid color").tag("color")
                     Text("Image").tag("image")
                 }
@@ -70,7 +70,7 @@ struct ThemeEditorView: View {
             }
 
             Section {
-                Button("Reset to LiveAgain defaults") {
+                Button("Reset to default design") {
                     vm.theme = BrandTheme()
                 }
                 .disabled(vm.theme.isDefault)

@@ -115,10 +115,10 @@ struct AnthropicClient {
 enum CopyService {
 
     private static let voiceSystem = """
-    You write product copy for LiveAgain, an iOS app that helps people with aphasia speak again. \
-    The brand voice is warm, plain, encouraging, second person, no jargon, never clinical or patronizing.
-
-    \(Brand.voiceReference)
+    You write product copy for recorded software walkthroughs. Unless the project briefing says \
+    otherwise, the voice is warm, plain, encouraging, second person, no jargon, never patronizing. \
+    Infer the product's name and purpose from the briefing and the transcript — never invent \
+    features the recording doesn't show.
     """
 
     /// System prompt, optionally extended with the attached project briefing.
@@ -163,7 +163,7 @@ enum CopyService {
 
         Rewrite each step into a polished narration script for a professional voice-over:
         - Remove filler ("um", false starts, repeated words, tangents).
-        - Keep the meaning; tighten to the LiveAgain voice — warm, plain, encouraging.
+        - Keep the meaning; tighten to the product voice — warm, plain, encouraging (the briefing wins).
         - Aim for roughly 2.5 words per second of the step's duration so the narration fits, \
           and never more than that.
         - If a "middle" step has an empty transcript, reply with an empty script for it — do not \
@@ -208,22 +208,22 @@ enum CopyService {
             ]
         }
         let user = """
-        Below are the steps of a recorded walkthrough of the LiveAgain iOS app, in order, each with \
+        Below are the steps of a recorded walkthrough of an app, in order, each with \
         the transcript of what was said while that screen was shown.
 
         Together they form ONE complete walkthrough video with a beginning, a middle, and an end. \
         Write the copy to match each step's position:
         - The "intro" step welcomes the viewer: its title/headline should introduce the product and \
-          the tour (e.g. "Welcome to LiveAgain"), not describe a feature.
+          the tour (e.g. "Welcome to <the product's name>"), not describe a feature.
         - "middle" steps describe the screen being shown.
-        - The "outro" step closes the tour: a warm send-off ("You're all set", "That's LiveAgain") \
-          rather than a feature description.
+        - The "outro" step closes the tour: a warm send-off ("You're all set") rather than a \
+          feature description.
 
         For each step produce:
         - "slug": a short stable kebab-case slug (e.g. "me", "voice", "talk") — one or two words.
         - "area": the tab/area label, e.g. "Content → Me" (infer from the transcript; keep it short).
         - "title": a short, warm title (2–5 words), e.g. "Make it yours".
-        - "body": 1–2 sentences in the LiveAgain voice explaining what to do on this screen.
+        - "body": 1–2 sentences in the product voice explaining what to do on this screen.
         - "alt": a plain accessibility description of what the screenshot shows.
         - "headline": an App Store slide headline — short and emotional, 3–8 words. You may use \
           "<br>" for line breaks and wrap ONE emphasized word or phrase in \

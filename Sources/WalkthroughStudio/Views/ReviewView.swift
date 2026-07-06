@@ -87,7 +87,7 @@ struct ReviewView: View {
             } label: {
                 Label("Tutorial Steps…", systemImage: "list.bullet.rectangle")
             }
-            .help("Export slug-named PNGs + the tutorialSteps payload for the pilot page")
+            .help("Export slug-named PNGs + the tutorialSteps payload for a web tutorial page")
 
             Button {
                 vm.exportBranded()
@@ -98,7 +98,7 @@ struct ReviewView: View {
             .tint(Brand.coral)
             .disabled(!vm.deviceKind.supportsAppStoreExport)
             .help(vm.deviceKind.supportsAppStoreExport
-                  ? "Render every step in the LiveAgain frame at both App Store sizes"
+                  ? "Render every step in the branded frame at both App Store sizes"
                   : "App Store screenshots are iPhone/iPad only — not available for \(vm.deviceKind.label) recordings")
         }
         .disabled(vm.isBusy)

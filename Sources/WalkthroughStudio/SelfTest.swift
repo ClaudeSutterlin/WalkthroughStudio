@@ -309,7 +309,7 @@ enum SelfTest {
         let vm = StudioViewModel()
         vm.steps = [WalkthroughStep(startTime: 0, endTime: 20, frameTime: 5)]
         vm.transcript = [
-            TranscriptSegment(start: 0.5, end: 4.0, text: "Today I'm going to walk you through a demo of LiveAgain."),
+            TranscriptSegment(start: 0.5, end: 4.0, text: "Today I'm going to walk you through a demo of the app."),
             TranscriptSegment(start: 6.0, end: 12.0, text: "First, open the Talk tab and pick a phrase."),
             TranscriptSegment(start: 13.5, end: 18.0, text: "And that's the whole flow — thanks for watching!"),
         ]

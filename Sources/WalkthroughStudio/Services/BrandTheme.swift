@@ -62,7 +62,7 @@ struct BrandTheme: Codable, Equatable, Hashable {
     var subColor = "#5C5549"
     var headlineFontCSS = "Georgia, 'Times New Roman', serif"
 
-    /// "brand" (LiveAgain gradient), "color", or "image"
+    /// "brand" (the default warm gradient), "color", or "image"
     var backgroundMode = "brand"
     var backgroundColor = "#FFFBF5"
     var backgroundImagePath = ""
@@ -70,7 +70,7 @@ struct BrandTheme: Codable, Equatable, Hashable {
     var bezelColor = "#1A1612"
 
     var showWordmark = true
-    var wordmarkText = "LiveAgain"
+    var wordmarkText = "Your App"
     var logoImagePath = ""
 
     /// What to do about the recording's status bar (clock, battery, the red
@@ -86,10 +86,9 @@ struct BrandTheme: Codable, Equatable, Hashable {
 
     var isDefault: Bool { self == BrandTheme() }
 
-    /// The wordmark markup ("LiveAgain" keeps its signature bold "Again").
+    /// The wordmark text, HTML-escaped for the template.
     var wordmarkHTML: String {
-        if wordmarkText == "LiveAgain" { return "Live<b>Again</b>" }
-        return wordmarkText
+        wordmarkText
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")

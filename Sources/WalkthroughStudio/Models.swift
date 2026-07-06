@@ -67,7 +67,7 @@ struct WalkthroughProject: Codable {
     /// PDF briefing whose text guides all generated copy (optional so older
     /// project files keep decoding).
     var briefingPath: String?
-    /// Custom frame design tokens (nil = LiveAgain defaults).
+    /// Custom frame design tokens (nil = default design).
     var theme: BrandTheme?
     /// What the recording was captured on (nil = re-detect on open).
     var deviceKind: DeviceKind?
@@ -95,14 +95,6 @@ enum Brand {
     static let charcoal = Color(hex: 0x1A1612)
     static let muted = Color(hex: 0x5C5549)
     static let faded = Color(hex: 0x9B9286)
-
-    /// Voice/tone reference passed to the LLM (from the shipped tutorialSteps copy).
-    static let voiceReference = """
-    Reference copy (the register to match — warm, second person, plain, encouraging, no jargon):
-    "Make it yours" (Content → Me): "Open the Content tab and tell LiveAgain a little about you — \
-    your name, how you talk, and what matters to you. This is what makes every suggestion sound \
-    like you, not a generic voice."
-    """
 }
 
 extension Color {

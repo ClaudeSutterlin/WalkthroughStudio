@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Walkthrough Studio</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.liveagain.walkthroughstudio</string>
+	<string>com.walkthroughstudio.app</string>
 	<key>CFBundleExecutable</key>
 	<string>WalkthroughStudio</string>
 	<key>CFBundlePackageType</key>

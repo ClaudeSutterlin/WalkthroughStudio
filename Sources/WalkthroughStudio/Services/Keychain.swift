@@ -3,7 +3,7 @@ import Security
 
 /// Minimal Keychain wrapper for API keys (spec: never write keys to disk in plaintext).
 enum Keychain {
-    private static let service = "com.liveagain.walkthroughstudio"
+    private static let service = "com.walkthroughstudio.app"
 
     static let anthropicAccount = "anthropic-api-key"
     static let elevenLabsAccount = "elevenlabs-api-key"
