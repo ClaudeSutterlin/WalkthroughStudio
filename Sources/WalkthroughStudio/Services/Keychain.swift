@@ -4,10 +4,6 @@ import Security
 /// Minimal Keychain wrapper for API keys (spec: never write keys to disk in plaintext).
 enum Keychain {
     private static let service = "com.walkthroughstudio.app"
-    /// Pre-rename service (the de-branding commit changed the app identity).
-    /// Keys saved by older builds still live here — reads fall back to it and
-    /// migrate the value forward so nobody has to re-enter a key.
-    private static let legacyService = "com.liveagain.walkthroughstudio"
 
     static let anthropicAccount = "anthropic-api-key"
     static let elevenLabsAccount = "elevenlabs-api-key"
@@ -56,13 +52,6 @@ enum Keychain {
         if let value = copyValue(service: service, account: account) {
             setCached(value, account: account)
             return value
-        }
-        // Nothing under the current identity — migrate from the pre-rename
-        // service so keys entered in older builds keep working. (macOS may ask
-        // once to allow access to the old item; "Always Allow" ends it.)
-        if let legacy = copyValue(service: legacyService, account: account), !legacy.isEmpty {
-            set(legacy, account: account) // re-homes it under the current service + caches
-            return legacy
         }
         return ""
     }
