@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var keysLoaded = false
 
     @AppStorage(SettingsKeys.anthropicModel) private var anthropicModel = Defaults.anthropicModel
+    @AppStorage(SettingsKeys.anthropicBaseURL) private var anthropicBaseURL = ""
+    @AppStorage(SettingsKeys.anthropicModelOverride) private var anthropicModelOverride = ""
     @AppStorage(SettingsKeys.elevenVoiceID) private var voiceID = Defaults.elevenVoiceID
     @AppStorage(SettingsKeys.elevenModelID) private var elevenModelID = ""
     @AppStorage(SettingsKeys.transcribeLocale) private var locale = Defaults.transcribeLocale
@@ -40,6 +42,15 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
+
+                TextField("Custom API endpoint (blank = api.anthropic.com)", text: $anthropicBaseURL)
+                Text("Route Claude requests through an Anthropic-compatible gateway (e.g. an AWS Bedrock proxy). The app calls `<base>/v1/messages` with the standard Messages API shape and your key as `x-api-key`.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("Model ID override (blank = use the picker above)", text: $anthropicModelOverride)
+                Text("Gateways often need their own model IDs — on Bedrock, Claude models take an `anthropic.` prefix (e.g. `anthropic.claude-sonnet-5`).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("ElevenLabs (voice-over)") {

@@ -81,8 +81,16 @@ via the toolbar Project menu.
 
 ## Settings (⌘, or the gear)
 
+A first-run setup screen collects both API keys (skippable — the pipeline
+degrades gracefully and explains what's missing). Everything is editable
+later in Settings:
+
 - **Anthropic API key** + model (`claude-sonnet-5` default, `claude-opus-4-8`
-  for best quality).
+  for best quality). An optional **custom endpoint** routes Claude requests
+  through any Anthropic-compatible gateway (e.g. an AWS Bedrock proxy) — the
+  app calls `<base>/v1/messages` with the standard Messages API shape; blank
+  means `api.anthropic.com`. A free-text **model ID override** covers gateway
+  model naming (Bedrock uses an `anthropic.` prefix).
 - **ElevenLabs API key**, voice id (defaults to "Rachel", a neutral warm stock
   narrator from the Voice Library), and an optional model override — by default
   the current recommended high-quality TTS model is discovered from the
@@ -118,11 +126,12 @@ touching the network:
 
 ```sh
 swift build
-./.build/debug/WalkthroughStudio --selftest <recording.mov> <outDir>
+swift scripts/make-test-video.swift /tmp/test-walkthrough.mov   # synthetic 3-scene recording
+./.build/debug/WalkthroughStudio --selftest /tmp/test-walkthrough.mov /tmp/selftest-out
 ```
 
 It prints one `selftest: … OK` line per probe and ends with `SELFTEST PASS`,
-dumping the rendered PNGs/videos into `<outDir>` for eyeballing.
+dumping the rendered PNGs/videos into the output folder for eyeballing.
 
 ## Extending it (with your AI)
 

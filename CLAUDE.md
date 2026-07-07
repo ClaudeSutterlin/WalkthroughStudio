@@ -24,8 +24,13 @@ pipeline without the network and pixel-checks rendered output:
 
 ```sh
 swift build
-./.build/debug/WalkthroughStudio --selftest <some-recording.mov> <outDir>
+swift scripts/make-test-video.swift /tmp/test-walkthrough.mov   # synthetic 3-scene recording
+./.build/debug/WalkthroughStudio --selftest /tmp/test-walkthrough.mov <outDir>
 ```
+
+The generator matters: the probes pixel-check specific regions of it (saturated
+header right below the status-bar band, distinct scene colors) — if you change
+a probe's sample point, keep `scripts/make-test-video.swift` in sync.
 
 Ends with `SELFTEST PASS` or throws with a specific probe failure. It dumps
 PNGs/MP4s into `<outDir>` — **actually look at them** (they're the ground
@@ -49,9 +54,16 @@ Keychain behavior — permissions stick to the signed bundle identity.
   narration pauses (catches spoken intro/outro over an unchanged screen).
 - `SpeechTranscriber` — on-device `SFSpeechRecognizer` in 55s chunks behind
   the `Transcribing` protocol (WhisperKit can be swapped in there).
-- `AnthropicClient` + `CopyService` — Messages API; prompts are position-aware
-  (intro/middle/outro) and grounded in the optional project briefing
-  (`Briefing.extractText`, injected into the system prompt; "briefing wins").
+- `AnthropicClient` + `CopyService` — Messages API over raw HTTP (no Swift
+  SDK exists); prompts are position-aware (intro/middle/outro) and grounded in
+  the optional project briefing (`Briefing.extractText`, injected into the
+  system prompt; "briefing wins"). The endpoint is configurable
+  (`SettingsKeys.anthropicBaseURL`, blank = api.anthropic.com) so requests can
+  route through an Anthropic-compatible gateway (e.g. a Bedrock proxy);
+  `messagesEndpoint(baseURL:)` normalizes what users paste, and
+  `anthropicModelOverride` covers gateway model IDs (`anthropic.claude-…`).
+  A first-run `SetupSheet` collects keys + endpoint (skippable;
+  `SettingsKeys.didCompleteSetup`).
 - `ElevenLabsClient` — TTS model discovered from `/v1/models` at runtime;
   output-format fallback ladder (PCM tiers → MP3) because formats are
   tier-gated; audio wrapped in WAV for AVFoundation.

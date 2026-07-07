@@ -191,11 +191,14 @@ struct ExportSize: Identifiable, Hashable {
 
 enum SettingsKeys {
     static let anthropicModel = "anthropicModel"           // default claude-sonnet-5
+    static let anthropicBaseURL = "anthropicBaseURL"       // empty = api.anthropic.com
+    static let anthropicModelOverride = "anthropicModelOverride" // empty = use picker; gateways may need e.g. "anthropic.claude-sonnet-5"
     static let elevenVoiceID = "elevenVoiceID"             // default: Rachel (stock narrator)
     static let elevenModelID = "elevenModelID"             // empty = auto-select recommended
     static let transcribeLocale = "transcribeLocale"       // default en-US
     static let keepOriginalAudio = "keepOriginalAudio"     // default false
     static let lastVideoExportDir = "lastVideoExportDir"   // remembered export folder
+    static let didCompleteSetup = "didCompleteSetup"       // first-run setup sheet shown
 }
 
 enum Defaults {

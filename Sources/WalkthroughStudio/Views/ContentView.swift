@@ -228,6 +228,7 @@ struct ContentView: View {
 struct ImportView: View {
     @ObservedObject var vm: StudioViewModel
     @State private var showNewProject = false
+    @State private var showSetup = false
 
     var body: some View {
         VStack(spacing: 22) {
@@ -265,8 +266,16 @@ struct ImportView: View {
         .sheet(isPresented: $showNewProject) {
             NewProjectSheet(vm: vm)
         }
+        .sheet(isPresented: $showSetup, onDismiss: {
+            // Setup done (or skipped) → straight into the first project.
+            if vm.videoURL == nil && !vm.isBusy { showNewProject = true }
+        }) {
+            SetupSheet(vm: vm)
+        }
         .onAppear {
-            if vm.videoURL == nil && !vm.isBusy {
+            if !Defaults.bool(SettingsKeys.didCompleteSetup) {
+                showSetup = true
+            } else if vm.videoURL == nil && !vm.isBusy {
                 showNewProject = true
             }
         }

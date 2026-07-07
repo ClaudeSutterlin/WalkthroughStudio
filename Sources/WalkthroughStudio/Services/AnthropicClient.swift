@@ -1,20 +1,56 @@
 import Foundation
 
-/// Thin client for the Anthropic Messages API.
+/// Thin client for the Anthropic Messages API (raw HTTP — there is no official
+/// Swift SDK). The endpoint is configurable so requests can route through an
+/// Anthropic-compatible gateway (e.g. a Bedrock proxy) instead of the default
+/// api.anthropic.com; the request/response shape is identical either way.
 struct AnthropicClient {
+    static let defaultBaseURL = "https://api.anthropic.com"
+
     var apiKey: String
     var model: String
+    var baseURL: String
 
-    init(apiKey: String, model: String = Defaults.string(SettingsKeys.anthropicModel, Defaults.anthropicModel)) {
+    init(
+        apiKey: String,
+        model: String = AnthropicClient.configuredModel(),
+        baseURL: String = Defaults.string(SettingsKeys.anthropicBaseURL, "")
+    ) {
         self.apiKey = apiKey
         self.model = model
+        self.baseURL = baseURL
+    }
+
+    /// The model picker's choice, unless a free-text override is set — custom
+    /// gateways often need their own IDs (Bedrock: "anthropic.claude-…").
+    static func configuredModel() -> String {
+        let override = Defaults.string(SettingsKeys.anthropicModelOverride, "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return override.isEmpty
+            ? Defaults.string(SettingsKeys.anthropicModel, Defaults.anthropicModel)
+            : override
+    }
+
+    /// Resolve the Messages endpoint from a base URL. Lenient about what the
+    /// user pastes: trailing slashes are trimmed, and a URL that already ends
+    /// in /v1/messages is used as-is.
+    static func messagesEndpoint(baseURL: String) -> URL? {
+        var base = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        if base.isEmpty { base = defaultBaseURL }
+        while base.hasSuffix("/") { base = String(base.dropLast()) }
+        if !base.hasSuffix("/v1/messages") { base += "/v1/messages" }
+        guard let url = URL(string: base), url.scheme?.hasPrefix("http") == true else { return nil }
+        return url
     }
 
     func complete(system: String, user: String, maxTokens: Int = 16000) async throws -> String {
         guard !apiKey.isEmpty else {
             throw StudioError("No Anthropic API key. Add one in Settings (it's stored in the Keychain).")
         }
-        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+        guard let endpoint = Self.messagesEndpoint(baseURL: baseURL) else {
+            throw StudioError("The custom API endpoint isn't a valid URL. Fix it in Settings (or clear it to use api.anthropic.com).")
+        }
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 120
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")

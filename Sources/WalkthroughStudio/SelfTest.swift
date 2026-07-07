@@ -19,6 +19,9 @@ enum SelfTest {
         // 0.5. LLM JSON-array extraction (no network — pure parsing)
         try jsonExtractionProbe()
 
+        // 0.55. Anthropic endpoint resolution (default + custom gateway URLs)
+        try endpointProbe()
+
         // 0.6. Transcript-based segmentation (pure logic — no speech recognition)
         try transcriptRefinementProbe()
 
@@ -36,6 +39,9 @@ enum SelfTest {
 
         // 0.8. New Project sheet renders on-brand even under dark appearance
         try await newProjectSheetProbe(outDir: outDir)
+
+        // 0.82. First-run setup sheet renders on-brand even under dark appearance
+        try await setupSheetProbe(outDir: outDir)
 
         // 0.85. Video export sheet renders on-brand even under dark appearance
         try await exportSheetProbe(outDir: outDir)
@@ -363,6 +369,63 @@ enum SelfTest {
             throw StudioError(String(format: "New Project sheet corner is rgb(%d,%d,%d) under dark appearance — expected brand cream", corner.r, corner.g, corner.b))
         }
         print("selftest: New Project sheet probe OK (cream under dark appearance)")
+    }
+
+    /// The Messages endpoint must resolve correctly for the default API, a
+    /// pasted gateway base URL (with or without trailing slash / full path),
+    /// and reject garbage instead of building a bogus request.
+    private static func endpointProbe() throws {
+        let cases: [(String, String?)] = [
+            ("", "https://api.anthropic.com/v1/messages"),
+            ("  ", "https://api.anthropic.com/v1/messages"),
+            ("https://bedrock-gw.corp.example.com", "https://bedrock-gw.corp.example.com/v1/messages"),
+            ("https://bedrock-gw.corp.example.com/", "https://bedrock-gw.corp.example.com/v1/messages"),
+            ("https://gw.example.com/anthropic/v1/messages", "https://gw.example.com/anthropic/v1/messages"),
+            ("http://localhost:4000", "http://localhost:4000/v1/messages"),
+            ("not a url", nil),
+        ]
+        for (base, expected) in cases {
+            let got = AnthropicClient.messagesEndpoint(baseURL: base)?.absoluteString
+            guard got == expected else {
+                throw StudioError("endpoint(\(base)) → \(got ?? "nil"), expected \(expected ?? "nil")")
+            }
+        }
+        print("selftest: endpoint probe OK (default + gateway URLs resolve)")
+    }
+
+    /// Render the first-run setup sheet offscreen under DARK appearance and
+    /// verify it stays brand-cream.
+    private static func setupSheetProbe(outDir: URL) async throws {
+        let vm = StudioViewModel()
+        let hosting = NSHostingView(rootView: SetupSheet(vm: vm))
+        hosting.frame = NSRect(x: 0, y: 0, width: 560, height: 560)
+        let window = NSWindow(
+            contentRect: NSRect(x: -30000, y: -30000, width: 560, height: 560),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua) // worst case
+        window.contentView = hosting
+        window.orderBack(nil)
+        hosting.layoutSubtreeIfNeeded()
+        try await Task.sleep(nanoseconds: 400_000_000)
+
+        guard let rep = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) else {
+            throw StudioError("could not snapshot the setup sheet")
+        }
+        hosting.cacheDisplay(in: hosting.bounds, to: rep)
+        window.orderOut(nil)
+        window.contentView = nil
+
+        if let png = rep.representation(using: .png, properties: [:]) {
+            try? png.write(to: outDir.appendingPathComponent("setup-sheet.png"))
+        }
+        guard let cg = rep.cgImage else { throw StudioError("setup sheet snapshot has no image") }
+        let corner = pixel(cg, x: 12, y: 12)
+        guard corner.r > 220, corner.g > 210, corner.b > 190 else {
+            throw StudioError(String(format: "setup sheet corner is rgb(%d,%d,%d) under dark appearance — expected brand cream", corner.r, corner.g, corner.b))
+        }
+        print("selftest: setup sheet probe OK (cream under dark appearance)")
     }
 
     /// Render the video export sheet offscreen under DARK appearance: it must
