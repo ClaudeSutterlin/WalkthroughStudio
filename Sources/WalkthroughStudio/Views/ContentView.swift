@@ -272,10 +272,22 @@ struct ImportView: View {
         }) {
             SetupSheet(vm: vm)
         }
-        .onAppear {
+        .task {
             if !Defaults.bool(SettingsKeys.didCompleteSetup) {
-                showSetup = true
-            } else if vm.videoURL == nil && !vm.isBusy {
+                // Off the main thread: this read can trigger a one-time macOS
+                // access prompt while migrating keys from a pre-rename build.
+                let hasKeys = await Task.detached {
+                    !Keychain.anthropicKey.isEmpty || !Keychain.elevenLabsKey.isEmpty
+                }.value
+                if hasKeys {
+                    // Keys already exist (e.g. migrated) — nothing to set up.
+                    UserDefaults.standard.set(true, forKey: SettingsKeys.didCompleteSetup)
+                } else {
+                    showSetup = true
+                    return
+                }
+            }
+            if vm.videoURL == nil && !vm.isBusy {
                 showNewProject = true
             }
         }
