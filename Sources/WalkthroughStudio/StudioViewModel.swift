@@ -272,6 +272,9 @@ final class StudioViewModel: ObservableObject {
             pipelineNotice = "The steps are captured, but writing the narration didn't finish (\(error.localizedDescription)) — press Run AI to retry."
         }
 
+        if result.endedEarly, pipelineNotice == nil {
+            pipelineNotice = "The capture ended before the agent finished the tour — \(result.finishReason) Review what was recorded below."
+        }
         if Keychain.elevenLabsKey.isEmpty {
             if pipelineNotice == nil {
                 pipelineNotice = "Add an ElevenLabs API key in Settings to generate the voice-over."

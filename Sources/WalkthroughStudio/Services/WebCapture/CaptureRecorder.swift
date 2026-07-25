@@ -135,7 +135,12 @@ actor CaptureRecorder {
     private var lastAppendTime = -1.0
 
     private func append(_ buffer: CVPixelBuffer, at seconds: Double) throws {
+        // Check the writer INSIDE the readiness spin: a failed writer may never
+        // become ready again, and waiting on it would hang the capture forever.
         while !input.isReadyForMoreMediaData {
+            guard writer.status == .writing else {
+                throw writer.error ?? StudioError("The capture video writer failed mid-recording.")
+            }
             usleep(5_000)
         }
         guard writer.status == .writing else {

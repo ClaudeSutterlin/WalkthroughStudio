@@ -272,6 +272,10 @@ struct CaptureResult {
     var duration: Double
     var actionsTaken: Int
     var finishReason: String
+    /// True when the capture stopped on repeated errors rather than the
+    /// agent's own "finish" — the recorded steps are still good, but the UI
+    /// should say the tour may be incomplete.
+    var endedEarly = false
 }
 
 /// Runs the observe → decide → act → record loop: the explorer makes the
@@ -323,6 +327,8 @@ final class CaptureDriver {
 
         var actionsTaken = 0
         var finishReason = ""
+        var endedEarly = false
+        var consecutiveFailures = 0
 
         captureLoop: while actionsTaken < limits.maxActions {
             let duration = await recorder.currentTime
@@ -347,7 +353,23 @@ final class CaptureDriver {
                 screenshotJPEG: jpeg,
                 actionsRemaining: limits.maxActions - actionsTaken
             )
-            let decision = try await explorer.nextDecision(observation)
+            // A capture holds minutes of recorded work — one transient failure
+            // must not throw it all away. Decisions get one retry, then the
+            // shoot wraps up with what it has; before any step exists there is
+            // nothing to save, so the error propagates.
+            let decision: CaptureDecision
+            do {
+                decision = try await explorer.nextDecision(observation)
+            } catch {
+                do {
+                    decision = try await explorer.nextDecision(observation)
+                } catch {
+                    guard !steps.isEmpty else { throw error }
+                    finishReason = "Stopped early: \(error.localizedDescription)"
+                    endedEarly = true
+                    break captureLoop
+                }
+            }
             actionsTaken += 1
 
             if let begin = decision.beginStep, steps.count < limits.maxSteps {
@@ -363,47 +385,62 @@ final class CaptureDriver {
                 appendNote(note)
             }
 
-            switch decision.action {
-            case .click(let element):
-                progress("Step \(steps.count): clicking \(label(of: element, in: elements))…", page)
-                try await performClick(element: element, page: page)
-                page = try await settleAndRecord(dwell: 2.4)
-                actionLog.append("clicked \(label(of: element, in: elements))")
+            do {
+                switch decision.action {
+                case .click(let element):
+                    progress("Step \(steps.count): clicking \(label(of: element, in: elements))…", page)
+                    try await performClick(element: element)
+                    page = try await settleAndRecord(dwell: 2.4)
+                    actionLog.append("clicked \(label(of: element, in: elements))")
 
-            case .type(let element, let text):
-                progress("Step \(steps.count): typing into \(label(of: element, in: elements))…", page)
-                try await performType(element: element, text: text, page: page)
-                page = try await settleAndRecord(dwell: 1.6)
-                actionLog.append("typed \"\(text.prefix(40))\" into \(label(of: element, in: elements))")
+                case .type(let element, let text):
+                    progress("Step \(steps.count): typing into \(label(of: element, in: elements))…", page)
+                    try await performType(element: element, text: text)
+                    page = try await settleAndRecord(dwell: 1.6)
+                    actionLog.append("typed \"\(text.prefix(40))\" into \(label(of: element, in: elements))")
 
-            case .scroll(let dy):
-                progress("Step \(steps.count): scrolling…", page)
-                let moved = try await performScroll(cssDy: dy)
-                page = try await session.snapshot()
-                try await recorder.appendHold(page, seconds: 1.2, cursor: cursor)
-                await noteSettledFrame(page: page, dwell: 1.2)
-                actionLog.append(moved ? "scrolled \(Int(dy)) px" : "scroll had no effect (page edge)")
+                case .scroll(let dy):
+                    progress("Step \(steps.count): scrolling…", page)
+                    let moved = try await performScroll(cssDy: dy)
+                    page = try await session.snapshot()
+                    try await recorder.appendHold(page, seconds: 1.2, cursor: cursor)
+                    await noteSettledFrame(page: page, dwell: 1.2)
+                    actionLog.append(moved ? "scrolled \(Int(dy)) px" : "scroll had no effect (page edge)")
 
-            case .navigate(let urlString):
-                guard let url = URL(string: urlString), Self.sameSite(url, startURL) else {
-                    actionLog.append("navigation to \(urlString) blocked (off the target site)")
-                    continue captureLoop
+                case .navigate(let urlString):
+                    guard let url = URL(string: urlString), Self.sameSite(url, startURL) else {
+                        actionLog.append("navigation to \(urlString) blocked (off the target site)")
+                        continue captureLoop
+                    }
+                    progress("Step \(steps.count): opening \(url.path.isEmpty ? urlString : url.path)…", page)
+                    try await session.load(url: url)
+                    page = try await settleAndRecord(dwell: 2.4)
+                    actionLog.append("navigated to \(urlString)")
+
+                case .wait(let seconds):
+                    await session.settle(timeout: seconds)
+                    page = try await session.snapshot()
+                    try await recorder.appendHold(page, seconds: max(1.0, seconds), cursor: cursor)
+                    await noteSettledFrame(page: page, dwell: max(1.0, seconds))
+                    actionLog.append("waited \(String(format: "%.1f", seconds))s")
+
+                case .finish(let reason):
+                    finishReason = reason
+                    break captureLoop
                 }
-                progress("Step \(steps.count): opening \(url.path.isEmpty ? urlString : url.path)…", page)
-                try await session.load(url: url)
-                page = try await settleAndRecord(dwell: 2.4)
-                actionLog.append("navigated to \(urlString)")
-
-            case .wait(let seconds):
-                await session.settle(timeout: seconds)
-                page = try await session.snapshot()
-                try await recorder.appendHold(page, seconds: max(1.0, seconds), cursor: cursor)
-                await noteSettledFrame(page: page, dwell: max(1.0, seconds))
-                actionLog.append("waited \(String(format: "%.1f", seconds))s")
-
-            case .finish(let reason):
-                finishReason = reason
-                break captureLoop
+                consecutiveFailures = 0
+            } catch {
+                // A stale element or a flaky page shouldn't scrap the shoot:
+                // tell the agent what happened (it re-inventories next turn)
+                // and only give up after three failures in a row.
+                consecutiveFailures += 1
+                actionLog.append("last action FAILED: \(error.localizedDescription)")
+                if consecutiveFailures >= 3 {
+                    guard !steps.isEmpty else { throw error }
+                    finishReason = "Stopped after repeated action failures (\(error.localizedDescription))."
+                    endedEarly = true
+                    break captureLoop
+                }
             }
         }
 
@@ -411,10 +448,13 @@ final class CaptureDriver {
             throw StudioError("The capture agent never started a step — nothing to build a walkthrough from.")
         }
 
-        // Closing dwell so the outro breathes, then seal the movie.
-        page = try await session.snapshot()
-        try await recorder.appendHold(page, seconds: 3.0, cursor: nil)
-        await noteSettledFrame(page: page, dwell: 3.0)
+        // Closing dwell so the outro breathes (skipped if the page is gone —
+        // the footage already recorded still makes a project), then seal the movie.
+        if let closing = try? await session.snapshot() {
+            page = closing
+            try await recorder.appendHold(closing, seconds: 3.0, cursor: nil)
+            await noteSettledFrame(page: closing, dwell: 3.0)
+        }
         finalizeCurrentStep()
         try await recorder.finish()
 
@@ -428,7 +468,8 @@ final class CaptureDriver {
             steps: steps,
             duration: duration,
             actionsTaken: actionsTaken,
-            finishReason: finishReason
+            finishReason: finishReason,
+            endedEarly: endedEarly
         )
     }
 
@@ -501,7 +542,7 @@ final class CaptureDriver {
 
     // MARK: Action execution + recording
 
-    private func performClick(element: Int, page: CGImage) async throws {
+    private func performClick(element: Int) async throws {
         let target = try await session.prepareClick(elementIndex: element)
         // scrollIntoView may have moved the page — record from the fresh state.
         let prepared = try await session.snapshot()
@@ -511,7 +552,7 @@ final class CaptureDriver {
         try await session.commitClick(elementIndex: element)
     }
 
-    private func performType(element: Int, text: String, page: CGImage) async throws {
+    private func performType(element: Int, text: String) async throws {
         let target = try await session.prepareClick(elementIndex: element)
         let prepared = try await session.snapshot()
         try await recorder.appendCursorMove(prepared, from: cursor, to: target, duration: 0.5)

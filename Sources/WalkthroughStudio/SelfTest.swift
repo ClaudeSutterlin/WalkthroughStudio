@@ -592,8 +592,8 @@ enum SelfTest {
         guard result.steps[0].title == "Welcome", result.steps[1].title == "Enter your name" else {
             throw StudioError("scripted capture step titles wrong: \(result.steps.map(\.title))")
         }
-        guard result.actionsTaken == 3 else {
-            throw StudioError("scripted capture took \(result.actionsTaken) actions, expected 3")
+        guard result.actionsTaken == 3, !result.endedEarly else {
+            throw StudioError("scripted capture took \(result.actionsTaken) actions (endedEarly: \(result.endedEarly)), expected a clean 3-action run")
         }
         guard result.duration > 8 else {
             throw StudioError(String(format: "scripted capture movie only %.1fs", result.duration))
