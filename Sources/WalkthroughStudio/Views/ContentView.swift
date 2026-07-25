@@ -30,6 +30,7 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $vm.showThemeEditor) { ThemeEditorView(vm: vm) }
         .sheet(isPresented: $vm.showVideoExportSheet) { ExportVideoSheet(vm: vm) }
+        .sheet(isPresented: $vm.showWebCaptureSheet) { WebCaptureSheet(vm: vm) }
         .alert(
             "Something went wrong",
             isPresented: Binding(
@@ -90,6 +91,7 @@ struct ContentView: View {
             Button("Edit HTML Templates…") { vm.editTemplatesInFinder() }
             Divider()
             Button("Import New Recording…") { pickVideo() }
+            Button("Capture a Website…") { vm.showWebCaptureSheet = true }
         } label: {
             Label("Project", systemImage: vm.briefingURL == nil ? "folder" : "folder.fill")
                 .labelStyle(.titleAndIcon)
@@ -247,10 +249,15 @@ struct ImportView: View {
                     .controlSize(.large)
                     .buttonStyle(.borderedProminent)
                     .tint(Brand.coral)
+                Button("Capture a Website…") { vm.showWebCaptureSheet = true }
+                    .controlSize(.large)
                 Button("Open Saved Project…") { vm.openProject() }
                     .controlSize(.large)
             }
             .padding(.top, 6)
+            Text("No recording yet? Capture a Website has Claude browse your site and record the walkthrough for you.")
+                .font(.caption)
+                .foregroundStyle(Brand.faded)
 
             if let busy = vm.busyMessage {
                 HStack(spacing: 8) {
@@ -361,6 +368,16 @@ struct NewProjectSheet: View {
             HStack {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Capture a Website Instead…") {
+                    dismiss()
+                    vm.showWebCaptureSheet = true
+                }
+                .buttonStyle(.plain)
+                .font(.callout)
+                .foregroundStyle(Brand.coral)
+                .underline()
+                .help("No recording? Claude browses your site and records the walkthrough for you")
                 Spacer()
                 Button("Create Project") { create() }
                     .keyboardShortcut(.defaultAction)

@@ -56,6 +56,30 @@ enum Exporters {
         "data:image/png;base64,\(png.base64EncodedString())"
     }
 
+    /// Downscale (preserving aspect) and JPEG-encode — the compact form
+    /// screenshots take inside Claude vision requests.
+    static func jpegData(from cgImage: CGImage, maxDimension: CGFloat, quality: Double = 0.7) -> Data? {
+        var width = CGFloat(cgImage.width)
+        var height = CGFloat(cgImage.height)
+        let longest = max(width, height)
+        if longest > maxDimension {
+            let scale = maxDimension / longest
+            width = (width * scale).rounded()
+            height = (height * scale).rounded()
+        }
+        guard let ctx = CGContext(
+            data: nil, width: Int(width), height: Int(height),
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.interpolationQuality = .high
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let scaled = ctx.makeImage() else { return nil }
+        return NSBitmapImageRep(cgImage: scaled)
+            .representation(using: .jpeg, properties: [.compressionFactor: quality])
+    }
+
     /// Redraw `image` into an exact-pixel RGBA `CGImage` (normalizes retina scale).
     static func cgImage(from image: NSImage, pixelWidth: Int, pixelHeight: Int) -> CGImage? {
         guard let rep = NSBitmapImageRep(

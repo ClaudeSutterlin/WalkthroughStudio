@@ -296,6 +296,336 @@ enum SelfTest {
             }
         }
         print("selftest: framed.mp4 OK (1920x1080; \(framing.segments.count) text segments; recording composited into device)")
+
+        // 9. Web capture stack: decision parsing (pure), the recorder (movie
+        // composition + cursor + status-bar band), the live browser session
+        // (inventory/click/type against a local fixture), and a scripted
+        // end-to-end capture. All offline — the selftest never hits the network.
+        try captureDecisionProbe()
+        try await captureRecorderProbe(outDir: outDir)
+        try await webCaptureSessionProbe(outDir: outDir)
+        try await scriptedCaptureProbe(outDir: outDir)
+    }
+
+    // MARK: - Web capture probes
+
+    /// JSON-object extraction + agent decision parsing + URL/site helpers —
+    /// the pure logic between a model reply and a browser action.
+    private static func captureDecisionProbe() throws {
+        // Fenced reply with nested braces inside strings.
+        let fenced = """
+        Here's my decision:
+        ```json
+        {"observation": "A page with {curly} text", "beginStep": {"title": "Welcome", "narration": "Hi"}, "action": {"type": "click", "element": 4}}
+        ```
+        """
+        let object = try AnthropicClient.extractJSONObject(from: fenced)
+        let decision = try CaptureDecision.parse(object)
+        guard case .click(let element) = decision.action, element == 4,
+              decision.beginStep?.title == "Welcome" else {
+            throw StudioError("capture decision: click parse failed (\(decision))")
+        }
+
+        // JSON numbers arrive as Double; element indices must survive that.
+        let typed = try CaptureDecision.parse([
+            "observation": "form",
+            "action": ["type": "type", "element": 7.0, "text": "Alex Example"] as [String: Any],
+        ])
+        guard case .type(let el, let text) = typed.action, el == 7, text == "Alex Example" else {
+            throw StudioError("capture decision: type parse failed")
+        }
+
+        let finish = try CaptureDecision.parse(["action": ["type": "finish", "reason": "done"]])
+        guard case .finish(let reason) = finish.action, reason == "done" else {
+            throw StudioError("capture decision: finish parse failed")
+        }
+
+        // Unknown actions and truncated JSON must throw, not limp on.
+        if (try? CaptureDecision.parse(["action": ["type": "teleport"]])) != nil {
+            throw StudioError("capture decision: unknown action should throw")
+        }
+        if (try? AnthropicClient.extractJSONObject(from: #"{"observation": "cut o"#)) != nil {
+            throw StudioError("capture decision: truncated object should throw")
+        }
+
+        // Forgiving URL entry.
+        let urlCases: [(String, String?)] = [
+            ("example.com", "https://example.com"),
+            (" https://app.example.com/tour ", "https://app.example.com/tour"),
+            ("http://localhost:3000", "http://localhost:3000"),
+            ("not a url", nil),
+            ("justwords", nil),
+            ("ftp://example.com", nil),
+        ]
+        for (input, expected) in urlCases {
+            let got = WebCaptureSheet.normalizedURL(from: input)?.absoluteString
+            guard got == expected else {
+                throw StudioError("normalizedURL(\(input)) → \(got ?? "nil"), expected \(expected ?? "nil")")
+            }
+        }
+
+        // Same-site guard (the agent must stay on the target site).
+        let site = URL(string: "https://example.com")!
+        guard CaptureDriver.sameSite(URL(string: "https://app.example.com/x")!, site),
+              CaptureDriver.sameSite(URL(string: "https://www.example.com")!, site),
+              !CaptureDriver.sameSite(URL(string: "https://evil.com")!, site),
+              !CaptureDriver.sameSite(URL(string: "https://notexample.com")!, site) else {
+            throw StudioError("sameSite guard misclassified a host")
+        }
+        print("selftest: capture decision probe OK (parsing, URLs, same-site guard)")
+    }
+
+    /// Solid-color test card for recorder frames.
+    nonisolated private static func solid(width: Int, height: Int, r: CGFloat, g: CGFloat, b: CGFloat) throws -> CGImage {
+        guard let ctx = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { throw StudioError("recorder probe: no context") }
+        ctx.setFillColor(CGColor(red: r, green: g, blue: b, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        guard let image = ctx.makeImage() else { throw StudioError("recorder probe: no image") }
+        return image
+    }
+
+    /// The recorder alone: holds, cursor move, click pulse — verified by
+    /// duration and per-segment pixel colors; then an iPhone-band variant
+    /// (band continues the page background, island pill drawn, content intact).
+    private static func captureRecorderProbe(outDir: URL) async throws {
+        // Desktop timeline: red 2s → cursor move on blue 0.5s → pulse 0.4s →
+        // green 2s with the cursor parked at (400, 300).
+        let viewport = CaptureViewport.desktop
+        let w = Int(viewport.pixelSize.width), h = Int(viewport.pixelSize.height)
+        let red = try solid(width: w, height: h, r: 1, g: 0, b: 0)
+        let blue = try solid(width: w, height: h, r: 0, g: 0, b: 1)
+        let green = try solid(width: w, height: h, r: 0, g: 0.8, b: 0)
+
+        let movieURL = outDir.appendingPathComponent("capture-recorder.mov")
+        let recorder = try CaptureRecorder(outputURL: movieURL, viewport: viewport, barOverlayLight: nil, barOverlayDark: nil)
+        try await recorder.appendHold(red, seconds: 2.0, cursor: nil)
+        try await recorder.appendCursorMove(blue, from: CGPoint(x: 100, y: 100), to: CGPoint(x: 2000, y: 1200), duration: 0.5)
+        try await recorder.appendClickPulse(blue, at: CGPoint(x: 2000, y: 1200))
+        try await recorder.appendHold(green, seconds: 2.0, cursor: CGPoint(x: 400, y: 300))
+        try await recorder.finish()
+
+        let duration = try await AVURLAsset(url: movieURL).load(.duration).seconds
+        guard abs(duration - 4.9) < 0.35 else {
+            throw StudioError(String(format: "capture-recorder.mov is %.2fs, expected ~4.9s", duration))
+        }
+        let early = try await VideoService.extractFrame(videoURL: movieURL, at: 1.0)
+        guard early.width == w, early.height == h else {
+            throw StudioError("recorder frame is \(early.width)x\(early.height), expected \(w)x\(h)")
+        }
+        let earlyPixel = pixel(early, x: w / 2, y: h / 2)
+        guard earlyPixel.r > 180, earlyPixel.g < 90 else {
+            throw StudioError("recorder red hold shows rgb(\(earlyPixel.r),\(earlyPixel.g),\(earlyPixel.b))")
+        }
+        let late = try await VideoService.extractFrame(videoURL: movieURL, at: 4.0)
+        let latePixel = pixel(late, x: w / 2, y: h / 2)
+        guard latePixel.g > 130, latePixel.r < 110 else {
+            throw StudioError("recorder green hold shows rgb(\(latePixel.r),\(latePixel.g),\(latePixel.b))")
+        }
+        // The parked cursor's charcoal dot at (400, 300), green just outside it.
+        let dot = pixel(late, x: 400, y: 300)
+        guard dot.r < 90, dot.g < 90, dot.b < 90 else {
+            throw StudioError("recorder cursor dot missing at (400,300) — rgb(\(dot.r),\(dot.g),\(dot.b))")
+        }
+        let beside = pixel(late, x: 400 + 90, y: 300)
+        guard beside.g > 120 else {
+            throw StudioError("recorder cursor overlay flooded the frame — rgb(\(beside.r),\(beside.g),\(beside.b)) beside the dot")
+        }
+        print("selftest: capture recorder probe OK (timeline colors + cursor dot)")
+
+        // iPhone variant: the reserved band continues the page's background
+        // color and carries the island pill; content is drawn below, intact.
+        let phone = CaptureViewport.iphone
+        let pw = Int(phone.pixelSize.width), band = phone.statusBarBandHeight
+        let content = try solid(
+            width: Int(phone.contentPixelSize.width),
+            height: Int(phone.contentPixelSize.height),
+            r: 1, g: 0, b: 0
+        )
+        let phoneURL = outDir.appendingPathComponent("capture-recorder-iphone.mov")
+        let phoneRecorder = try CaptureRecorder(
+            outputURL: phoneURL,
+            viewport: phone,
+            barOverlayLight: StatusBarStyler.overlay(width: pw, bandHeight: band, white: false, device: .iphone),
+            barOverlayDark: StatusBarStyler.overlay(width: pw, bandHeight: band, white: true, device: .iphone)
+        )
+        try await phoneRecorder.appendHold(content, seconds: 1.5, cursor: nil)
+        try await phoneRecorder.finish()
+
+        let phoneFrame = try await VideoService.extractFrame(videoURL: phoneURL, at: 0.75)
+        guard phoneFrame.width == pw, phoneFrame.height == Int(phone.pixelSize.height) else {
+            throw StudioError("iphone capture frame is \(phoneFrame.width)x\(phoneFrame.height)")
+        }
+        let bandEdge = pixel(phoneFrame, x: 40, y: 20)
+        guard bandEdge.r > 180, bandEdge.g < 90 else {
+            throw StudioError("iphone band should continue the red page — rgb(\(bandEdge.r),\(bandEdge.g),\(bandEdge.b))")
+        }
+        // Island pill centre from StatusBarStyler's width-fraction geometry.
+        let islandY = Int(Double(pw) * (0.0292 + 0.0955 / 2))
+        let island = pixel(phoneFrame, x: pw / 2, y: islandY)
+        guard island.r < 70, island.g < 70, island.b < 70 else {
+            throw StudioError("iphone island pill missing — rgb(\(island.r),\(island.g),\(island.b))")
+        }
+        let below = pixel(phoneFrame, x: pw / 2, y: band + 400)
+        guard below.r > 180, below.g < 90 else {
+            throw StudioError("iphone content below the band wrong — rgb(\(below.r),\(below.g),\(below.b))")
+        }
+        print("selftest: capture recorder iPhone probe OK (band + island + content)")
+    }
+
+    /// Write the two-page local fixture the browser probes drive.
+    /// Page A (saturated red) links to page B (deep blue) via a button;
+    /// page B has a text input. Distinct colors make pixel checks unambiguous.
+    private static func writeCaptureFixture(outDir: URL) throws -> URL {
+        let dir = outDir.appendingPathComponent("web-fixture")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let pageA = """
+        <!doctype html><html><head><meta charset="utf-8"><title>Fixture A</title>
+        <style>html,body{margin:0;background:#E63946;color:#fff;font-family:-apple-system}</style></head>
+        <body>
+          <h1 style="padding:32px">Walkthrough Fixture</h1>
+          <button id="next" style="font-size:22px;margin:32px;padding:10px 18px"
+                  onclick="location.href='b.html'">Continue the tour</button>
+          <div style="height:2400px"></div>
+        </body></html>
+        """
+        let pageB = """
+        <!doctype html><html><head><meta charset="utf-8"><title>Fixture B</title>
+        <style>html,body{margin:0;background:#1D3557;color:#fff;font-family:-apple-system}</style></head>
+        <body>
+          <h1 style="padding:32px">Step two</h1>
+          <input id="name" placeholder="Your name" style="font-size:22px;margin:32px;padding:8px">
+          <button style="font-size:22px;margin:32px">Finish</button>
+        </body></html>
+        """
+        try pageA.write(to: dir.appendingPathComponent("a.html"), atomically: true, encoding: .utf8)
+        try pageB.write(to: dir.appendingPathComponent("b.html"), atomically: true, encoding: .utf8)
+        return dir
+    }
+
+    /// The live browser session: load → inventory → scroll → click (navigates)
+    /// → type, with pixel checks against the fixture's page colors.
+    private static func webCaptureSessionProbe(outDir: URL) async throws {
+        let fixtureDir = try writeCaptureFixture(outDir: outDir)
+        let session = WebCaptureSession(viewport: .desktop)
+        defer { session.close() }
+
+        try await session.load(url: fixtureDir.appendingPathComponent("a.html"))
+        let size = session.viewport.contentPixelSize
+
+        let elements = try await session.inventory()
+        guard let button = elements.first(where: { $0.label.contains("Continue the tour") }) else {
+            throw StudioError("session probe: 'Continue the tour' missing from inventory: \(elements.map(\.label))")
+        }
+        guard button.frame.width > 10, button.frame.minY >= 0, button.frame.maxY <= size.height else {
+            throw StudioError("session probe: button frame out of bounds \(button.frame)")
+        }
+
+        let pageA = try await session.snapshot()
+        guard pageA.width == Int(size.width), pageA.height == Int(size.height) else {
+            throw StudioError("session probe: snapshot is \(pageA.width)x\(pageA.height), expected \(Int(size.width))x\(Int(size.height))")
+        }
+        let redSample = pixel(pageA, x: Int(size.width) - 120, y: 160)
+        guard redSample.r > 170, redSample.b < 120 else {
+            throw StudioError("session probe: page A not red — rgb(\(redSample.r),\(redSample.g),\(redSample.b))")
+        }
+
+        // Scroll down and back (the page has a 2400px tail to move through).
+        let moved = try await session.scroll(byPixels: 800)
+        guard moved > 100 else { throw StudioError("session probe: scroll moved only \(moved)px") }
+        try await session.scroll(byPixels: -100000)
+
+        // Click through to page B.
+        let target = try await session.prepareClick(elementIndex: button.index)
+        guard target.x > 0, target.x < size.width, target.y > 0, target.y < size.height else {
+            throw StudioError("session probe: click target out of view \(target)")
+        }
+        try await session.commitClick(elementIndex: button.index)
+        await session.settle(timeout: 8)
+        guard session.currentURLString.hasSuffix("b.html") else {
+            throw StudioError("session probe: click did not navigate (at \(session.currentURLString))")
+        }
+        let pageB = try await session.snapshot()
+        let blueSample = pixel(pageB, x: Int(size.width) - 120, y: 160)
+        guard blueSample.b > blueSample.r, blueSample.b > 50 else {
+            throw StudioError("session probe: page B not blue — rgb(\(blueSample.r),\(blueSample.g),\(blueSample.b))")
+        }
+
+        // Type into the field and read the value back through the DOM.
+        let fields = try await session.inventory()
+        guard let field = fields.first(where: { $0.editable }) else {
+            throw StudioError("session probe: no editable field on page B")
+        }
+        try await session.setText(elementIndex: field.index, text: "Alex Example")
+        let value = try await session.evaluate("document.getElementById('name').value") as? String
+        guard value == "Alex Example" else {
+            throw StudioError("session probe: typed value read back as \(value ?? "nil")")
+        }
+        print("selftest: web capture session probe OK (inventory, scroll, click→navigate, type)")
+    }
+
+    /// End-to-end capture with a scripted explorer standing in for Claude:
+    /// the driver browses the fixture, the recorder writes the movie, and the
+    /// step marks map onto WalkthroughSteps whose frames show the right pages.
+    private static func scriptedCaptureProbe(outDir: URL) async throws {
+        let fixtureDir = try writeCaptureFixture(outDir: outDir)
+        let viewport = CaptureViewport.desktop
+        let session = WebCaptureSession(viewport: viewport)
+        defer { session.close() }
+        let movieURL = outDir.appendingPathComponent("capture-scripted.mov")
+        let recorder = try CaptureRecorder(outputURL: movieURL, viewport: viewport, barOverlayLight: nil, barOverlayDark: nil)
+        let driver = CaptureDriver(session: session, recorder: recorder, explorer: ScriptedExplorer()) { message, _ in
+            print("selftest: capture · \(message)")
+        }
+
+        let result = try await driver.run(
+            startURL: fixtureDir.appendingPathComponent("a.html"),
+            goal: "A two-step fixture tour.",
+            movieURL: movieURL
+        )
+        guard result.steps.count == 2 else {
+            throw StudioError("scripted capture made \(result.steps.count) steps, expected 2")
+        }
+        guard result.steps[0].title == "Welcome", result.steps[1].title == "Enter your name" else {
+            throw StudioError("scripted capture step titles wrong: \(result.steps.map(\.title))")
+        }
+        guard result.actionsTaken == 3 else {
+            throw StudioError("scripted capture took \(result.actionsTaken) actions, expected 3")
+        }
+        guard result.duration > 8 else {
+            throw StudioError(String(format: "scripted capture movie only %.1fs", result.duration))
+        }
+        guard !result.steps[1].narrationNotes.isEmpty else {
+            throw StudioError("scripted capture step 2 lost its narration notes")
+        }
+
+        let steps = result.walkthroughSteps()
+        guard steps.count == 2,
+              steps[0].startTime == 0,
+              abs(steps[0].endTime - steps[1].startTime) < 0.01,
+              abs(steps[1].endTime - result.duration) < 0.01,
+              steps[0].frameTime > steps[0].startTime, steps[0].frameTime < steps[0].endTime,
+              steps[1].frameTime > steps[1].startTime, steps[1].frameTime < steps[1].endTime,
+              steps[0].transcript.contains("landing page") else {
+            throw StudioError("scripted capture step mapping broken: \(steps.map { "\($0.startTime)-\($0.endTime)@\($0.frameTime)" })")
+        }
+
+        // Step 1's card frame must show page A (red) even though the step's
+        // click navigated to page B; step 2's frame must show page B (blue).
+        let frameA = try await VideoService.extractFrame(videoURL: movieURL, at: steps[0].frameTime)
+        let a = pixel(frameA, x: frameA.width - 120, y: 160)
+        guard a.r > 150, a.r > a.b else {
+            throw StudioError("scripted capture: step 1 frame not page A — rgb(\(a.r),\(a.g),\(a.b)) at \(steps[0].frameTime)s")
+        }
+        let frameB = try await VideoService.extractFrame(videoURL: movieURL, at: steps[1].frameTime)
+        let b = pixel(frameB, x: frameB.width - 120, y: 160)
+        guard b.b > b.r, b.b > 40 else {
+            throw StudioError("scripted capture: step 2 frame not page B — rgb(\(b.r),\(b.g),\(b.b)) at \(steps[1].frameTime)s")
+        }
+        print("selftest: scripted capture probe OK (2 steps, \(String(format: "%.1f", result.duration))s movie, per-step frames correct)")
     }
 
     /// Sample a pixel using top-left coordinates. NSBitmapImageRep.colorAt
@@ -760,6 +1090,49 @@ enum SelfTest {
         window.orderOut(nil)
         window.contentView = nil
         print("selftest: studio UI probe OK (player pane instantiated)")
+    }
+
+    /// Stands in for Claude in the scripted capture probe: three fixed turns
+    /// (click through, type a name, finish) driving the REAL session, driver,
+    /// and recorder — the only thing missing is the network.
+    private final class ScriptedExplorer: CaptureExploring {
+        private var turn = 0
+
+        func nextDecision(_ observation: CaptureObservation) async throws -> CaptureDecision {
+            turn += 1
+            switch turn {
+            case 1:
+                guard let button = observation.elements.first(where: { $0.label.contains("Continue the tour") }) else {
+                    throw StudioError("scripted explorer: fixture button missing from inventory")
+                }
+                return CaptureDecision(
+                    observation: "The fixture landing page.",
+                    beginStep: .init(title: "Welcome", narration: "This is the fixture's landing page."),
+                    note: nil,
+                    action: .click(element: button.index)
+                )
+            case 2:
+                guard observation.url.hasSuffix("b.html") else {
+                    throw StudioError("scripted explorer: click did not navigate (still at \(observation.url))")
+                }
+                guard let field = observation.elements.first(where: { $0.editable }) else {
+                    throw StudioError("scripted explorer: no editable field on page B")
+                }
+                return CaptureDecision(
+                    observation: "Step two shows a name field.",
+                    beginStep: .init(title: "Enter your name", narration: "Type a name to continue the tour."),
+                    note: "The form accepts any name.",
+                    action: .type(element: field.index, text: "Alex Example")
+                )
+            default:
+                return CaptureDecision(
+                    observation: "The tour is complete.",
+                    beginStep: nil,
+                    note: nil,
+                    action: .finish(reason: "Fixture tour complete.")
+                )
+            }
+        }
     }
 
     private static func sineWAV(duration: Double, sampleRate: Int = 44100) -> Data {

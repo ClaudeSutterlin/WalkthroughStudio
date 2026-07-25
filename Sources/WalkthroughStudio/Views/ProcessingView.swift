@@ -7,6 +7,18 @@ struct ProcessingView: View {
 
     private var stage: (title: String, quip: String) {
         let message = vm.busyMessage ?? ""
+        if message.contains("Preparing the capture") {
+            return ("Warming up the browser", "Opening a fresh browser window for your site.")
+        }
+        if message.contains("Exploring") {
+            return ("Browsing your site", "Claude is exploring the site, recording every click as it goes.")
+        }
+        if message.contains("Assembling the recording") {
+            return ("Cutting the footage", "Turning the browsing session into a clean screen recording.")
+        }
+        if message.contains("Writing narration") {
+            return ("Writing from the screenshots", "Studying each step's screenshot and writing what a narrator should say.")
+        }
         if message.contains("Importing") {
             return ("Rolling the tape", "Loading your recording and sizing it up.")
         }
@@ -50,6 +62,17 @@ struct ProcessingView: View {
             // The card
             VStack(spacing: 22) {
                 VoiceBarsMark()
+
+                // Live view of the page the capture agent is on right now.
+                if let live = vm.captureLiveImage {
+                    Image(nsImage: live)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 340, maxHeight: 230)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.faded.opacity(0.35)))
+                        .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
+                }
 
                 VStack(spacing: 8) {
                     Text(stage.title)

@@ -39,6 +39,12 @@ final class StudioViewModel: ObservableObject {
     /// Most recent export target — the status bar renders it as a clickable link.
     @Published var lastExportURL: URL?
 
+    /// The "Capture a Website" sheet (URL + goal → agent-driven recording).
+    @Published var showWebCaptureSheet = false
+    /// Freshest page image while a web capture runs — the processing screen
+    /// shows it so the user can watch the agent browse.
+    @Published var captureLiveImage: NSImage?
+
     /// Project briefing (PDF): its text guides every content-generating prompt.
     @Published var briefingURL: URL?
     @Published var briefingText: String = ""
@@ -124,31 +130,8 @@ final class StudioViewModel: ObservableObject {
     /// `device` nil = auto-detect from the recording's aspect ratio.
     func importVideo(url: URL, device: DeviceKind? = nil) {
         run("Importing recording…") {
-            let asset = AVURLAsset(url: url)
-            let duration = try await asset.load(.duration).seconds
-            if let track = try await asset.loadTracks(withMediaType: .video).first {
-                let natural = try await track.load(.naturalSize)
-                let transform = try await track.load(.preferredTransform)
-                let oriented = natural.applying(transform)
-                self.videoNaturalSize = CGSize(width: abs(oriented.width), height: abs(oriented.height))
-            }
-            self.deviceKind = device ?? DeviceKind.detect(
-                width: Int(self.videoNaturalSize.width),
-                height: Int(self.videoNaturalSize.height)
-            )
-            self.videoURL = url
-            self.videoDuration = duration
-            self.steps = []
-            self.transcript = []
-            self.thumbnails = [:]
-            self.narrationAudio = [:]
-            self.narrationDurations = [:]
-            self.frameDataURLCache = [:]
-            self.player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
-            self.showAdvanced = false
-            self.pipelineNotice = nil
-            self.lastExportURL = nil
-            self.statusMessage = "Imported \(url.lastPathComponent) (\(Self.formatTime(duration)))."
+            try await self.adoptVideo(url: url, device: device)
+            self.statusMessage = "Imported \(url.lastPathComponent) (\(Self.formatTime(self.videoDuration)))."
             // Continue straight into the pipeline INSIDE this run() call —
             // nesting a second run() here would let the outer epilogue clear
             // the busy state and reopen the single-flight guard mid-pipeline.
@@ -156,6 +139,148 @@ final class StudioViewModel: ObservableObject {
             defer { self.isProcessingPipeline = false }
             try await self.autoPipelineCore()
         }
+    }
+
+    /// Load a recording and reset all per-project state — shared by manual
+    /// import and the web-capture pipeline. `device` nil = auto-detect.
+    private func adoptVideo(url: URL, device: DeviceKind?) async throws {
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration).seconds
+        if let track = try await asset.loadTracks(withMediaType: .video).first {
+            let natural = try await track.load(.naturalSize)
+            let transform = try await track.load(.preferredTransform)
+            let oriented = natural.applying(transform)
+            videoNaturalSize = CGSize(width: abs(oriented.width), height: abs(oriented.height))
+        }
+        deviceKind = device ?? DeviceKind.detect(
+            width: Int(videoNaturalSize.width),
+            height: Int(videoNaturalSize.height)
+        )
+        videoURL = url
+        videoDuration = duration
+        steps = []
+        transcript = []
+        thumbnails = [:]
+        narrationAudio = [:]
+        narrationDurations = [:]
+        frameDataURLCache = [:]
+        player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
+        showAdvanced = false
+        pipelineNotice = nil
+        lastExportURL = nil
+    }
+
+    // MARK: Web capture (URL + goal → agent-recorded project)
+
+    /// Everything the Capture a Website sheet collects.
+    struct WebCaptureConfig {
+        var url: URL
+        var goal: String
+        var viewport: CaptureViewport
+    }
+
+    /// Drive the capture agent over the site, record the browsing session as
+    /// a movie, then run the capture-flavored pipeline (steps come from the
+    /// agent's own marks; scripts/copy are written FROM the step screenshots).
+    func captureFromWeb(config: WebCaptureConfig) {
+        run("Preparing the capture browser…") {
+            self.isProcessingPipeline = true
+            defer {
+                self.isProcessingPipeline = false
+                self.captureLiveImage = nil
+            }
+            guard !Keychain.anthropicKey.isEmpty else {
+                throw StudioError("Web capture needs an Anthropic API key — the agent explores the site by looking at it with Claude. Add a key in Settings, then try again.")
+            }
+            let client = AnthropicClient(apiKey: Keychain.anthropicKey)
+            let explorer = ClaudeExplorer(client: client, briefing: self.briefingText)
+            try await self.runWebCaptureCore(config: config, explorer: explorer)
+        }
+    }
+
+    /// The capture pipeline body (must run inside an enclosing `run()`; the
+    /// explorer is injected so the selftest can drive it without the network).
+    func runWebCaptureCore(config: WebCaptureConfig, explorer: CaptureExploring) async throws {
+        busyMessage = "Exploring \(config.url.host ?? config.url.absoluteString)…"
+
+        let capturesDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("walkthrough-studio-captures")
+        try FileManager.default.createDirectory(at: capturesDir, withIntermediateDirectories: true)
+        let baseName = (config.url.host ?? "capture").replacingOccurrences(of: ".", with: "-")
+        let movieURL = capturesDir.appendingPathComponent("\(baseName)-\(Int(Date().timeIntervalSince1970)).mov")
+
+        // Status-bar glyph overlays are AppKit drawing — built here on the
+        // main actor, consumed inside the recorder actor.
+        let viewport = config.viewport
+        var barLight: CGImage?
+        var barDark: CGImage?
+        if viewport.statusBarBandHeight > 0 {
+            let width = Int(viewport.pixelSize.width)
+            barLight = StatusBarStyler.overlay(width: width, bandHeight: viewport.statusBarBandHeight, white: false, device: .iphone)
+            barDark = StatusBarStyler.overlay(width: width, bandHeight: viewport.statusBarBandHeight, white: true, device: .iphone)
+        }
+
+        let session = WebCaptureSession(viewport: viewport)
+        defer { session.close() }
+        let recorder = try CaptureRecorder(
+            outputURL: movieURL,
+            viewport: viewport,
+            barOverlayLight: barLight,
+            barOverlayDark: barDark
+        )
+        let driver = CaptureDriver(session: session, recorder: recorder, explorer: explorer) { [weak self] message, image in
+            guard let self else { return }
+            self.statusMessage = message
+            if let image {
+                self.captureLiveImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+            }
+        }
+        let result = try await driver.run(startURL: config.url, goal: config.goal, movieURL: movieURL)
+
+        busyMessage = "Assembling the recording…"
+        try await adoptVideo(url: movieURL, device: viewport.deviceKind)
+        // The capture bakes its own pristine status bar into the footage
+        // (iPhone) or has none (desktop) — don't re-clean it downstream.
+        theme.statusBarMode = "off"
+        steps = result.walkthroughSteps()
+        selectedStepID = steps.first?.id
+        statusMessage = "Captured \(steps.count) steps from \(config.url.host ?? "the site")."
+        await refreshAllThumbnails()
+
+        busyMessage = "Writing narration & copy from the screenshots…"
+        do {
+            let client = AnthropicClient(apiKey: Keychain.anthropicKey)
+            let content = try await CaptureCopywriter.write(
+                client: client,
+                steps: steps,
+                logs: result.steps,
+                goal: config.goal,
+                briefing: briefingText
+            )
+            for index in steps.indices {
+                guard let c = content[steps[index].id] else { continue }
+                steps[index].script = c.script
+                steps[index].slug = c.slug
+                steps[index].area = c.area
+                steps[index].title = c.title.isEmpty ? steps[index].title : c.title
+                steps[index].body = c.body
+                steps[index].alt = c.alt
+                steps[index].headline = c.headline
+                steps[index].subheadline = c.subheadline
+            }
+        } catch {
+            pipelineNotice = "The steps are captured, but writing the narration didn't finish (\(error.localizedDescription)) — press Run AI to retry."
+        }
+
+        if Keychain.elevenLabsKey.isEmpty {
+            if pipelineNotice == nil {
+                pipelineNotice = "Add an ElevenLabs API key in Settings to generate the voice-over."
+            }
+        } else if steps.contains(where: { !$0.script.isEmpty }) {
+            busyMessage = "Synthesizing voice-over (ElevenLabs)…"
+            try await synthesizeCore(stepIDs: nil)
+        }
+        statusMessage = "Review the captured steps below — edit anything, then export."
     }
 
     // MARK: Automatic pipeline (import → review)

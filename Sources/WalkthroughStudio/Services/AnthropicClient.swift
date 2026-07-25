@@ -43,7 +43,36 @@ struct AnthropicClient {
         return url
     }
 
+    /// One piece of a user message. Images ride along as base64 blocks so the
+    /// model can SEE screenshots (the web-capture agent lives on this).
+    enum ContentPart {
+        case text(String)
+        case imageJPEG(Data)
+        case imagePNG(Data)
+
+        var block: [String: Any] {
+            switch self {
+            case .text(let text):
+                return ["type": "text", "text": text]
+            case .imageJPEG(let data):
+                return [
+                    "type": "image",
+                    "source": ["type": "base64", "media_type": "image/jpeg", "data": data.base64EncodedString()],
+                ]
+            case .imagePNG(let data):
+                return [
+                    "type": "image",
+                    "source": ["type": "base64", "media_type": "image/png", "data": data.base64EncodedString()],
+                ]
+            }
+        }
+    }
+
     func complete(system: String, user: String, maxTokens: Int = 16000) async throws -> String {
+        try await complete(system: system, parts: [.text(user)], maxTokens: maxTokens)
+    }
+
+    func complete(system: String, parts: [ContentPart], maxTokens: Int = 16000) async throws -> String {
         guard !apiKey.isEmpty else {
             throw StudioError("No Anthropic API key. Add one in Settings (it's stored in the Keychain).")
         }
@@ -61,7 +90,7 @@ struct AnthropicClient {
             "model": model,
             "max_tokens": maxTokens,
             "system": system,
-            "messages": [["role": "user", "content": user]],
+            "messages": [["role": "user", "content": parts.map(\.block)]],
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -94,10 +123,49 @@ struct AnthropicClient {
         }
     }
 
+    /// Ask for a single JSON object (the capture agent's decision format), with
+    /// one corrective retry if the reply can't be parsed.
+    func completeJSONObject(system: String, parts: [ContentPart], maxTokens: Int = 16000) async throws -> [String: Any] {
+        let first = try await complete(system: system, parts: parts, maxTokens: maxTokens)
+        do {
+            return try Self.extractJSONObject(from: first)
+        } catch {
+            let retry = parts + [.text("\n\nIMPORTANT: Your previous reply could not be parsed. Reply with ONLY the raw JSON object — no prose, no code fences, no explanations.")]
+            let second = try await complete(system: system, parts: retry, maxTokens: maxTokens)
+            return try Self.extractJSONObject(from: second)
+        }
+    }
+
     /// Extract a JSON array from an LLM reply that may be wrapped in prose or
     /// code fences. Scans for balanced top-level brackets (string- and
     /// escape-aware) so a stray "]" inside prose or a string doesn't break it.
     static func extractJSONArray(from text: String) throws -> [[String: Any]] {
+        for candidate in balancedCandidates(in: text, open: "[", close: "]") {
+            if let data = candidate.data(using: .utf8),
+               let array = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] {
+                return array
+            }
+        }
+        let snippet = String(text.prefix(200)).replacingOccurrences(of: "\n", with: " ")
+        throw StudioError("The model reply did not contain a parseable JSON array. Reply began: \"\(snippet)…\"")
+    }
+
+    /// Extract a single JSON object the same way (used for the capture agent's
+    /// one-decision-per-turn replies).
+    static func extractJSONObject(from text: String) throws -> [String: Any] {
+        for candidate in balancedCandidates(in: text, open: "{", close: "}") {
+            if let data = candidate.data(using: .utf8),
+               let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+                return object
+            }
+        }
+        let snippet = String(text.prefix(200)).replacingOccurrences(of: "\n", with: " ")
+        throw StudioError("The model reply did not contain a parseable JSON object. Reply began: \"\(snippet)…\"")
+    }
+
+    /// Balanced top-level `open`…`close` spans in `text` (string- and
+    /// escape-aware), largest first — the shared scanner behind both extractors.
+    private static func balancedCandidates(in text: String, open: Character, close: Character) -> [String] {
         var candidates: [String] = []
         let chars = Array(text)
         var depth = 0
@@ -119,10 +187,10 @@ struct AnthropicClient {
             switch char {
             case "\"":
                 inString = true
-            case "[":
+            case open:
                 if depth == 0 { start = index }
                 depth += 1
-            case "]":
+            case close:
                 if depth > 0 {
                     depth -= 1
                     if depth == 0, let s = start {
@@ -134,16 +202,7 @@ struct AnthropicClient {
                 break
             }
         }
-
-        // Prefer the largest parseable candidate.
-        for candidate in candidates.sorted(by: { $0.count > $1.count }) {
-            if let data = candidate.data(using: .utf8),
-               let array = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] {
-                return array
-            }
-        }
-        let snippet = String(text.prefix(200)).replacingOccurrences(of: "\n", with: " ")
-        throw StudioError("The model reply did not contain a parseable JSON array. Reply began: \"\(snippet)…\"")
+        return candidates.sorted { $0.count > $1.count }
     }
 }
 
@@ -159,7 +218,8 @@ enum CopyService {
 
     /// System prompt, optionally extended with the attached project briefing.
     /// The briefing is authoritative: it wins over the generic defaults above.
-    private static func system(briefing: String) -> String {
+    /// (Internal: the web-capture copywriter grounds its prompts in the same voice.)
+    static func system(briefing: String) -> String {
         guard !briefing.isEmpty else { return voiceSystem }
         return voiceSystem + """
 

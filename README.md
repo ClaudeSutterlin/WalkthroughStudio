@@ -34,6 +34,31 @@ bundle is the reliable path for the speech-recognition permission prompt.)
 
 Requires macOS 14+, Xcode 15+. No third-party dependencies.
 
+## No recording? Capture a website
+
+**Capture a Website…** (on the start screen, the New Project sheet, and the
+Project menu) builds the recording for you. Give it a base URL and describe
+the video you want — e.g. *"a step-by-step tutorial of the onboarding flow"* —
+and a Claude vision agent drives a real browser:
+
+1. It loads the page, looks at a screenshot plus an inventory of everything
+   clickable, and plans the tour (grouped into steps, each with draft
+   narration).
+2. Every click, scroll, and keystroke is rendered into a synthetic screen
+   recording with an animated cursor and click pulses. Mobile captures
+   (the **iPhone** preset, 1170×2532 with a pristine baked-in status bar) look
+   like a phone; **Desktop** records a full 2560×1600 browser viewport.
+3. When the tour is covered, the narration scripts and all step copy are
+   written *from the step screenshots* (plus the agent's notes and your
+   briefing), the ElevenLabs voice-over is synthesized, and you land on the
+   normal review screen — same editing, same three exports.
+
+The agent stays on the site you point it at, uses placeholder data in forms
+(put test credentials in the description if a flow needs a login), avoids
+destructive actions, and treats page text as content to document — not as
+instructions. Watching it work: the processing screen shows the live page as
+it browses. Requires an Anthropic API key.
+
 ## Workflow (wizard)
 
 1. **New Project** — drop in a `.mov`/`.mp4` screen recording, an optional
@@ -117,11 +142,20 @@ API keys are stored in the macOS **Keychain**, never on disk.
   overlap), `AVAssetExportSession` H.264 export, SRT generation.
 - ElevenLabs audio is requested as raw PCM and wrapped in a WAV container so
   AVFoundation composites it without an intermediate re-encode.
+- Web capture: `WebCaptureSession` (offscreen WKWebView + injected-JS element
+  inventory and actions) is driven by `CaptureDriver`, which asks a
+  `CaptureExploring` implementation (`ClaudeExplorer` — vision over the
+  Messages API) for one JSON decision per turn and renders every action into
+  a movie via `CaptureRecorder` (AVAssetWriter, animated cursor, optional
+  baked-in iPhone status bar). Steps are seeded from the agent's own step
+  marks — no scene detection needed — and `CaptureCopywriter` writes scripts
+  + copy from the per-step screenshots.
 
 ## Testing
 
 A hidden headless self-test exercises the whole pipeline (scene detection,
-layout/geometry probes, branded renders, narrated + framed exports) without
+layout/geometry probes, branded renders, narrated + framed exports, and the
+web-capture stack against a local HTML fixture with a scripted agent) without
 touching the network:
 
 ```sh

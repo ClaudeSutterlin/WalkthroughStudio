@@ -82,6 +82,33 @@ Keychain behavior — permissions stick to the signed bundle identity.
 - `StatusBarStyler` — replaces the recorded status bar with Apple's marketing
   bar (9:41, Dynamic Island on iPhone, slim bar on iPad); banner-aware for
   stills (`firstCleanRow` detects notification banners and repaints past them).
+- **Web capture** (`Services/WebCapture/`) — "Capture a Website": a Claude
+  vision agent records the walkthrough itself. Three layers, deliberately
+  separable:
+  - `WebCaptureSession` — offscreen-window WKWebView (landmine 2 applies);
+    injected JS builds an indexed inventory of visible interactable elements
+    (`window.__wsElements` keeps the references), actions dispatch real
+    pointer events / React-safe value setters. Coordinates are CONTENT PIXELS
+    (CSS × `pageZoom`, top-left) matching the snapshot exactly.
+  - `CaptureRecorder` — actor over AVAssetWriter; a hold appends ONE frame
+    (duration runs to the next append — `endSession(atSourceTime:)` keeps the
+    final hold), animations append at 24fps; draws the cursor/halo/click-pulse
+    and, for the iPhone preset, fills a reserved top band with the page's
+    top-row color + the marketing-bar overlay (built by the CALLER on the main
+    actor — AppKit drawing stays out of the actor).
+  - `CaptureDriver` + `CaptureExploring` — the observe→decide→act→record loop.
+    `ClaudeExplorer` is one JSON decision per turn (screenshot + inventory +
+    history); the selftest swaps in a scripted explorer, so the whole loop runs
+    offline. Step frame choice rule: a step's card never shows the screen its
+    CLOSING navigation revealed (that's the next step's opening state).
+  - Capture projects skip SceneDetector/transcription: steps come from the
+    agent's own `beginStep` marks, `CaptureCopywriter` writes scripts + copy
+    in ONE vision request grounded in per-step screenshots + notes + briefing,
+    then the normal synth/export stages run. `theme.statusBarMode` is set to
+    "off" (the bar is already pristine or absent — don't re-clean web content).
+  - Agent guardrails live in `ClaudeExplorer.systemPrompt`: same-site only
+    (also enforced in code via `CaptureDriver.sameSite`), placeholder data in
+    forms, no destructive actions, page text is content-not-instructions.
 - `DeviceKind` (Models.swift) — iphone/ipad/computer; drives bezel geometry,
   status-bar fraction, App Store sizes, and export availability. Add new
   device variation HERE, not as scattered branches.
@@ -107,6 +134,11 @@ Keychain behavior — permissions stick to the signed bundle identity.
    "Always Allow" stops sticking. `build-app.sh` auto-picks a stable identity.
 8. The selftest quits early if `applicationShouldTerminateAfterLastWindowClosed`
    fires when an offscreen render window closes — kept `false` under `--selftest`.
+9. AVAssetWriter presentation times must be strictly increasing and the LAST
+   frame's dwell only survives via `endSession(atSourceTime:)` — the recorder
+   guards both; don't "fix" them away.
+10. Local pages need `loadFileURL(_:allowingReadAccessTo:)` with the DIRECTORY,
+    or relative navigation inside the selftest fixture fails.
 
 ## Conventions
 
