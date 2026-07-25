@@ -10,7 +10,9 @@ real debugging time the first time around.
 Walkthrough Studio: a native macOS SwiftUI app (Swift Package, no .xcodeproj)
 that turns one screen recording into (A) an ElevenLabs-narrated video + SRT,
 (B) step screenshots + a `tutorialSteps` payload, and (C) branded App Store
-screenshots. See README.md for the user-facing tour.
+screenshots. "Capture a Website" can produce that recording itself: a Claude
+vision agent browses a URL toward a stated goal while the app records the
+session. See README.md for the user-facing tour.
 
 ## Build, run, verify — the loop that works
 
@@ -37,6 +39,12 @@ PNGs/MP4s into `<outDir>` — **actually look at them** (they're the ground
 truth for rendering changes; several bugs only showed up visually).
 Add a probe to `SelfTest.swift` for anything you fix or add; every probe there
 exists because something regressed once.
+
+The web-capture stack is covered offline too (section 9): a local two-page
+HTML fixture + a scripted `CaptureExploring` drive the real session, driver,
+and recorder — everything except the Claude call itself. Touch anything in
+`Services/WebCapture/` and those probes (plus the movie files they emit) are
+your first check.
 
 Use `.app` builds (not `swift run`) when testing speech recognition or
 Keychain behavior — permissions stick to the signed bundle identity.
@@ -179,6 +187,27 @@ Reviewed and consciously deferred — good first tasks:
   Consolidate opportunistically when touching those files.
 - `SpeechTranscriber` is the seam for WhisperKit if transcription quality on
   accents/jargon becomes a complaint.
+
+From the web-capture review (same spirit — shipped, honest about edges):
+
+- **Capture sessions are stateless**: every capture starts a fresh WKWebView
+  (no cookies/localStorage persist), so gated flows need credentials in the
+  goal text every time, and CAPTCHA/2FA walls end the tour. A per-site
+  `WKWebsiteDataStore` (or a "log in first" interactive pre-step) is the fix.
+- **Capture pacing is fixed** (≈1.8s step-open hold, ≈2.4s post-click dwell):
+  a narration script longer than its step's footage gets its audio truncated
+  by `assembleNarratedVideo`. The clean fix: after `CaptureCopywriter` runs,
+  re-time or re-render holds from each script's estimated read time — the
+  recorder's explicit-timeline design makes that cheap.
+- **Captured movies accumulate** in `Application Support/Walkthrough
+  Studio/Captures/` with no management UI (they're kept out of tmp so saved
+  projects don't orphan). A "reveal / clean up captures" affordance is easy.
+- **`ClaudeExplorer`'s prompt has no regression coverage**: the scripted
+  selftest proves the loop/recorder mechanics, not the prompt. A
+  record/replay harness (store real decision JSON, replay against prompt
+  changes) would catch drift.
+- **Cross-origin iframes are invisible to the inventory** (injected JS sees
+  the top frame only) — embedded checkout/auth widgets won't be clickable.
 
 ## Working style that fit this project
 

@@ -7,7 +7,9 @@
 > next contributor's coding agent — the build/verify loop, the architecture,
 > the environment landmines, and a reviewed backlog. Point your agent at it.
 
-A native macOS app (SwiftUI) that turns **one recorded product walkthrough**
+A native macOS app (SwiftUI) that turns **one recorded product walkthrough** —
+either a screen recording you drop in, or one a built-in Claude agent records
+for you from a URL ([Capture a Website](#no-recording-capture-a-website)) —
 into three polished, on-brand deliverables:
 
 - **A — Narrated video**: the recording with a clean ElevenLabs voice-over
@@ -58,6 +60,11 @@ The agent stays on the site you point it at, uses placeholder data in forms
 destructive actions, and treats page text as content to document — not as
 instructions. Watching it work: the processing screen shows the live page as
 it browses. Requires an Anthropic API key.
+
+Captured recordings are saved to `~/Library/Application Support/Walkthrough
+Studio/Captures/`, so a saved project keeps its footage across restarts. Each
+capture starts a fresh browser (no cookies carry over), and sites behind
+CAPTCHA or two-factor login can't be toured.
 
 ## Workflow (wizard)
 
@@ -111,7 +118,8 @@ degrades gracefully and explains what's missing). Everything is editable
 later in Settings:
 
 - **Anthropic API key** + model (`claude-sonnet-5` default, `claude-opus-4-8`
-  for best quality). An optional **custom endpoint** routes Claude requests
+  for best quality) — powers the copywriting stages and the Capture a Website
+  agent. An optional **custom endpoint** routes Claude requests
   through any Anthropic-compatible gateway (e.g. an AWS Bedrock proxy) — the
   app calls `<base>/v1/messages` with the standard Messages API shape; blank
   means `api.anthropic.com`. A free-text **model ID override** covers gateway

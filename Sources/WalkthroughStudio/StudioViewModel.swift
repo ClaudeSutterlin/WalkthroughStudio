@@ -203,8 +203,11 @@ final class StudioViewModel: ObservableObject {
     func runWebCaptureCore(config: WebCaptureConfig, explorer: CaptureExploring) async throws {
         busyMessage = "Exploring \(config.url.host ?? config.url.absoluteString)…"
 
-        let capturesDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("walkthrough-studio-captures")
+        // Application Support, not tmp: the movie IS the project's recording —
+        // a saved .walkstudio.json references it by path, and a purged temp
+        // file would orphan the project on reopen.
+        let capturesDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Walkthrough Studio/Captures", isDirectory: true)
         try FileManager.default.createDirectory(at: capturesDir, withIntermediateDirectories: true)
         let baseName = (config.url.host ?? "capture").replacingOccurrences(of: ".", with: "-")
         let movieURL = capturesDir.appendingPathComponent("\(baseName)-\(Int(Date().timeIntervalSince1970)).mov")
