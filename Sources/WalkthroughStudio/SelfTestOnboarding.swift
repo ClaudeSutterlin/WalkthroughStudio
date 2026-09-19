@@ -75,7 +75,7 @@ extension SelfTest {
         if let only {
             selected = all.filter { $0.name == only }
             if selected.isEmpty {
-                let names = all.map(\.name).joined(separator: ", ")
+                let names = all.map { $0.name }.joined(separator: ", ")
                 throw StudioError("unknown probe \"\(only)\" — known probes: \(names)")
             }
         } else {
@@ -130,7 +130,8 @@ extension SelfTest {
         }
         for (author, expected) in FixtureRepoFacts.authorCounts {
             guard seen[author] == expected else {
-                throw StudioError("fixtureRepoProbe: shortlog for \(author) is \(seen[author].map(String.init) ?? "missing"), expected \(expected) (shortlog: \(shortlog.replacingOccurrences(of: "\n", with: " | ")))")
+                let observed = seen[author].map { String($0) } ?? "missing"
+                throw StudioError("fixtureRepoProbe: shortlog for \(author) is \(observed), expected \(expected) (shortlog: \(shortlog.replacingOccurrences(of: "\n", with: " | ")))")
             }
         }
 
@@ -221,7 +222,7 @@ extension SelfTest {
             }
             let rgb = SelfTestSupport.pixel(in: frame, x: 960, y: 540)
             guard dominantChannel(rgb) == expectation.channel else {
-                throw StudioError(String(format: "stillsWriterProbe: frame at %.2fs is rgb(%d,%d,%d), expected %@", expectation.time, rgb.r, rgb.g, rgb.b, expectation.label))
+                throw StudioError(String(format: "stillsWriterProbe: frame at %.2fs is rgb(%d,%d,%d), expected ", expectation.time, rgb.r, rgb.g, rgb.b) + expectation.label)
             }
         }
 
