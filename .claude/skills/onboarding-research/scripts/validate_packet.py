@@ -350,6 +350,13 @@ def main():
         check_anchor(d.get("manifest"), f"dependencies.json:[{j}].manifest", {"code"})
         for k, a in enumerate(d.get("evidence") or []):
             check_anchor(a, f"dependencies.json:[{j}].evidence[{k}]")
+        if isinstance(d.get("cves"), list) and d["cves"]:
+            has_url = any(str(a).startswith("url:") for a in (d.get("evidence") or [])) or any(c.get("url") for c in d["cves"])
+            if not has_url:
+                rep.warn(f"dependencies.json:[{j}]({d.get('name')})", "CVE ids listed without any url: evidence; treat as model memory until a source is cited")
+        for c in d.get("cves") if isinstance(d.get("cves"), list) else []:
+            if c.get("url") and not str(c["url"]).startswith("http"):
+                rep.error(f"dependencies.json:[{j}].cves", f"cve url is not http(s): {c['url']}")
     for j, d in enumerate((files.get("decisions") or {}).get("decisions", [])):
         for k, a in enumerate(d.get("evidence") or []):
             check_anchor(a, f"decisions.json:[{j}].evidence[{k}]")
