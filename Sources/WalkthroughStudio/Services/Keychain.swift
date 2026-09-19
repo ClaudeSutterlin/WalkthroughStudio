@@ -7,6 +7,10 @@ enum Keychain {
 
     static let anthropicAccount = "anthropic-api-key"
     static let elevenLabsAccount = "elevenlabs-api-key"
+    /// GitHub personal access token for private clones ("Onboard to a
+    /// Codebase", M2). Read lazily off the main actor and handed to git only
+    /// through a GIT_ASKPASS helper's environment (GitRunner.clone).
+    static let githubTokenAccount = "github-token"
 
     /// Per-launch cache so we hit the keychain (and any access prompt) at most
     /// once per key per run. Lock-guarded — reads can come from a background
@@ -80,4 +84,5 @@ enum Keychain {
 
     static var anthropicKey: String { read(account: anthropicAccount) }
     static var elevenLabsKey: String { read(account: elevenLabsAccount) }
+    static var githubToken: String { read(account: githubTokenAccount) }
 }

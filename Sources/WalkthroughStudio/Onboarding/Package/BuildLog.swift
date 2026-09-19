@@ -152,23 +152,31 @@ struct BuildLog {
 
     // MARK: Redaction
 
-    private static let secretPatterns: [NSRegularExpression] = {
-        let sources = [
+    /// (pattern, replacement template), applied in order. The bearer rule runs
+    /// before the header rule so "Authorization: Bearer <token>" loses the token,
+    /// not just the word "Bearer".
+    private static let secretRules: [(NSRegularExpression, String)] = {
+        let sources: [(String, String)] = [
             // Prefixed API keys and tokens: sk-..., sk-ant-..., xi-..., ghp_..., github_pat_...
-            "(?i)\\b(sk|xi|ghp|gho|ghu|ghs|github_pat)[-_][A-Za-z0-9_-]{6,}",
-            // Header-shaped leaks: x-api-key: ..., Authorization: Bearer ...
-            "(?i)\\b(x-api-key|xi-api-key|authorization|api[_-]?key|secret)(\\s*[:=]\\s*)\\S+",
-            "(?i)\\bbearer\\s+[A-Za-z0-9._-]{8,}",
+            ("(?i)\\b(sk|xi|ghp|gho|ghu|ghs|github_pat)[-_][A-Za-z0-9_-]{6,}", "[redacted]"),
+            ("(?i)\\bbearer\\s+[A-Za-z0-9._-]{8,}", "[redacted]"),
+            // Header-shaped leaks: x-api-key: ..., api_key=..., SECRET: ...
+            ("(?i)\\b(x-api-key|xi-api-key|authorization|api[_-]?key|secret)(\\s*[:=]\\s*)\\S+", "$1$2[redacted]"),
         ]
-        return sources.compactMap { try? NSRegularExpression(pattern: $0, options: []) }
+        var rules: [(NSRegularExpression, String)] = []
+        for (pattern, template) in sources {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                rules.append((regex, template))
+            }
+        }
+        return rules
     }()
 
     /// Replaces anything that looks like a key or auth header value with [redacted].
     static func redact(_ text: String) -> String {
         var out = text
-        for (index, regex) in secretPatterns.enumerated() {
+        for (regex, template) in secretRules {
             let range = NSRange(out.startIndex..<out.endIndex, in: out)
-            let template = index == 1 ? "$1$2[redacted]" : "[redacted]"
             out = regex.stringByReplacingMatches(in: out, options: [], range: range, withTemplate: template)
         }
         return out
