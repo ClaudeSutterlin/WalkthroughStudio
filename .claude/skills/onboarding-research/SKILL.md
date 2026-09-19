@@ -97,26 +97,40 @@ with reasons. Then run one tracer per path (`templates/tracer.md`) writing
 real code, the ten concerns each present/absent/unknown with evidence, and
 "what scares me" in plain sentences. An `absent` concern is a finding.
 
-## Step 6: decisions, glossary, coverage
+## Step 6: decisions, glossary, summary
 
-- `decisions.json`: the top decisions the code implies (framework, storage,
-  sync vs async, deploy model, testing approach), each with alternatives,
-  consequences, evidence, and `wouldRepeat` when you have an opinion.
-- `glossary.json`: domain terms with `definedAt` anchors.
-- `coverage.json`: for each directory set `filesRead` from the mappers'
-  read lists, `facts` and `verified` counts from facts whose evidence cites the
-  directory, and `level`: `traced` if a trace hop cites it, else `verified` if
-  it has verdict-bearing facts, else `mapped` if it has facts, else
-  `inventoried`, or `unread` with a reason. Fill `paths` and `checks`.
+Run the decisions unit: the top decisions the code implies (framework, storage,
+sync vs async, deploy model, testing approach), each with alternatives,
+consequences, evidence, and `wouldRepeat` when you have an opinion; the packet
+summary paragraph; and the top ten findings with anchors. Glossary terms come
+from the glossary lens.
 
-## Step 7: finish and validate
+## Step 7: assemble, validate, hand off
 
-Write `packet.json.summary` (one paragraph a stranger reads first), `counts`,
-`producer.model`, `producer.finishedAt`. Then:
+Save every unit's output as JSON under a working folder with this layout, then
+let the assembler merge them, apply the status rule, compute coverage and
+counts, and run the validator:
+
+```
+$WORK/mappers/<unit>.json   {"unit","facts","readPaths","skipped"}
+$WORK/lenses/<unit>.json    {"unit","facts","readPaths","dependencies"?,"glossary"?}
+$WORK/verdicts/<id>.json    {"verifier","verdicts"}
+$WORK/paths.json            ranker output
+$WORK/traces/<pathId>.json  tracer outputs
+$WORK/decisions.json        {"decisions","summary","topFindings"}
+$WORK/checks.json           optional: what you ran or skipped (build, tests, ...)
+```
 
 ```sh
-python3 "$SKILL/scripts/validate_packet.py" "$PACKET" --repo . --json "$PACKET/validation.json"
+python3 "$SKILL/scripts/assemble_packet.py" --packet "$PACKET" --units "$WORK" --repo . --model "<model id>"
 ```
+
+The assembler writes facts.jsonl, paths.json, traces/, decisions.json,
+glossary.json, dependencies.json, coverage.json and packet.json, then runs
+`validate_packet.py` and exits with its status. Coverage levels are computed,
+never hand-written: `traced` if a trace hop cites the directory, else
+`verified` if it has verified facts, else `mapped` if it has facts, else
+`inventoried` if something was read, else `unread` with a reason.
 
 Fix every error and re-run until `PACKET OK`. Read the warnings; fix the ones
 that are cheap. Report to the user: the packet path, the summary, the top ten
