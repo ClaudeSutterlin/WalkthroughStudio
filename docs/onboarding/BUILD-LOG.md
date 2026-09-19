@@ -19,19 +19,24 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 
 | Milestone | Status | Probe | Last session |
 |---|---|---|---|
-| M0 Planning docs | verified | n/a (docs) | S1 |
-| M1 Fixture repo + feature selftest scaffold | planned | | |
-| M2 Package format + manifest + anchors | planned | | |
-| M3 Research fleet runtime (tool-use loop, artifact store, resume) | planned | | |
-| M4 Git mining + build/test runner units | planned | | |
-| M5 Architecture map + diagrams | planned | | |
-| M6 Registers | planned | | |
-| M7 Critical path traces | planned | | |
-| M8 Video script generation | planned | | |
-| M9 Scene renderer + narration + transcript + coderefs | planned | | |
-| M10 Hub + code view + cross-links | planned | | |
-| M11 Playback chat agent | planned | | |
-| M12 Review, staleness, export | planned | | |
+| M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S1 |
+| M1 Fixture repo, selftest scaffold, stills writer | planned | fixtureRepoProbe, stillsWriterProbe | |
+| M2 Package format, anchors, store, git | planned | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe | |
+| M3 Player shell on a generated fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
+| M4 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
+| M5 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
+| M6 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
+| M7 Fleet runtime and deterministic survey units | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe | |
+| M8 Research fleet (plan, map, lens, verify, rank, trace) | planned | fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
+| M9 Diagrams and registers | planned | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe | |
+| M10 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
+| M11 Hub, cross-links, search, export | planned | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe | |
+| M12 Review, staleness, end-to-end smoke, hardening | planned | smokeEndToEndProbe, stalenessProbe, reviewStateProbe, secretLeakProbe | |
+
+The table above was rewritten once in S1, after the architecture was synthesized,
+to match ARCHITECTURE.md section 11 (player before fleet). It replaces the
+provisional twelve rows drafted earlier in the same session. No later rewrite of
+the milestone list is allowed without an entry explaining it.
 
 ## Entry template
 
@@ -65,14 +70,23 @@ Verified:
 - not verified: no code written this session by design (the human asked to pause
   before coding to switch effort level).
 Broke / learned:
-- Nothing built. The repo's existing `run()` single-flight gate and the
-  `autoPipelineCore()` pattern must be respected by the fleet runner (see
-  CLAUDE.md); nesting `run()` was a real bug once.
+- Nothing built. The fleet must never call `StudioViewModel.run()`; it gets its
+  own `OnboardingViewModel` and its own `Window` scene (ARCHITECTURE.md D3).
+- Any new headless flag must extend `applicationShouldTerminateAfterLastWindowClosed`
+  (it matches the literal `--selftest` today) or the first offscreen render
+  window closing kills the run. Do this in M1 before any render probe.
+- The milestone table was provisional when first written and was rewritten once
+  in this session to the synthesized order (player before fleet). Recorded here
+  so the "append, never rewrite" rule has its one documented exception.
 Limits hit:
-- none.
+- The design workflow ran fourteen agents over about ninety minutes; no context
+  limit was hit in this session. The next session starts cold from these docs.
 Next:
-1. Read ARCHITECTURE.md "Milestones" and start M1: `scripts/make-fixture-repo.sh`
-   plus `--selftest-onboarding` entry point in SelfTest.swift that currently only
-   asserts the fixture exists and the package directory is created.
-2. Then M2: `OnboardingPackage` types and the anchor scheme, with a probe that
-   round-trips `manifest.json`.
+1. Read ARCHITECTURE.md sections 2, 9 and 11, then USER-STORIES.md epic 11.
+2. Start M1: `scripts/make-fixture-repo.sh` (deterministic two-author repo
+   described in ARCHITECTURE.md section 9), the `--selftest-onboarding` flag,
+   the terminate-guard prefix change, `SelfTestSupport.swift`,
+   `SelfTestOnboarding.swift`, and `StillsVideoWriter.swift`.
+3. Run both selftests on the Mac, look at the stills mp4, append entry S2.
+4. Ask the human the section 13 questions (Mermaid bundling, build/test opt-in,
+   package location, depth and spend defaults) before M7 and M9 need answers.

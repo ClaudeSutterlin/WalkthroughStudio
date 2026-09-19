@@ -18,7 +18,8 @@ Personas:
 
 Priority: P0 = the feature is not usable without it. P1 = first release.
 P2 = later. Each story has acceptance criteria that a headless selftest probe or a
-manual check can verify. Milestone column is filled in from ARCHITECTURE.md.
+manual check can verify. The story-to-milestone map at the end of this file
+says which ARCHITECTURE.md milestone delivers each story.
 
 Story IDs are stable. Do not renumber. Add new stories at the end of an epic.
 
@@ -233,3 +234,27 @@ Acceptance criteria:
 - Editing code from inside the hub.
 - Team features: comments, shared review state, permissions.
 - Languages the fleet cannot build: the fleet still reads and maps them, but the "dev environment" and "test truth" deliverables report "could not run".
+
+---
+
+## Story-to-milestone map
+
+Milestones are defined in ARCHITECTURE.md section 11. A story listed under two
+milestones is delivered across both (the first builds the mechanism, the second
+populates it).
+
+| Milestone | Stories delivered |
+|---|---|
+| M0 Planning docs | ON-11.2, ON-11.3 |
+| M1 Fixture, selftest scaffold, stills writer | ON-11.1 |
+| M2 Package format, anchors, store, git | ON-1.2, ON-1.3 (token storage), ON-2.7 (artifact store) |
+| M3 Player shell on a fixture package | ON-1.1, ON-3.5, ON-8.2, ON-8.3, ON-9.5 (bookmarks) |
+| M4 Narration, scene renderer, transcript, code-ref map | ON-6.2, ON-6.3, ON-6.4, ON-6.7, ON-7.1, ON-7.2, ON-7.3, ON-11.4 (narrator fixture), ON-12.3 |
+| M5 LLM runtime | ON-2.8, ON-11.4 (transport fixture), ON-12.1, ON-12.2 (meter) |
+| M6 Playback chat agent | ON-9.1, ON-9.2, ON-9.3, ON-9.4, ON-9.6, ON-9.7 |
+| M7 Fleet runtime and survey units | ON-1.3 (private clone), ON-1.4, ON-1.5, ON-1.7, ON-2.1 (emit_fact), ON-2.2, ON-2.3, ON-11.5 (smoke depth), ON-12.2 (cap ends run as partial) |
+| M8 Research fleet | ON-2.4, ON-2.5, ON-2.6, ON-2.9, ON-5.1, ON-5.2, ON-5.3 (trace facts) |
+| M9 Diagrams and registers | ON-3.1, ON-3.2, ON-3.3, ON-3.4, ON-3.6, ON-4.1 to ON-4.11, ON-5.1 to ON-5.3 (projection) |
+| M10 Video scripts and the series | ON-5.4, ON-6.1, ON-6.5, ON-6.6 |
+| M11 Hub, cross-links, search, export | ON-8.1, ON-8.4, ON-8.5, ON-8.6 |
+| M12 Review, staleness, end-to-end smoke | ON-1.6, ON-10.1, ON-10.2, ON-10.3 |
