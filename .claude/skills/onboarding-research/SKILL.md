@@ -145,6 +145,6 @@ produced from it must validate with zero errors and contain facts for: the
 `src/repo/orders_repo.py` hotspot (6 commits, one author), bus factor 1 in
 every directory, `users.email` as PII, migration 002 written but not applied,
 the idempotency gap in order creation (retry without key), no rollback in
-`deploy/deploy.sh`, the old pinned `requests==2.19.0`, and `vendor/` listed as
-unread. The trace for order creation must mark `idempotency` absent with the
+`deploy/deploy.sh`, the old pinned `requests==2.19.0`, and `vendor/` never above level
+`inventoried` (generated code is listed, not mapped). The trace for order creation must mark `idempotency` absent with the
 handler and repo anchors as evidence.

@@ -825,7 +825,7 @@ Every anchor uses the grammar in 2.2 and must resolve against the repository at
   validator before finishing. It records `producer.name = "claude-code-skill"`.
   Its acceptance test is the fixture repo: the produced packet validates with
   zero errors and covers the known facts (hotspot, bus factor, PII column,
-  unapplied migration, idempotency gap, no rollback, old pinned dependency).
+  unapplied migration, idempotency gap, no rollback, old pinned dependency; `vendor/` never above `inventoried`).
 - **In-app fleet** (M11). Writes the same layout into `<package>/packet/`,
   `producer.name = "walkthrough-studio-fleet"`.
 - **Anything else** that passes the validator.

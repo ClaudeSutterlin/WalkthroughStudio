@@ -249,6 +249,13 @@ def main():
         else:
             read = min(d["files"], len({p for p in read_paths if top_of(p) == path}))
         fd = facts_by_dir.get(path, {"facts": 0, "verified": 0})
+        if d.get("generated") and read == 0:
+            # nobody opened a generated directory: it stays unread even if a fact
+            # mentions it from the inventory (honest coverage beats a higher level)
+            directories.append({"path": path, "files": d["files"], "filesRead": 0, "level": "unread",
+                                "facts": fd["facts"], "verified": fd["verified"],
+                                "reason": d.get("reason") or "generated or vendored code, not read"})
+            continue
         if path in traced_dirs and fd["facts"] > 0:
             level = "traced"
         elif fd["verified"] > 0:
