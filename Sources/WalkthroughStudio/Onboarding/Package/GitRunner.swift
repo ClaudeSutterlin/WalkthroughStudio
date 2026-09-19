@@ -403,9 +403,9 @@ struct GitRunner: Sendable {
             }
             if !inEntry {
                 let parts = line.split(separator: " ")
-                if parts.count >= 3, parts[0].count == 40, isHex(parts[0]), let final = Int(parts[2]) {
+                if parts.count >= 3, parts[0].count == 40, isHex(parts[0]), let finalLineNumber = Int(parts[2]) {
                     sha = String(parts[0])
-                    finalLine = final
+                    finalLine = finalLineNumber
                     author = ""
                     authorTime = nil
                     authorTZ = "+0000"

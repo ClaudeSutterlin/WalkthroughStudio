@@ -73,9 +73,34 @@ enum SelfTestSupport {
         let stderr: String
     }
 
+    /// Lock-protected byte buffer filled from a background drain (a class so
+    /// the @Sendable dispatch block does not mutate a captured var).
+    private final class StreamBuffer {
+        private let lock = NSLock()
+        private var data = Data()
+        func set(_ newData: Data) {
+            lock.lock()
+            data = newData
+            lock.unlock()
+        }
+        var value: Data {
+            lock.lock()
+            let copy = data
+            lock.unlock()
+            return copy
+        }
+    }
+
     /// Run `executable` with `args` in `dir`, capturing both streams. Does not
-    /// throw on a non-zero exit; callers decide what a failure means.
-    static func runProcess(_ executable: String, _ args: [String], in dir: URL?) throws -> ProcessResult {
+    /// throw on a non-zero exit; callers decide what a failure means. Both
+    /// pipes are drained on background queues while the caller waits, so a
+    /// child that writes more than the pipe buffer to stderr before closing
+    /// stdout cannot deadlock the selftest (mirrors `GitRunner.Child`). A child
+    /// still running after `timeout` seconds is killed and a `StudioError`
+    /// is thrown.
+    static func runProcess(
+        _ executable: String, _ args: [String], in dir: URL?, timeout: TimeInterval = 120
+    ) throws -> ProcessResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = args
@@ -90,21 +115,47 @@ enum SelfTestSupport {
         process.standardError = errPipe
         process.standardInput = FileHandle.nullDevice
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
             throw StudioError("could not launch \(executable): \(error.localizedDescription)")
         }
-        // Drain stdout first (the large one), then stderr, then wait. git's
-        // stderr output is small enough to sit in the pipe buffer meanwhile.
-        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+
+        let outBuffer = StreamBuffer()
+        let errBuffer = StreamBuffer()
+        let drained = DispatchGroup()
+        let outHandle = outPipe.fileHandleForReading
+        let errHandle = errPipe.fileHandleForReading
+        drained.enter()
+        DispatchQueue.global(qos: .utility).async {
+            outBuffer.set(outHandle.readDataToEndOfFile())
+            drained.leave()
+        }
+        drained.enter()
+        DispatchQueue.global(qos: .utility).async {
+            errBuffer.set(errHandle.readDataToEndOfFile())
+            drained.leave()
+        }
+
+        let completed = finished.wait(timeout: .now() + timeout) == .success
+        if !completed, process.isRunning {
+            kill(process.processIdentifier, SIGKILL)
+            _ = finished.wait(timeout: .now() + 5)
+        }
+        // Bounded: a grandchild that inherited the pipes may outlive a killed
+        // child for a moment; never hang on it.
+        _ = drained.wait(timeout: .now() + 30)
+        guard completed else {
+            throw StudioError("\(executable) \(args.joined(separator: " ")) timed out after \(Int(timeout))s")
+        }
 
         return ProcessResult(
             status: process.terminationStatus,
-            stdout: String(decoding: outData, as: UTF8.self),
-            stderr: String(decoding: errData, as: UTF8.self)
+            stdout: String(decoding: outBuffer.value, as: UTF8.self),
+            stderr: String(decoding: errBuffer.value, as: UTF8.self)
         )
     }
 

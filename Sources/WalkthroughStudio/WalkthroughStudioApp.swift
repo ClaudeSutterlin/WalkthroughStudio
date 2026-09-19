@@ -51,11 +51,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             setvbuf(stdout, nil, _IONBF, 0) // unbuffered so progress prints live
             let fixtureRepo = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 1])
             let outDir = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 2])
-            var onlyProbe: String? = nil
-            if let probeIndex = CommandLine.arguments.firstIndex(of: "--probe"),
-               CommandLine.arguments.count > probeIndex + 1 {
-                onlyProbe = CommandLine.arguments[probeIndex + 1]
-            }
+            let onlyProbe: String? = {
+                guard let probeIndex = CommandLine.arguments.firstIndex(of: "--probe"),
+                      CommandLine.arguments.count > probeIndex + 1 else { return nil }
+                return CommandLine.arguments[probeIndex + 1]
+            }()
             Task { @MainActor in
                 do {
                     try await SelfTest.runOnboarding(fixtureRepo: fixtureRepo, outDir: outDir, only: onlyProbe)

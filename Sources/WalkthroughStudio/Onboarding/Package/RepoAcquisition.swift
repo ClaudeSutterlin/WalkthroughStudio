@@ -66,6 +66,7 @@ struct RepoAcquisition {
             guard !url.isEmpty else { throw StudioError("Repository URL is empty") }
             let cloneDir = root.appendingPathComponent(cloneDirName, isDirectory: true)
 
+            var reopened = false
             if FileManager.default.fileExists(atPath: cloneDir.appendingPathComponent(".git").path) {
                 progress("Fetching \(url)…")
                 do {
@@ -73,6 +74,7 @@ struct RepoAcquisition {
                 } catch {
                     throw authAware(error, token: token)
                 }
+                reopened = true
             } else {
                 if FileManager.default.fileExists(atPath: cloneDir.path) {
                     try FileManager.default.removeItem(at: cloneDir)
@@ -86,7 +88,24 @@ struct RepoAcquisition {
             }
 
             progress("Resolving revision…")
-            let sha = try await git.revParse(pinnedSHA ?? "HEAD", in: cloneDir)
+            let sha: String
+            if let pinnedSHA {
+                sha = try await git.revParse(pinnedSHA, in: cloneDir)
+            } else if reopened {
+                // `git fetch` never moves the clone's own HEAD, so an unpinned
+                // reopen must read the remote's default branch (section 3:
+                // "sha is the default branch head"), not the sha the package was
+                // first cloned at. Older clones may lack origin/HEAD; then the
+                // local HEAD is the best answer available.
+                do {
+                    sha = try await git.revParse("refs/remotes/origin/HEAD", in: cloneDir)
+                } catch {
+                    sha = try await git.revParse("HEAD", in: cloneDir)
+                }
+            } else {
+                // Fresh clone: HEAD is the default branch head.
+                sha = try await git.revParse("HEAD", in: cloneDir)
+            }
             if try await git.isShallow(repo: cloneDir) {
                 notices.append(shallowNotice)
             }
