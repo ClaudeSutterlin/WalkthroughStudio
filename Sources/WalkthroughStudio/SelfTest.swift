@@ -762,7 +762,9 @@ enum SelfTest {
         print("selftest: studio UI probe OK (player pane instantiated)")
     }
 
-    private static func sineWAV(duration: Double, sampleRate: Int = 44100) -> Data {
+    /// Internal (not private) so SelfTestSupport.sineWAV(seconds:) can share it
+    /// with the onboarding selftest; nonisolated because it is pure.
+    nonisolated static func sineWAV(duration: Double, sampleRate: Int = 44100) -> Data {
         let count = Int(duration * Double(sampleRate))
         var pcm = Data(capacity: count * 2)
         for i in 0..<count {

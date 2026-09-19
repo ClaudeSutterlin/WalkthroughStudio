@@ -42,11 +42,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+
+        // Hidden headless selftest of the "Onboard to a Codebase" feature
+        // (docs/onboarding/ARCHITECTURE.md section 9):
+        //   WalkthroughStudio --selftest-onboarding <fixtureRepo> <outputDir> [--probe <name>]
+        if let flagIndex = CommandLine.arguments.firstIndex(of: "--selftest-onboarding"),
+           CommandLine.arguments.count > flagIndex + 2 {
+            setvbuf(stdout, nil, _IONBF, 0) // unbuffered so progress prints live
+            let fixtureRepo = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 1])
+            let outDir = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 2])
+            var onlyProbe: String? = nil
+            if let probeIndex = CommandLine.arguments.firstIndex(of: "--probe"),
+               CommandLine.arguments.count > probeIndex + 1 {
+                onlyProbe = CommandLine.arguments[probeIndex + 1]
+            }
+            Task { @MainActor in
+                do {
+                    try await SelfTest.runOnboarding(fixtureRepo: fixtureRepo, outDir: outDir, only: onlyProbe)
+                    print("SELFTEST PASS")
+                    exit(0)
+                } catch {
+                    print("SELFTEST FAIL: \(error.localizedDescription)")
+                    exit(1)
+                }
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // In selftest mode the branded renderer's offscreen windows come and go;
-        // don't let their closing terminate the process mid-run.
-        !CommandLine.arguments.contains("--selftest")
+        // In any selftest mode (--selftest, --selftest-onboarding, ...) the
+        // branded renderer's offscreen windows come and go; don't let their
+        // closing terminate the process mid-run.
+        !CommandLine.arguments.contains { $0.hasPrefix("--selftest") }
     }
 }
