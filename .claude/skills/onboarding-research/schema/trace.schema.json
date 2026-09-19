@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/trace.schema.json",
+  "title": "CriticalPathTrace (traces/<pathId>.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "pathId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+      "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+    },
+    "scenario": {
+      "type": "string",
+      "description": "the one concrete request or event being followed"
+    },
+    "hops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "n",
+          "anchor",
+          "summary"
+        ],
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "anchor": {
+            "type": "string",
+            "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+            "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+          },
+          "callSite": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "factIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "minItems": 0
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "concerns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry",
+        "authorization",
+        "validation",
+        "businessLogic",
+        "persistence",
+        "sideEffects",
+        "failureHandling",
+        "idempotency",
+        "timeoutsRetries",
+        "logging"
+      ],
+      "properties": {
+        "entry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "businessLogic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "sideEffects": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "failureHandling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "idempotency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "timeoutsRetries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "present",
+                "absent",
+                "unknown"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              "minItems": 0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "scaresMe": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "factIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "version",
+    "pathId",
+    "title",
+    "entry",
+    "scenario",
+    "hops",
+    "concerns",
+    "scaresMe"
+  ]
+}

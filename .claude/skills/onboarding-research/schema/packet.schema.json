@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/packet.schema.json",
+  "title": "PacketManifest (packet.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "startedAt",
+        "finishedAt"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headSHA"
+      ],
+      "properties": {
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "headSHA": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "defaultBranch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "localPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "smoke",
+        "preview",
+        "complete"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 40,
+      "description": "One paragraph a stranger could read first."
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "facts",
+        "verified",
+        "refuted",
+        "traces",
+        "unreadDirs"
+      ],
+      "properties": {
+        "facts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "refuted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "traces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unreadDirs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "briefing": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "producer",
+    "repo",
+    "scope",
+    "summary",
+    "counts"
+  ]
+}

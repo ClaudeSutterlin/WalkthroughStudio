@@ -19,24 +19,24 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 
 | Milestone | Status | Probe | Last session |
 |---|---|---|---|
-| M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S1 |
-| M1 Fixture repo, selftest scaffold, stills writer | planned | fixtureRepoProbe, stillsWriterProbe | |
-| M2 Package format, anchors, store, git | planned | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe | |
-| M3 Player shell on a generated fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
-| M4 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
-| M5 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
-| M6 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
-| M7 Fleet runtime and deterministic survey units | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe | |
-| M8 Research fleet (plan, map, lens, verify, rank, trace) | planned | fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
-| M9 Diagrams and registers | planned | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe | |
-| M10 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
-| M11 Hub, cross-links, search, export | planned | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe | |
+| M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S2 |
+| M1 Fixture repo, selftest scaffold, stills writer | in-progress | fixtureRepoProbe, stillsWriterProbe | S2 |
+| M2 Package format, anchors, git, Research Packet contract | in-progress | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
+| M3 Claude Code producer skill and the fixture packet | in-progress | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
+| M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
+| M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
+| M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
+| M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
+| M8 Projectors: Mermaid diagrams, registers, traces | planned | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
+| M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
+| M10 Hub, cross-links, search, export, coverage tracker | planned | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
+| M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
 | M12 Review, staleness, end-to-end smoke, hardening | planned | smokeEndToEndProbe, stalenessProbe, reviewStateProbe, secretLeakProbe | |
 
-The table above was rewritten once in S1, after the architecture was synthesized,
-to match ARCHITECTURE.md section 11 (player before fleet). It replaces the
-provisional twelve rows drafted earlier in the same session. No later rewrite of
-the milestone list is allowed without an entry explaining it.
+The table was rewritten in S1 (synthesized order) and again in S2 (the human's
+decision to separate research from content behind a Research Packet contract
+moved the in-app fleet to M11 and added the producer skill as M3). Both
+rewrites are recorded in their entries. No further rewrite without an entry.
 
 ## Entry template
 

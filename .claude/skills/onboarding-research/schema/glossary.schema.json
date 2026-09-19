@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/glossary.schema.json",
+  "title": "Glossary (glossary.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "headSHA": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "term",
+          "definition"
+        ],
+        "properties": {
+          "term": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "definedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "minItems": 0
+          }
+        }
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "version",
+    "headSHA",
+    "terms"
+  ]
+}

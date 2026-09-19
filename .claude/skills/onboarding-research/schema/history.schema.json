@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/history.schema.json",
+  "title": "GitHistory (history.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "headSHA": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "commits": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "firstCommit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lastCommit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "shallow": {
+      "type": "boolean"
+    },
+    "authors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "commits",
+          "share"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "commits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "hotspots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "commits",
+          "lastTouched"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "commits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastTouched": {
+            "type": "string"
+          },
+          "authors": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "ownership": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dir",
+          "authors",
+          "busFactor"
+        ],
+        "properties": {
+          "dir": {
+            "type": "string"
+          },
+          "commits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "share"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "share": {
+                  "type": "number"
+                },
+                "commits": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "minItems": 0
+          },
+          "busFactor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "smallest number of authors covering 50 percent of the directory's commits"
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "stale": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "lastTouched"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "lastTouched": {
+            "type": "string"
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "parallel": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "a",
+          "b",
+          "reason"
+        ],
+        "properties": {
+          "a": {
+            "type": "string",
+            "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+            "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+          },
+          "b": {
+            "type": "string",
+            "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+            "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "messageKeywords": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revert",
+        "hotfix",
+        "fix",
+        "todo",
+        "fixme"
+      ],
+      "properties": {
+        "revert": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hotfix": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fix": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "todo": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fixme": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "wip": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hack": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "notableCommits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "anchor",
+          "why"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+            "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "version",
+    "headSHA",
+    "commits",
+    "authors",
+    "hotspots",
+    "ownership",
+    "stale",
+    "parallel",
+    "messageKeywords"
+  ]
+}

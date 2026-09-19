@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/fact.schema.json",
+  "title": "Fact (one line of facts.jsonl)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "component",
+        "interface",
+        "endpoint",
+        "dependency",
+        "dataEntity",
+        "dataField",
+        "flowHop",
+        "decision",
+        "risk",
+        "owner",
+        "hotspot",
+        "testCoverage",
+        "migration",
+        "config",
+        "integration",
+        "deployStep",
+        "incidentPattern",
+        "term",
+        "landmine",
+        "metric",
+        "buildResult",
+        "security",
+        "observability"
+      ]
+    },
+    "subject": {
+      "type": "string",
+      "description": "the path, symbol, table, or concept the claim is about"
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 600,
+      "description": "one sentence"
+    },
+    "attributes": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "anchor"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+            "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 6000
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "producedBy": {
+      "type": "string"
+    },
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "verifier",
+          "verdict",
+          "reason"
+        ],
+        "properties": {
+          "verifier": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "refuted",
+              "unknown"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+              "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+            },
+            "minItems": 0
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "verified",
+        "refuted",
+        "unknown"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "subject",
+    "claim",
+    "evidence",
+    "confidence",
+    "producedBy",
+    "status"
+  ]
+}

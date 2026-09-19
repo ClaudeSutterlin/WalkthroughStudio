@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://walkthroughstudio.dev/onboarding/packet/coverage.schema.json",
+  "title": "Coverage (coverage.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "headSHA": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "directories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "files",
+          "filesRead",
+          "level",
+          "facts",
+          "verified"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "filesRead": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "unread",
+              "inventoried",
+              "mapped",
+              "verified",
+              "traced"
+            ]
+          },
+          "facts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "verified": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidates",
+        "traced",
+        "untraced"
+      ],
+      "properties": {
+        "candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "traced": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "untraced": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          },
+          "minItems": 0
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check",
+          "status"
+        ],
+        "properties": {
+          "check": {
+            "type": "string",
+            "enum": [
+              "build",
+              "tests",
+              "lint",
+              "typecheck",
+              "secretScan",
+              "dependencyAudit",
+              "issues",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ran",
+              "skipped",
+              "failed"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(code|video|doc|diagram|trace|fact|commit|cmd|issue|url):.+$",
+                "description": "An anchor string in the grammar of docs/onboarding/PACKET.md section 3. The reference validator parses and resolves it; this pattern only checks the prefix."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "deliverablesPlanned": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "deliverablesProduced": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "version",
+    "headSHA",
+    "generatedAt",
+    "directories",
+    "paths",
+    "checks"
+  ]
+}

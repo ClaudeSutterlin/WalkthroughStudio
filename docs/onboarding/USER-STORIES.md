@@ -35,7 +35,7 @@ Story IDs are stable. Do not renumber. Add new stories at the end of an epic.
 | ON-1.4 | P0 | As an onboarding engineer, I want a progress view that shows which research agents are running, what they are reading, and what has been produced so far, so that a long run is not a black box. |
 | ON-1.5 | P0 | As an onboarding engineer, I want to cancel a run and later resume it from the last checkpoint, so that a crash, a quit, or an API limit never loses work. |
 | ON-1.6 | P1 | As an onboarding engineer, I want a cost and time estimate before the run starts and a running total during it, so that I can bound spend. |
-| ON-1.7 | P1 | As an onboarding engineer, I want to choose depth (smoke, quick, standard, exhaustive) before the run, so that a small repo does not get a four-hour treatment. |
+| ON-1.7 | P1 | As an onboarding engineer, I want the run to be complete by default, with a preview scope available for a fast first look, and a live progress and coverage tracker instead of a depth cap, so that I see how deep the research went rather than deciding in advance. |
 | ON-1.8 | P1 | As an onboarding engineer, I want to open an existing package from a recents list or a folder picker without starting a run, including one produced on another Mac, so that packages are portable. |
 | ON-1.9 | P1 | As an onboarding engineer, I want to pause a running fleet (distinct from cancel), open the package so far, and see a clear paused state when the API is unreachable, so that a long run is under my control. |
 | ON-1.10 | P0 | As an onboarding engineer, I want the pre-run sheet to let me choose the output folder, override the pinned commit, attach a briefing, and opt in to build and test execution with a plain warning, so that a run is configured in one place. |
@@ -47,7 +47,7 @@ Acceptance criteria:
 - ON-1.4: progress view lists agents by role, current activity, and produced artifact count; updates at least every 2 seconds.
 - ON-1.5: killing the process mid-run and relaunching offers "Resume"; resumed run does not re-execute completed research units; selftest probe proves it.
 - ON-1.6: estimate is shown from repository size before start; actual tokens and dollars are tallied in the manifest at the end.
-- ON-1.7: depth setting changes the number of critical paths traced and videos produced and is recorded in the manifest.
+- ON-1.7: `complete` is the default scope; the tracker shows per-directory coverage levels (unread, inventoried, mapped, verified, traced), files read over files present, candidate versus traced paths with reasons, and deliverables produced versus planned; the scope and final coverage are recorded in the package.
 - ON-1.8: opening validates the package (repo folder present, head SHA matches, referenced files exist) and reports each failure by name; recents are stored in settings.
 - ON-1.9: pause cancels the in-flight request, writes the checkpoint, and leaves the window usable; the circuit breaker shows "Paused: API unreachable" with a Resume button; each notice has an inline Retry.
 - ON-1.10: the sheet stores folder, SHA, briefing path and the opt-in flag in the manifest; the estimate updates when depth changes.
@@ -241,7 +241,7 @@ Acceptance criteria:
 | ID | Priority | Story |
 |---|---|---|
 | ON-12.1 | P0 | As an onboarding engineer, I want the feature to use the existing Anthropic, ElevenLabs and gateway settings, so that setup is not repeated. |
-| ON-12.2 | P1 | As an onboarding engineer, I want a per-run token and dollar cap that stops the fleet gracefully with a partial package and a coverage report, so that a bad repo cannot burn my budget. |
+| ON-12.2 | P1 | As an onboarding engineer, I want an optional per-run dollar cap (off by default) that stops the fleet gracefully with a partial package and a coverage report, so that I can bound spend when I choose to. |
 | ON-12.3 | P2 | As an onboarding engineer, I want to pick the narration voice per package, so that the series sounds consistent. |
 | ON-12.4 | P0 | As an onboarding engineer, I want an Onboarding section in Settings (planner and worker models, effort, parallelism, spend cap, default package folder, editor command, GitHub token, record-fixtures toggle), so that the feature is configurable without editing files. |
 | ON-12.5 | P1 | As an onboarding engineer, I want tokens, dollars and cache-hit rate by model during and after a run, and the coverage report opened from the hub when a run ends partial, so that cost and blind spots are visible where I look. |
@@ -252,6 +252,27 @@ Acceptance criteria:
 - ON-12.5: the progress view shows per-model usage and cache-hit rate; the hub links the coverage report.
 
 ---
+
+## Epic 13: The Research Packet contract and producers
+
+| ID | Priority | Story |
+|---|---|---|
+| ON-13.1 | P0 | As an onboarding engineer, I want a documented Research Packet format with JSON Schemas, so that any tool with good context on my project can produce the research and the app builds the content and viewer from it. |
+| ON-13.2 | P0 | As an onboarding engineer, I want to import a Research Packet from a folder, have it validated (schema, anchors resolving at the pinned commit, orphan facts, missing traces), and see the report before anything is built, so that bad research is caught at the door. |
+| ON-13.3 | P0 | As a Claude Code user, I want a skill in this repository that produces a valid Research Packet for the repository I am working in, so that my coding agent's project knowledge becomes the research. |
+| ON-13.4 | P0 | As a producer, I want a command-line validator that runs anywhere without the app, so that I can check a packet before handing it over. |
+| ON-13.5 | P1 | As an onboarding engineer, I want the hub to show which producer made the packet, when, with which model, and the coverage it reported, so that provenance is never in doubt. |
+| ON-13.6 | P1 | As an onboarding engineer, I want to re-import an updated packet into an existing package and have only the affected deliverables go stale, so that research can iterate without a full rebuild. |
+| ON-13.7 | P2 | As a producer, I want to include drafts (narratives, scripts, diagrams) in the packet that the app treats as proposals, so that a producer with strong opinions can shape the deliverables. |
+
+Acceptance criteria:
+- ON-13.1: `docs/onboarding/PACKET.md` and `docs/onboarding/packet-schema/*.json` exist and the fixture packet validates against them.
+- ON-13.2: import refuses on errors and lists warnings; a packet with a dangling anchor, an orphan fact and a missing trace is rejected with exactly those three errors in a probe.
+- ON-13.3: running the skill on the fixture repo produces a packet that validates with zero errors and contains the fixture's known findings (hotspot, bus factor, PII column, unapplied migration, idempotency gap, no rollback, old pinned dependency).
+- ON-13.4: `scripts/validate-packet.py <packet> [<repo>]` exits 0 only with zero errors and prints statistics.
+- ON-13.5: the hub's About card shows `packet.json.producer` and the coverage summary.
+- ON-13.6: re-import diffs fact ids and content hashes and marks dependents stale through manifest edges.
+- ON-13.7: drafts are validated like everything else and the composer records whether it kept or replaced each.
 
 ## Out of scope for the first release
 
@@ -272,14 +293,15 @@ populates it).
 |---|---|
 | M0 Planning docs | ON-11.2, ON-11.3 |
 | M1 Fixture, selftest scaffold, stills writer | ON-11.1 |
-| M2 Package format, anchors, store, git | ON-1.2, ON-1.3 (token storage), ON-2.7 (artifact store) |
-| M3 Player shell on a fixture package | ON-1.1, ON-1.8, ON-1.10 (sheet), ON-3.5, ON-8.2, ON-8.3, ON-8.7, ON-9.5 (bookmarks) |
-| M4 Narration, scene renderer, transcript, code-ref map | ON-6.2, ON-6.3, ON-6.4, ON-6.7, ON-7.1, ON-7.2, ON-7.3, ON-11.4 (narrator fixture), ON-12.3 |
-| M5 LLM runtime | ON-2.8, ON-11.4 (transport fixture), ON-11.6, ON-12.1, ON-12.2 (meter) |
-| M6 Playback chat agent | ON-9.1, ON-9.2, ON-9.3, ON-9.4, ON-9.6, ON-9.7, ON-9.8, ON-9.9 |
-| M7 Fleet runtime and survey units | ON-1.3 (private clone), ON-1.4, ON-1.5, ON-1.7, ON-1.9, ON-1.10 (opt-in), ON-4.6 (issues unit), ON-12.4, ON-12.5, ON-2.1 (emit_fact), ON-2.2, ON-2.3, ON-11.5 (smoke depth), ON-12.2 (cap ends run as partial) |
-| M8 Research fleet | ON-2.4, ON-2.5, ON-2.6, ON-2.9, ON-5.1, ON-5.2, ON-5.3 (trace facts) |
-| M9 Diagrams and registers | ON-3.1, ON-3.2, ON-3.3, ON-3.4, ON-3.6, ON-4.1 to ON-4.11, ON-5.1 to ON-5.3 (projection) |
-| M10 Video scripts and the series | ON-5.4, ON-6.1, ON-6.5, ON-6.6 |
-| M11 Hub, cross-links, search, export | ON-8.1, ON-8.4, ON-8.5, ON-8.6, ON-8.8, ON-8.9 |
-| M12 Review, staleness, end-to-end smoke | ON-1.6, ON-2.9 (briefing), ON-10.1, ON-10.2, ON-10.3, ON-10.4 |
+| M2 Package format, anchors, store, git, Research Packet contract | ON-1.2, ON-1.3 (token storage), ON-2.7 (artifact store), ON-13.1, ON-13.2, ON-13.4 |
+| M3 Claude Code producer skill and fixture packet | ON-13.3 |
+| M4 Player shell on a fixture package | ON-1.1, ON-1.8, ON-1.10 (sheet), ON-3.5, ON-8.2, ON-8.3, ON-8.7, ON-9.5 (bookmarks) |
+| M5 Narration, scene renderer, transcript, code-ref map | ON-6.2, ON-6.3, ON-6.4, ON-6.7, ON-7.1, ON-7.2, ON-7.3, ON-11.4 (narrator fixture), ON-12.3 |
+| M6 LLM runtime | ON-2.8, ON-11.4 (transport fixture), ON-11.6, ON-12.1, ON-12.2 (meter) |
+| M7 Playback chat agent | ON-9.1, ON-9.2, ON-9.3, ON-9.4, ON-9.6, ON-9.7, ON-9.8, ON-9.9 |
+| M11 In-app research fleet (second producer) | ON-1.3 (private clone), ON-1.4, ON-1.5, ON-1.7, ON-1.9, ON-1.10 (opt-in), ON-4.6 (issues unit), ON-12.4, ON-12.5, ON-2.1 (emit_fact), ON-2.2, ON-2.3, ON-11.5 (smoke depth), ON-12.2 (cap ends run as partial) |
+| M11 (continued) | ON-2.4, ON-2.5, ON-2.6, ON-2.9, ON-5.1, ON-5.2, ON-5.3 (trace facts) |
+| M8 Projectors: Mermaid diagrams, registers, traces | ON-3.1, ON-3.2, ON-3.3, ON-3.4, ON-3.6, ON-4.1 to ON-4.11, ON-5.1 to ON-5.3 (projection) |
+| M9 Video scripts and the series | ON-5.4, ON-6.1, ON-6.5, ON-6.6 |
+| M10 Hub, cross-links, search, export, coverage tracker | ON-8.1, ON-8.4, ON-8.5, ON-8.6, ON-8.8, ON-8.9 |
+| M12 Review, staleness, end-to-end smoke | ON-1.6, ON-13.5, ON-13.6, ON-13.7, ON-2.9 (briefing), ON-10.1, ON-10.2, ON-10.3, ON-10.4 |

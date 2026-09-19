@@ -1,6 +1,6 @@
 # Onboard to a Codebase: architecture and build plan
 
-Status: planning complete, no code written. This document is the hand-off for the
+Status: planning complete and revised on 2026-09-19 after the human's decisions (section 15); build started at M1. This document is the hand-off for the
 AI builder sessions that implement the feature. Read it with USER-STORIES.md
 (what to build and how to accept it) and BUILD-LOG.md (where the build is).
 
@@ -44,6 +44,7 @@ The final architecture takes the experience-first proposal as its base (the weig
 12. Risks
 13. Third-party asks and open questions for the human
 14. Critic findings and resolutions
+15. Human decisions of 2026-09-19 and the Research Packet contract
 
 ## 0. Shape of the feature
 
@@ -62,6 +63,8 @@ Path convention for this document: paths that start with `Sources/`, `scripts/`,
 | OnboardSheet | new | `Sources/WalkthroughStudio/Views/Onboarding/OnboardSheet.swift` | Modelled on NewProjectSheet (560 wide, Brand.cream, `.environment(\.colorScheme, .light)`): URL field or folder DropZone (`DropZone` becomes internal in M3; it is `private` in ContentView.swift today), optional commit SHA override, optional briefing file (reusing `Briefing.extractText`, stored as `manifest.briefingPath`, ON-2.9), output folder, depth picker (smoke, quick, standard, exhaustive), "Run the repository's build and tests" checkbox (default off, with a plain warning), spend cap, voice, pre-run estimate. Validates with `GitRunner.revParse` before enabling Start. |
 | FleetProgressView | new | `Sources/WalkthroughStudio/Views/Onboarding/FleetProgressView.swift` | ProcessingView's backdrop (warm gradient, orbs, white card, Georgia title, VoiceBarsMark) with a dashboard card: stage rows from `OnboardingStage`, unit rows (kind, status, current tool call text, attempts), artifact counts, tokens and USD, Pause and checkpoint, Resume, Cancel, Open package so far. Dark-appearance probe. |
 | OnboardingRootView + panes | new | `Sources/WalkthroughStudio/Views/Onboarding/OnboardingRootView.swift`, `HubNavigatorView.swift`, `StageView.swift`, `VideoPane.swift`, `PlaybackClock.swift`, `CodeView.swift`, `DocView.swift`, `DiagramView.swift`, `CompanionPanel.swift`, `ChatPanel.swift`, `PackageReviewView.swift`, `WalkthroughSchemeHandler.swift` | Three-pane NavigationSplitView (min 1280x800). See section 7. |
+| Research Packet contract + validator | new | `docs/onboarding/PACKET.md`, `.claude/skills/onboarding-research/schema/*.json` (normative), `.claude/skills/onboarding-research/scripts/validate_packet.py` and `survey_repo.py` (with thin wrappers `scripts/validate-packet.py`, `scripts/survey-repo.py`), `Sources/WalkthroughStudio/Onboarding/Packet/PacketModels.swift`, `PacketValidator.swift`, `PacketImporter.swift` | The boundary between research and content (section 15). JSON Schemas are the normative contract; the Python validator is the reference implementation used by producers on any machine; `PacketValidator` is the Swift port the app runs on import (schema shape, anchor grammar, anchor resolution against `repo/` at the packet's SHA, orphan facts, coverage completeness). `PacketImporter` copies a validated packet into `<package>/packet/`, records `manifest.producer`, and pends every content unit. `--validate-packet <dir> <repo>` is a headless flag. |
+| Research Packet producer skill | new | `.claude/skills/onboarding-research/SKILL.md` and its `templates/` | A Claude Code skill that, run inside any repository checkout, produces a Research Packet with the same fact, evidence, trace and coverage semantics as the in-app fleet. It is the first producer; the in-app fleet (M11) is the second. Its own test is the fixture repo. |
 | Package model + Anchor | new | `Sources/WalkthroughStudio/Onboarding/Package/OnboardingModels.swift`, `Anchor.swift`, `PackageStore.swift`, `BuildLog.swift`, `FactStore.swift`, `BacklinkIndex.swift` | All Codable types with explicit `encode(to:)` and a leading `version` field (BrandTheme lesson). PackageStore does atomic writes (write `.tmp`, rename), directory layout, content hashes, open-time validation (repo/ matches headSHA, referenced files exist). BuildLog appends `build-log.md` lines and `build-log.jsonl` records. FactStore appends JSONL, dedupes on id, rebuilds `facts/index.json`. |
 | GitRunner + RepoAcquisition | new | `Sources/WalkthroughStudio/Onboarding/Package/GitRunner.swift`, `RepoAcquisition.swift`, `Sources/WalkthroughStudio/Services/Keychain.swift` | `Process("/usr/bin/git")` off-main with timeouts: `clone` (full history into `repo-git/`), `worktree add repo/ <sha>`, `rev-parse`, `log --numstat`, `blame --line-porcelain`, `show <sha>:<path>`, `ls-tree`. Token from `Keychain.githubToken` (new account `github-token`) passed through a `GIT_ASKPASS` helper script in a private temp dir that echoes an environment variable; never on disk, never logged. Detects a missing git binary with a readable error. |
 | Messages API client | extended | `Sources/WalkthroughStudio/Services/AnthropicClient.swift`, `Sources/WalkthroughStudio/Services/AnthropicMessages.swift`, `Sources/WalkthroughStudio/Services/SSEParser.swift`, `Sources/WalkthroughStudio/Services/LLMTransport.swift` | `complete`/`completeJSONArray`/`extractJSONArray` untouched (CopyService and jsonExtractionProbe depend on them). New: `MessagesRequest`, `MessagesResponse`, `ContentBlock` (text, tool_use, tool_result, thinking, redacted_thinking, unknown passthrough), `Message`, `ToolDefinition`, `StreamEvent`; `endpoint(path:)` generalizing `messagesEndpoint` for `/v1/messages`, `/v1/messages/count_tokens`, `/v1/models`; `AnthropicAPIError { status, type, message, retryAfter }`; `protocol LLMTransport { send, stream }` with `URLSessionTransport` and `FixtureTransport` (record and replay). `endpointProbe` cases stay green and gain the two new paths. |
@@ -77,7 +80,7 @@ Path convention for this document: paths that start with `Sources/`, `scripts/`,
 | Playback agent | new | `Sources/WalkthroughStudio/Onboarding/Chat/PlaybackAgent.swift`, `ChatSession.swift`, `CitationParser.swift` | Section 8. |
 | Review, staleness, export | new | `Sources/WalkthroughStudio/Onboarding/Review.swift`, `Staleness.swift`, `HubExporter.swift`, `Sources/WalkthroughStudio/Resources/OnboardingHub/hub.css`, `hub.js` | review/status.json state machine, staleness from `WorkUnit.inputsHash` plus manifest fact edges, regenerate-one for any deliverable kind, `restore(factId:note:)` that appends a reviewer verdict line to `facts/<unit>.jsonl` and re-pends dependents exactly like a correction (ON-10.3), static site export (excludes `units/`, `chat/`, `repo-git/`). |
 | Settings + Keychain | extended | `Sources/WalkthroughStudio/Views/SettingsView.swift`, `Sources/WalkthroughStudio/Views/SetupSheet.swift`, `Sources/WalkthroughStudio/Models.swift`, `Sources/WalkthroughStudio/Services/Keychain.swift` | New `SettingsKeys`: `onboardingOutputDir`, `onboardingPlannerModel` (default `claude-opus-5`), `onboardingWorkerModel` (default `claude-sonnet-5`), `onboardingEffort`, `onboardingMaxParallel` (4), `onboardingSpendCapUSD` (25), `onboardingDepth`, `onboardingRunBuild` (false), `onboardingGatewayCompat`, `onboardingRecordFixtures`, `onboardingEditorCommand`, `onboardingRecentPackages`. `Defaults.anthropicModels` gains `claude-opus-5`. GitHub token SecureField loaded in `.task`, never in an initializer. |
-| Selftest for the feature | extended | `Sources/WalkthroughStudio/WalkthroughStudioApp.swift`, `Sources/WalkthroughStudio/SelfTest.swift`, `Sources/WalkthroughStudio/SelfTestSupport.swift`, `Sources/WalkthroughStudio/SelfTestOnboarding.swift`, `Sources/WalkthroughStudio/Onboarding/Fixtures/FixturePackage.swift`, `scripts/make-fixture-repo.sh`, `Sources/WalkthroughStudio/Resources/OnboardingFixtures/`, `Package.swift` | `--selftest-onboarding <fixtureRepo> <outDir> [--probe <name>]`; `applicationShouldTerminateAfterLastWindowClosed` returns false when any argument `hasPrefix("--selftest")`; `SelfTestSupport` holds `pixel(_:x:y:)`, `sineWAV`, and `snapshot(view:size:appearance:)` replacing the five duplicated NSHostingView harnesses (newProjectSheetProbe, setupSheetProbe, exportSheetProbe, processingViewProbe, uiProbe); `SelfTestOnboarding.swift` is `extension SelfTest { static func runOnboarding(fixtureRepo:outDir:only:) }` in its own file so sessions read only what they need. `Package.swift` adds `.copy("Resources/OnboardingHub")`, `.copy("Resources/OnboardingPrompts")`, `.copy("Resources/OnboardingFixtures")` (`.process` flattens directories). |
+| Selftest for the feature | extended | `Sources/WalkthroughStudio/WalkthroughStudioApp.swift`, `Sources/WalkthroughStudio/SelfTest.swift`, `Sources/WalkthroughStudio/SelfTestSupport.swift`, `Sources/WalkthroughStudio/SelfTestOnboarding.swift`, `Sources/WalkthroughStudio/Onboarding/Fixtures/FixturePackage.swift`, `scripts/make-fixture-repo.sh`, `Sources/WalkthroughStudio/Resources/OnboardingFixtures/`, `Package.swift` | `--selftest-onboarding <fixtureRepo> <outDir> [--probe <name>]`; `applicationShouldTerminateAfterLastWindowClosed` returns false when any argument `hasPrefix("--selftest")`; `SelfTestSupport` holds `pixel(_:x:y:)`, `sineWAV`, and `snapshot(view:size:appearance:)` replacing the five duplicated NSHostingView harnesses (newProjectSheetProbe, setupSheetProbe, exportSheetProbe, processingViewProbe, uiProbe); `SelfTestOnboarding.swift` is `extension SelfTest { static func runOnboarding(fixtureRepo:outDir:only:) }` in its own file so sessions read only what they need. `Package.swift` adds one `.copy("OnboardingResources")` rule for `Sources/WalkthroughStudio/OnboardingResources/{hub,fixtures,prompts}` (a sibling of `Resources/`, so no path is covered by two rules; `.process` would flatten directories). |
 | Planning docs | extended | `docs/onboarding/ARCHITECTURE.md`, `docs/onboarding/BUILD-LOG.md`, `docs/onboarding/USER-STORIES.md`, `CLAUDE.md`, `README.md` | ARCHITECTURE.md is this document. BUILD-LOG milestone table rewritten once to section 9's list. CLAUDE.md verify loop gains the onboarding invocation. |
 
 ## 2. Package data model
@@ -95,7 +98,11 @@ Package root: `<onboardingOutputDir>/<RepoName>.onboarding/` (the user picks the
   repo-git/                  git clone with full history (mining); absent when the user supplied a local clone
   repo/                      git worktree pinned at headSHA; all tools and the code view read here only
   dossier/                   module-map.json, readme-digest.md, docs/*.md (in-repo documents via Briefing.extractText, no cap)
-  facts/<unitId>.jsonl       append-only Fact lines; facts/index.json (id -> file, line) rebuilt on open
+  packet/                    the Research Packet (section 15): packet.json, facts.jsonl, traces/, inventory.json,
+                             history.json, dependencies.json, paths.json, decisions.json, glossary.json, coverage.json,
+                             drafts/. Written by whichever producer made it; the in-app fleet writes here too.
+  facts/<unitId>.jsonl       in-app fleet only: append-only Fact lines as they are emitted, merged into packet/facts.jsonl
+                             at unit completion; facts/index.json (id -> file, line) rebuilt on open
   units/<unitId>/            transcript.jsonl (append-only agent history), result.json, cmd/<n>.txt
   diagrams/<id>.mmd          Mermaid source; <id>.links.json; <id>.svg (node ids preserved); <id>.png
   docs/<docId>.md            markdown with front matter; docs/<docId>.html rendered by MarkdownLite
@@ -305,16 +312,15 @@ Chat tools (`PackageTools`): `read_file`, `list_dir`, `grep`, `search_package(qu
 | narrate, render, assemble, transcript[video] | none | script, audio | video files |
 | index, hub | none | everything | `index/`, `hub/` |
 
-Depth presets (`Depth.swift`). Diagram kinds are `enum DiagramKind { c4Context, c4Container, c4Component(container), erd, deployment }` (DiagramProjector). Register doc ids are `architecture, adrs, ownership, dependencies, tech-debt, incident-patterns, operational-scorecard, test-truth, data-inventory, security-posture, glossary, landmines`, plus `coverage-report` on every run.
+Scope and the coverage tracker (`Scope.swift`, replaces the earlier `Depth.swift`; decided 2026-09-19: depth is not a cap). A run is `complete` by default: every top-level directory is mapped, every path the ranker supports with evidence is traced, every register and every series video is produced, confessionals for every subsystem. `smoke` exists for the selftest and `preview` (3 paths, 4 videos) for a fast first look; neither is the default. The spend cap is off by default and, when set, ends the run as `partial` with the coverage report. What the user watches instead is the coverage tracker: `coverage.json` (section 15.4) with a level per directory (unread, inventoried, mapped, verified, traced), files read over files present, facts and verified facts per component, candidate paths versus traced paths, and deliverables produced versus planned. FleetProgressView and the hub render it as a coverage map so blind spots are visible during and after the run, whichever producer made the packet. The presets below now describe the smoke and preview scopes only; `complete` produces everything the evidence supports. Diagram kinds are `enum DiagramKind { c4Context, c4Container, c4Component(container), erd, deployment }` (DiagramProjector). Register doc ids are `architecture, adrs, ownership, dependencies, tech-debt, incident-patterns, operational-scorecard, test-truth, data-inventory, security-posture, glossary, landmines`, plus `coverage-report` on every run.
 - smoke: diagrams [c4Container]; docs [landmines]; 1 trace; 1 video of at most 60 s; hub.
-- quick: diagrams [c4Context, c4Container, erd]; docs [architecture, ownership, tech-debt, landmines]; 3 paths; 4 videos (overview, codeTour, one trace, landmines-as-confessional).
-- standard: diagrams [c4Context, c4Container, erd, deployment, c4Component for each ranked critical container]; all 12 docs; 6 paths; the 10 series videos plus trace videos; confessionals for up to 6 subsystems; two independent verifiers per fact batch.
-- exhaustive: standard plus c4Component for every container, 10 paths, all videos, confessionals for every subsystem.
+- preview: diagrams [c4Context, c4Container, erd]; docs [architecture, ownership, tech-debt, landmines]; 3 paths; 4 videos.
+- complete (default): every diagram kind with c4Component for every container that owns a critical path; all 12 docs; every ranked path with evidence (no fixed count); the 10 series videos plus one trace video per path; confessionals for every subsystem; two independent verifiers per fact batch.
 `diagramLinksProbe` and `registerLinksProbe` assert one file per kind and id required at the depth under test.
 
 #### 4.5 Scheduling, limits, cost
 
-`FleetScheduler` pulls units whose inputs are `done`, runs them in a `TaskGroup` bounded per lane (`onboardingMaxParallel` LLM units, 2 TTS, 1 render because BrandedRenderer is MainActor and not reentrant). `RateLimiter`: per request retry on 429, 529, 5xx and URLError with jittered exponential backoff honoring `retry-after`, at most 6 attempts; per unit at most 3 attempts then `failed` with a notice and dependents `skipped`; a circuit breaker pauses the fleet after 5 consecutive transport failures with the notice "Paused: API unreachable, Resume when ready". `SpendMeter` prices every response from a per-model table in `Defaults` (input, output, cache write at 1.25x input, cache read at 0.1x input; editable) into `manifest.spent`; at `capUSD` the scheduler stops issuing units, lets in-flight units finish, sets `manifest.status = "partial"`, fills `unproduced`, and writes `docs/coverage-report.md`. A pre-run estimate (file count and total bytes to planned units to token estimate) is shown in OnboardSheet.
+`FleetScheduler` pulls units whose inputs are `done`, runs them in a `TaskGroup` bounded per lane (`onboardingMaxParallel` LLM units, 2 TTS, 1 render because BrandedRenderer is MainActor and not reentrant). `RateLimiter`: per request retry on 429, 529, 5xx and URLError with jittered exponential backoff honoring `retry-after`, at most 6 attempts; per unit at most 3 attempts then `failed` with a notice and dependents `skipped`; a circuit breaker pauses the fleet after 5 consecutive transport failures with the notice "Paused: API unreachable, Resume when ready". `SpendMeter` prices every response from a per-model table in `Defaults` (input, output, cache write at 1.25x input, cache read at 0.1x input; editable) into `manifest.spent`; the cap is optional and off by default (decided 2026-09-19); when set, at `capUSD` the scheduler stops issuing units, lets in-flight units finish, sets `manifest.status = "partial"`, fills `unproduced`, and writes `docs/coverage-report.md`. A pre-run estimate (file count and total bytes to planned units to token estimate) is shown in OnboardSheet.
 
 #### 4.6 Checkpoint and resume rules
 
@@ -485,7 +491,7 @@ Alternatives: compaction (`compact-2026-01-12`), context editing, task budgets.
 Why: behavior must be identical through the gateway the app already supports; the client-side scheme is simple, append-only safe and testable offline.
 Consequences: slightly higher token spend on very long reading units; server-side features can be added as an optimization later.
 
-### D12. Executing the target repository's build and tests is opt-in per run
+### D12. Executing the target repository's build and tests is opt-in per run (confirmed by the human 2026-09-19)
 Decision: `onboardingRunBuild` defaults to off; OnboardSheet shows a checkbox with a plain warning; commands run in a temp copy with a timeout and no privileges; when off, the dev-environment and test-truth deliverables report "could not run" with the reason.
 Alternatives: on by default with an allow-list.
 Why: the app is unsandboxed and signed with hardened runtime; an allow-list derived from the repo's own manifests is not a security boundary.
@@ -497,11 +503,11 @@ Alternatives: a `.walkstudio.json`-style single document; one log.
 Why: a multi-session build and a multi-hour run both need re-openable state on disk; the two logs answer different questions (what was built and verified versus what the fleet did and spent).
 Consequences: `WalkthroughProject` stays untouched; secrets are never written anywhere in the package (probed by grepping for the fixture token).
 
-### D14. Native syntax tokenizer; diagrams behind a protocol pending the Mermaid decision
-Decision: `SyntaxTokenizer` is hand-rolled; `DiagramRendering` has a `NativeDiagramRenderer` (SVG emitter for the subset the projectors produce) and a `MermaidJSDiagramRenderer` that ships only if the human approves bundling mermaid.min.js. `.mmd` source is emitted either way.
+### D14. Native syntax tokenizer; Mermaid bundled for diagrams (decided 2026-09-19)
+Decision: `SyntaxTokenizer` is hand-rolled. Diagrams render through `MermaidJSDiagramRenderer` over a bundled, pinned `mermaid.min.js` (11.4.1, MIT, sha256 a43bc1afd446f9c4cc66ac5dd45d02e8d65e26fc5344ec0ef787f88d6ddb6f9e, at `Sources/WalkthroughStudio/OnboardingResources/hub/vendor/mermaid.min.js` (the `OnboardingResources/` folder has its own `.copy` rule in Package.swift so directory structure survives and no rule overlaps `.process("Resources")`)). The human approved the bundle; the `NativeDiagramRenderer` fallback is dropped and `DiagramRendering` keeps one implementation. `.mmd` source is the editable form.
 Alternatives: highlight.js; Mermaid only.
 Why: README and CLAUDE.md promise no third-party dependencies; bundled JavaScript is third-party code even if not a SwiftPM dependency; the diagram milestone must be buildable regardless of the answer.
-Consequences: native diagrams are plainer; probes assert node ids and a node pixel so either renderer passes.
+Consequences: the no-third-party rule in README and CLAUDE.md gets a documented exception for this one JavaScript resource; probes assert node ids in the SVG and a node pixel.
 
 ### D15. Durations from AVURLAsset, chapters as sidecars, review state per user
 Decision: clip durations use `AVURLAsset(url:).load(.duration)` as `synthesizeCore` does; chapters are `chapters.json` plus `chapters.vtt`, no MP4 chapter atoms; `review/status.json`, `flags.json`, `bookmarks.json`, `progress.json` are plain JSON files.
@@ -706,3 +712,171 @@ belongs to that milestone.
 Twelve behaviors implied by the design had no story. They were added to
 USER-STORIES.md as ON-1.8 to ON-1.10, ON-8.7 to ON-8.9, ON-9.8, ON-9.9,
 ON-10.4, ON-11.6, ON-12.4 and ON-12.5, and mapped to milestones there.
+
+## 15. Human decisions of 2026-09-19 and the Research Packet contract
+
+The human decided four things after reading sections 1 to 14. Each is recorded
+here as an ADR, and the milestone list in section 11 is superseded by 15.6.
+
+### D16. Mermaid is bundled
+See D14. `mermaid.min.js` 11.4.1 is vendored as a resource with its hash in the
+build log. Diagram scenes in videos and the hub render real Mermaid output.
+
+### D17. Build and test execution stays optional per run
+D12 stands as written: off by default, a checkbox with a plain warning, a
+temporary copy, a timeout, no privileges, explicit could-not-run facts when off.
+
+### D18. Depth is not a cap; the user watches progress and coverage
+The former depth presets no longer bound the work. `complete` is the default
+scope and means everything the evidence supports. The spend cap is optional.
+The product surface that replaces the knob is the coverage tracker:
+`packet/coverage.json` (15.4) rendered as a coverage map in FleetProgressView
+during a run and in the hub afterwards. A producer that is not the in-app fleet
+reports the same file, so the hub can always answer "what did the research not
+read".
+
+### D19. Research and content are separated by a Research Packet contract
+Decision: the boundary between research and everything downstream is a
+directory format, the Research Packet, with JSON Schemas as the normative
+contract. Any tool can produce one: a coding agent working inside the target
+repository (Claude Code with the skill shipped in this repo, which has far
+better context on a project it has been working in than a cold fleet), the
+in-app fleet, or a human editing JSON. The app validates a packet and builds
+every deliverable from it: projectors, composer, video scripts, narration,
+rendering, hub, chat. Nothing downstream of the packet knows or cares which
+producer wrote it.
+
+Alternatives: keep the fleet as the only producer (the earlier design); expose
+the fleet's tool loop to external tools over a socket.
+
+Why: the human's coding tools already hold deep project context and can run
+the repository's own build and tests in their own sandbox; the packet lets that
+knowledge flow into the package without re-deriving it. It also makes the two
+halves testable apart: a checked-in fixture packet drives every content
+milestone offline, and a producer is tested by validating its output.
+
+Consequences: the in-app fleet moves to M11 and becomes the second producer;
+the first useful release is "import a packet, get the package". The fleet
+writes the same format, so the fact store semantics (evidence required,
+anchors resolve, verifier verdicts, refuted facts excluded) are enforced at the
+packet boundary by `PacketValidator` and not only inside the fleet. The
+`facts/<unitId>.jsonl` files stay as the fleet's append-only working store and
+are merged into `packet/facts.jsonl`.
+
+### 15.1 Packet layout
+
+```
+<name>.packet/                       (or <package>/packet/ once imported)
+  packet.json          PacketManifest: version, producer {name, version, model, startedAt, finishedAt},
+                       repo {url, headSHA, defaultBranch, localPath}, scope, summary (one paragraph),
+                       counts {facts, verified, refuted, traces, unreadDirs}
+  inventory.json       tree summary: top-level dirs with file counts, languages by extension, entry point
+                       candidates, manifests, CI files, infra files, docs files, generated dirs
+  history.json         git mining tables: hotspots [{path, commits, lastTouched}], ownership per directory
+                       [{dir, authors [{name, share}], busFactor}], stale [{path, lastTouched}],
+                       parallel [{a, b, reason}], messageKeywords {revert, hotfix, fix, todo, fixme}
+  dependencies.json    [{name, version, manifest anchor, license, eol, cves [{id, severity, url}] | "unknown"}]
+  facts.jsonl          one Fact per line (2.5), evidence required, ids unique, status in
+                       proposed | verified | refuted | unknown, verdicts inline
+  paths.json           ranked critical paths [{id, title, entry anchor, rank, rationale, businessImpact}]
+  traces/<pathId>.json ordered hops [{n, anchor, callSite, summary}], the ten concerns each
+                       {status: present | absent | unknown, evidence [anchors]}, scaresMe [string]
+  decisions.json       ADR seeds [{id, title, decision, alternatives, consequences, evidence}]
+  glossary.json        [{term, definition, definedAt anchor}]
+  coverage.json        15.4
+  commands/<unit>/<n>.txt  optional: captured command output referenced by cmd:<unit>/<n> anchors
+  drafts/              optional: docs/<docId>.md narrative drafts, scripts/<videoId>.json script drafts,
+                       diagrams/<id>.mmd hand-drawn diagrams; the app treats drafts as proposals the
+                       composer may keep, and validates their anchors like everything else
+```
+
+Every anchor uses the grammar in 2.2 and must resolve against the repository at
+`packet.json.repo.headSHA`. Producers that cannot run git (a human) still write
+`code:` anchors; the validator resolves them.
+
+### 15.2 Validation rules (`validate_packet.py` and `PacketValidator`)
+
+1. Every file present parses and matches its JSON Schema in
+   `.claude/skills/onboarding-research/schema/` (kept with the skill so the
+   skill folder is self-contained wherever it is installed).
+2. Every anchor string parses; every `code:` anchor's `sha7` is a prefix of
+   `repo.headSHA`; the path exists at that SHA and the line range is inside the
+   file (checked with `git show <sha>:<path>` when a repository is given, else
+   reported as unchecked).
+3. Every fact has at least one evidence record; every evidence anchor resolves;
+   `refuted` facts carry at least one refuting verdict with evidence.
+4. Every trace hop anchor resolves; every one of the ten concerns is present
+   with a status; every `paths.json` entry has a trace file.
+5. Every `coverage.json` directory entry corresponds to an inventory directory;
+   levels are consistent (a `traced` directory has facts).
+6. Fact ids referenced from traces, decisions and drafts exist.
+7. Completeness gates: zero facts, a placeholder summary, or no directory at
+   level `mapped` or above are errors; a survey skeleton is not a packet.
+8. The report lists errors (reject), warnings (accept, shown in the hub) and
+   statistics (facts by kind and status, coverage by level). Exit code 0 only
+   with zero errors.
+
+### 15.3 Producers
+
+- **Claude Code skill** (`.claude/skills/onboarding-research/`, M3). Run inside
+  a checkout of the target repository. It performs the survey with git and the
+  shell, fans research out to sub-agents per directory and per lens, runs
+  verifiers, ranks and traces critical paths, writes the packet, and runs the
+  validator before finishing. It records `producer.name = "claude-code-skill"`.
+  Its acceptance test is the fixture repo: the produced packet validates with
+  zero errors and covers the known facts (hotspot, bus factor, PII column,
+  unapplied migration, idempotency gap, no rollback, old pinned dependency).
+- **In-app fleet** (M11). Writes the same layout into `<package>/packet/`,
+  `producer.name = "walkthrough-studio-fleet"`.
+- **Anything else** that passes the validator.
+
+### 15.4 coverage.json
+
+```
+{ "version": 1, "headSHA": "...", "generatedAt": "...",
+  "directories": [ { "path": "src/repo/", "files": 1, "filesRead": 1, "level": "traced",
+                     "facts": 7, "verified": 6, "reason": null },
+                   { "path": "vendor/", "files": 1, "filesRead": 0, "level": "unread", "facts": 0, "verified": 0,
+                     "reason": "generated" } ],
+  "paths": { "candidates": 4, "traced": 2, "untraced": [ { "id": "list-orders", "reason": "no evidence of external caller" } ] },
+  "checks": [ { "check": "build", "status": "skipped", "reason": "runBuild off" },
+              { "check": "tests", "status": "ran", "anchor": "cmd:buildtest/1" } ],
+  "deliverablesPlanned": 24, "deliverablesProduced": 0 }
+```
+
+Levels, in order: `unread`, `inventoried` (listed only), `mapped` (facts
+exist), `verified` (facts have verdicts), `traced` (a critical path passes
+through it). The tracker in the UI shows each directory as a bar segmented by
+level with files read over files present, and the untraced candidate list with
+reasons.
+
+### 15.5 Import flow in the app
+
+`File > Onboard to a Codebase...` opens the OnboardSheet with two tabs:
+"Research it here" (the fleet, M11) and "Import a Research Packet" (M2 onward).
+Import asks for the packet folder and, when `repo.localPath` is absent or
+stale, clones `repo.url` at `repo.headSHA`. It runs `PacketValidator`, shows
+the report (errors block import, warnings are listed), copies the packet into
+the new package, writes `manifest.producer`, and pends the content units:
+diagrams, registers, traces, scripts, narration, render, transcript, hub. From
+there the pipeline is exactly sections 5 to 8.
+
+### 15.6 Milestones, revised (supersedes section 11's order; probes carry over)
+
+| Milestone | Goal | Notes |
+|---|---|---|
+| M0 | Planning docs | done |
+| M1 | Fixture repo, selftest scaffold, stills writer | `scripts/make-fixture-repo.sh` done and verified deterministic on Linux; Swift parts written, not compiled here |
+| M2 | Package format, anchors, git, and the Research Packet contract | adds `PACKET.md`, the skill's `schema/*.json`, `validate_packet.py`, `survey_repo.py`, `PacketModels`, `PacketValidator`, `PacketImporter`, `--validate-packet`; probes `anchorRoundTripProbe`, `manifestRoundTripProbe`, `packageStoreProbe`, `gitRunnerProbe`, `packetValidateProbe` (the fixture packet validates; a packet with a dangling anchor, an orphan fact and a missing trace is rejected with those three errors) |
+| M3 | Claude Code producer skill and the fixture packet | the skill under `.claude/skills/onboarding-research/`; the packet it produces for the fixture repo is checked in under `Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet/` and validates with zero errors; `fixturePacketProbe` asserts the known facts are present |
+| M4 | Player shell on the fixture package | as the old M3, with `FixturePackage.make` building from the M3 packet plus a hand-written script |
+| M5 | Narration, scene renderer, transcript, code-ref map | as the old M4 |
+| M6 | LLM runtime | as the old M5 |
+| M7 | Playback chat agent | as the old M6 |
+| M8 | Projectors: Mermaid diagrams, registers, traces from the packet | as the old M9, Mermaid only, plus the coverage map card in the hub |
+| M9 | Video scripts and the series | as the old M10 |
+| M10 | Hub, cross-links, search, export, coverage tracker | as the old M11 plus the tracker |
+| M11 | In-app research fleet, the second producer | the old M7 and M8 merged: fleet runtime, survey units, research units, progress and coverage tracker live in FleetProgressView; writes `packet/` |
+| M12 | Review, staleness, end-to-end smoke, hardening | as the old M12; `smokeEndToEndProbe` runs the import path on the fixture packet and, separately, the fleet path with fixtures |
+
+The build log's milestone table follows this list from S2 onward.
