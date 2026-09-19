@@ -18,8 +18,8 @@ enum OnboardingJSON {
     static func encoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
-        encoder.dateEncodingStrategy = .custom { date, encoder in
-            var container = encoder.singleValueContainer()
+        encoder.dateEncodingStrategy = .custom { date, valueEncoder in
+            var container = valueEncoder.singleValueContainer()
             try container.encode(OnboardingJSON.iso8601String(from: date))
         }
         return encoder
@@ -27,17 +27,17 @@ enum OnboardingJSON {
 
     /// Single-line variant for JSONL files (facts, build-log records).
     static func lineEncoder() -> JSONEncoder {
-        let encoder = encoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        return encoder
+        let compact = OnboardingJSON.encoder()
+        compact.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return compact
     }
 
     /// Accepts ISO 8601 with or without fractional seconds (other producers,
     /// e.g. a Python skill, tend to write fractions).
     static func decoder() -> JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
+        decoder.dateDecodingStrategy = .custom { valueDecoder in
+            let container = try valueDecoder.singleValueContainer()
             let raw = try container.decode(String.self)
             guard let date = OnboardingJSON.date(fromISO8601: raw) else {
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "Not an ISO 8601 date: \(raw)")

@@ -115,11 +115,17 @@ enum Anchor: Hashable, Codable {
         let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { throw StudioError("anchor: empty string") }
 
-        if s.lowercased().hasPrefix(Anchor.scheme + "://") {
+        let lowered = s.lowercased()
+        if lowered.hasPrefix(Anchor.scheme + "://") {
             guard let url = URL(string: s), let anchor = Anchor(url: url) else {
                 throw StudioError("anchor '\(s)': unparseable \(Anchor.scheme):// URL")
             }
             return anchor
+        }
+        // A bare external URL is the `url:` kind (so `Anchor(string: anchor.url.absoluteString)`
+        // round-trips for external anchors too).
+        if lowered.hasPrefix("https://") || lowered.hasPrefix("http://") {
+            return try parse("url:" + s)
         }
 
         guard let colon = s.firstIndex(of: ":") else {

@@ -194,7 +194,7 @@ struct BuildLog {
             }
             let handle = try FileHandle(forWritingTo: target)
             defer { try? handle.close() }
-            try handle.seekToEnd()
+            _ = try handle.seekToEnd()
             try handle.write(contentsOf: data)
         } catch {
             BuildLog.warn("could not append to \(fileName): \(error.localizedDescription)")

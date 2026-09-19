@@ -247,7 +247,8 @@ extension SelfTest {
         guard lenient.deliverables.count == 1, lenient.deliverables[0].kind == .video, lenient.deliverables[0].minutes == 11 else {
             throw StudioError("manifestRoundTripProbe: deliverables decoded as \(lenient.deliverables)")
         }
-        let reencoded = String(data: try encoder.encode(lenient), encoding: .utf8) ?? ""
+        let reencodedData = try encoder.encode(lenient)
+        let reencoded = String(data: reencodedData, encoding: .utf8) ?? ""
         guard !reencoded.contains("depth"), !reencoded.contains("futureFlag"), !reencoded.contains("\"extra\""),
               !reencoded.contains("producer"), !reencoded.contains("briefingPath") else {
             throw StudioError("manifestRoundTripProbe: unknown or nil keys leaked into re-encoded manifest")
@@ -272,7 +273,7 @@ extension SelfTest {
               unit.startedAt != nil, unit.finishedAt == nil, unit.error == nil else {
             throw StudioError("manifestRoundTripProbe: WorkUnit fields wrong: \(unit)")
         }
-        let planAgain = try decoder.decode(WorkPlan.self, from: try encoder.encode(plan))
+        let planAgain = try decoder.decode(WorkPlan.self, from: encoder.encode(plan))
         guard planAgain == plan else {
             throw StudioError("manifestRoundTripProbe: WorkPlan did not round-trip")
         }
@@ -280,7 +281,7 @@ extension SelfTest {
 
         // 4. Notices and stages.
         let notice = OnboardingNotice(message: "Build skipped (runBuild off)", retryUnitId: "buildtest")
-        let noticeAgain = try decoder.decode(OnboardingNotice.self, from: try encoder.encode(notice))
+        let noticeAgain = try decoder.decode(OnboardingNotice.self, from: encoder.encode(notice))
         guard noticeAgain == notice else {
             throw StudioError("manifestRoundTripProbe: notice did not round-trip")
         }
@@ -288,7 +289,7 @@ extension SelfTest {
         guard bareNotice.retryUnitId == nil, !bareNotice.id.isEmpty else {
             throw StudioError("manifestRoundTripProbe: bare notice decoded wrong")
         }
-        let stages = try decoder.decode([OnboardingStage].self, from: try encoder.encode(OnboardingStage.allCases))
+        let stages = try decoder.decode([OnboardingStage].self, from: encoder.encode(OnboardingStage.allCases))
         guard stages == OnboardingStage.allCases, OnboardingStage.acquire < OnboardingStage.complete,
               OnboardingStage.allCases.first == .acquire, OnboardingStage.allCases.last == .complete else {
             throw StudioError("manifestRoundTripProbe: stage order broken: \(stages)")
@@ -333,7 +334,8 @@ extension SelfTest {
         guard overwritten == "second" else {
             throw StudioError("packageStoreProbe: overwrite did not replace content: \(overwritten)")
         }
-        guard try store.readString("videos/arch-overview/script.json") == "nested" else {
+        let nested = try store.readString("videos/arch-overview/script.json")
+        guard nested == "nested" else {
             throw StudioError("packageStoreProbe: nested write failed")
         }
         let indexListing = store.listing("index")
@@ -360,14 +362,16 @@ extension SelfTest {
         manifest.repoURL = "https://github.com/example/fixture-repo"
         guard !store.hasManifest else { throw StudioError("packageStoreProbe: manifest present before write") }
         try store.writeManifest(manifest)
-        guard store.hasManifest, try store.readManifest() == manifest else {
+        let manifestBack = try store.readManifest()
+        guard store.hasManifest, manifestBack == manifest else {
             throw StudioError("packageStoreProbe: manifest did not round-trip through the store")
         }
         var plan = WorkPlan()
         plan.upsert(WorkUnit(id: "inventory", kind: "inventory", role: "deterministic"))
         plan.upsert(WorkUnit(id: "map-src-api", kind: "map", inputs: ["inventory"], params: ["dir": "src/api"]))
         try store.writeWorkPlan(plan)
-        guard try store.readWorkPlan() == plan, store.listing("").contains("checkpoint.json") else {
+        let planBack = try store.readWorkPlan()
+        guard planBack == plan, store.listing("").contains("checkpoint.json") else {
             throw StudioError("packageStoreProbe: checkpoint did not round-trip")
         }
 
@@ -416,14 +420,16 @@ extension SelfTest {
         guard digest == known else {
             throw StudioError("packageStoreProbe: sha256(\"abc\") = \(digest)")
         }
-        guard store.sha256(of: "abc") == known, try store.sha256(ofFileAt: "index/anchors.json") == store.sha256(of: "second"),
-              try store.sha256(ofFileAt: "index/nope.json") == "" else {
+        let fileDigest = try store.sha256(ofFileAt: "index/anchors.json")
+        let missingDigest = try store.sha256(ofFileAt: "index/nope.json")
+        guard store.sha256(of: "abc") == known, fileDigest == store.sha256(of: "second"), missingDigest == "" else {
             throw StudioError("packageStoreProbe: sha256 convenience overloads disagree")
         }
 
         // 6. Reopening the same root is a no-op on existing content.
         let reopened = try PackageStore(root: packageURL)
-        guard try reopened.readString("index/anchors.json") == "second", reopened.hasManifest else {
+        let reopenedContent = try reopened.readString("index/anchors.json")
+        guard reopenedContent == "second", reopened.hasManifest else {
             throw StudioError("packageStoreProbe: reopening the package lost content")
         }
 
