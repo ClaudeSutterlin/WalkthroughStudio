@@ -35,7 +35,10 @@ Story IDs are stable. Do not renumber. Add new stories at the end of an epic.
 | ON-1.4 | P0 | As an onboarding engineer, I want a progress view that shows which research agents are running, what they are reading, and what has been produced so far, so that a long run is not a black box. |
 | ON-1.5 | P0 | As an onboarding engineer, I want to cancel a run and later resume it from the last checkpoint, so that a crash, a quit, or an API limit never loses work. |
 | ON-1.6 | P1 | As an onboarding engineer, I want a cost and time estimate before the run starts and a running total during it, so that I can bound spend. |
-| ON-1.7 | P1 | As an onboarding engineer, I want to choose depth (quick map, standard, exhaustive) before the run, so that a small repo does not get a four-hour treatment. |
+| ON-1.7 | P1 | As an onboarding engineer, I want to choose depth (smoke, quick, standard, exhaustive) before the run, so that a small repo does not get a four-hour treatment. |
+| ON-1.8 | P1 | As an onboarding engineer, I want to open an existing package from a recents list or a folder picker without starting a run, including one produced on another Mac, so that packages are portable. |
+| ON-1.9 | P1 | As an onboarding engineer, I want to pause a running fleet (distinct from cancel), open the package so far, and see a clear paused state when the API is unreachable, so that a long run is under my control. |
+| ON-1.10 | P0 | As an onboarding engineer, I want the pre-run sheet to let me choose the output folder, override the pinned commit, attach a briefing, and opt in to build and test execution with a plain warning, so that a run is configured in one place. |
 
 Acceptance criteria:
 - ON-1.1: menu item exists under File; a sheet collects the URL or folder; validation rejects non-git targets with a readable message.
@@ -45,13 +48,16 @@ Acceptance criteria:
 - ON-1.5: killing the process mid-run and relaunching offers "Resume"; resumed run does not re-execute completed research units; selftest probe proves it.
 - ON-1.6: estimate is shown from repository size before start; actual tokens and dollars are tallied in the manifest at the end.
 - ON-1.7: depth setting changes the number of critical paths traced and videos produced and is recorded in the manifest.
+- ON-1.8: opening validates the package (repo folder present, head SHA matches, referenced files exist) and reports each failure by name; recents are stored in settings.
+- ON-1.9: pause cancels the in-flight request, writes the checkpoint, and leaves the window usable; the circuit breaker shows "Paused: API unreachable" with a Resume button; each notice has an inline Retry.
+- ON-1.10: the sheet stores folder, SHA, briefing path and the opt-in flag in the manifest; the estimate updates when depth changes.
 
 ## Epic 2: The research fleet
 
 | ID | Priority | Story |
 |---|---|---|
 | ON-2.1 | P0 | As an onboarding engineer, I want every fact the fleet states to carry evidence (file path, line range, commit SHA, or command output), so that I can verify any claim in one click. |
-| ON-2.2 | P0 | As an onboarding engineer, I want the fleet to run the repository's own build and tests where it safely can, so that the "dev environment" and "test truth" deliverables report what actually happened, not what the README says. |
+| ON-2.2 | P1 | As an onboarding engineer, I want the fleet to run the repository's own build and tests when I opt in for a run, so that the "dev environment" and "test truth" deliverables report what actually happened, not what the README says. |
 | ON-2.3 | P0 | As an onboarding engineer, I want the fleet to mine git history (churn hotspots, author concentration, untouched files, parallel implementations), so that bus-factor and half-migration findings are grounded in data. |
 | ON-2.4 | P0 | As an onboarding engineer, I want the fleet to identify the critical paths from evidence (entry points, money, auth, data, incident-prone areas) and rank them, so that depth goes where risk is. |
 | ON-2.5 | P0 | As an onboarding engineer, I want independent verifier agents to attempt to refute each finding before it appears in a deliverable, so that confident nonsense is filtered out. |
@@ -62,10 +68,10 @@ Acceptance criteria:
 
 Acceptance criteria:
 - ON-2.1: every `Fact` record has at least one `Evidence` record; deliverable renderers refuse facts without evidence; a probe counts zero orphan facts on the fixture repo.
-- ON-2.2: build and test commands are detected from the repository, run in a sandboxed working copy with a timeout, and their exit status and log tail are stored; a repo with no runnable build yields an explicit "could not run" record.
+- ON-2.2: execution is off by default and enabled per run by a checkbox with a plain warning (the app is not sandboxed); when on, commands detected from manifests and CI run in a temporary copy with a timeout and no privileges, and their exit status and log tail are stored; when off or nothing is detected, an explicit "could not run" record with the reason is produced.
 - ON-2.3: the git-mining unit outputs hotspot, ownership and staleness tables for the fixture repo that match a scripted computation.
 - ON-2.4: the critical-path list names the entry point of each path with evidence and a rank rationale; the fixture repo's known paths are all found.
-- ON-2.5: each finding stores verifier verdicts; a finding refuted by a majority is kept in a "rejected" list, not in deliverables.
+- ON-2.5: each finding stores verifier verdicts with counter-evidence; at smoke and quick depth one refuting verdict rejects a fact, at standard depth and above two independent verifiers must both refute, and a split verdict marks the fact unknown and lists it as disputed; rejected facts live in a "rejected" list, never in deliverables.
 - ON-2.6: the coverage report lists unread directories and skipped checks with reasons.
 - ON-2.7: the artifact store is append-only JSON files keyed by unit id; a probe deletes the process mid-run and confirms resume skips completed ids.
 - ON-2.8: existing base URL and model override settings are honored by the fleet.
@@ -163,12 +169,18 @@ Acceptance criteria:
 | ON-8.4 | P1 | As an onboarding engineer, I want the hub to open the anchor in my editor of choice, so that I can start working from a video. |
 | ON-8.5 | P1 | As an onboarding engineer, I want a search over transcripts, docs and code refs, so that I can find where a topic is covered. |
 | ON-8.6 | P1 | As a package author, I want the hub exported as a static site (HTML, MP4, SRT, JSON), so that I can share it with a team without the app. |
+| ON-8.7 | P0 | As an onboarding engineer, I want the video to keep playing in a docked mini-player when I click into code or a doc, and "Back to video" to return me to the same moment, so that exploring never loses my place. |
+| ON-8.8 | P1 | As an onboarding engineer, I want keyboard transport and shortcuts (play and pause, chapter skip, captions, focus chat, bookmark, search, back), so that I can drive the player without the mouse. |
+| ON-8.9 | P1 | As a package author, I want the export to let me choose a destination and tell me what is excluded (agent transcripts, chat, the clone) and that chat is unavailable in the exported site, so that I know what I am sharing. |
 
 Acceptance criteria:
 - ON-8.1: the hub reads `manifest.json` and shows status persisted per user.
 - ON-8.2: a probe walks every link in the package and confirms each target exists.
 - ON-8.3: code view loads file content from the pinned checkout, not the working tree.
 - ON-8.6: the exported folder opens in a browser with working links and playback.
+- ON-8.7: docking keeps the player on the same clock; the "Follow along" split mode opens the on-screen file at every shot change; a probe checks the stage restores the video at the same t.
+- ON-8.8: J, K, L transport; [ and ] chapters; C captions; ? focuses chat; Cmd-B bookmark; Cmd-K search; Cmd-[ back; Escape leaves the docked view.
+- ON-8.9: the export sheet lists excluded folders; the exported hub shows a note where chat would be.
 
 ## Epic 9: The playback chat agent
 
@@ -181,12 +193,16 @@ Acceptance criteria:
 | ON-9.5 | P1 | As an onboarding engineer, I want to bookmark a moment with a note, so that my questions become a review list. |
 | ON-9.6 | P1 | As an onboarding engineer, I want the agent to tell me when a claim in the video is contradicted by code it just read, so that mistakes in the package surface during viewing. |
 | ON-9.7 | P2 | As an onboarding engineer, I want the agent to jump the video to the chapter that answers my question, so that navigation is conversational. |
+| ON-9.8 | P1 | As an onboarding engineer, I want chat conversations to persist per video, resume when I reopen the package, roll into a new session with a summary after many questions, and report a spend cap or refusal in the pane rather than failing silently, so that the companion is dependable. |
+| ON-9.9 | P1 | As a package author, I want to review, clear, and turn flags and bookmarks into review items from the companion tabs, so that what I noticed while watching becomes work. |
 
 Acceptance criteria:
-- ON-9.1: the request sent at time t contains transcript segments with `end <= t`, the coderefs interval containing t, the current scene spec, the video's summary, and the package manifest; a probe asserts the assembled context for a fixture video at three times.
+- ON-9.1: the request sent at time t contains transcript segments with `end <= t`, the coderefs interval containing t with the highlighted source inlined, the shot's facts, the next two sentences marked as not yet narrated, the video's summary and chapter list, and a package digest (deliverable list, head SHA, module map); a probe asserts the assembled context for a fixture video at three times.
 - ON-9.2: replies use a citation syntax the hub renders as links; a probe checks parsing.
 - ON-9.3: the agent has read-only tools: read file at SHA, list directory, search package; tool calls are logged.
 - ON-9.6: a contradiction is recorded to `review/flags.json` for the package author.
+- ON-9.8: conversations are append-only files per video; a new session starts after 30 questions with the old one summarized; tool calls show as "reading ..." rows; cap and refusal messages are visible.
+- ON-9.9: flags and bookmarks tabs list items with jump links; an item can be cleared or promoted to `review/status.json` with a note.
 
 ## Epic 10: Review and corrections
 
@@ -194,11 +210,14 @@ Acceptance criteria:
 |---|---|---|
 | ON-10.1 | P0 | As a package author, I want a review checklist per deliverable (accept, fix, regenerate) with the evidence beside it, so that I can sign off deliberately. |
 | ON-10.2 | P1 | As a package author, I want to correct a fact and have every deliverable that depends on it marked stale, so that corrections propagate. |
-| ON-10.3 | P1 | As a package author, I want the rejected-findings list visible, so that I can rescue a false negative. |
+| ON-10.3 | P1 | As a package author, I want the rejected-findings list visible and a way to restore a fact with a note, so that I can rescue a false negative. |
+| ON-10.4 | P1 | As a package author, I want to regenerate any single deliverable (doc, diagram, trace, video) and see its dependents marked stale, so that corrections stay cheap and honest. |
 
 Acceptance criteria:
 - ON-10.1: review state is stored in `review/status.json`; the hub shows it.
 - ON-10.2: dependency edges from facts to deliverables exist in the manifest; staleness is computed from them.
+- ON-10.3: restore appends a reviewer verdict to the fact file (never rewrites) and re-pends dependents.
+- ON-10.4: regenerating one deliverable touches only its files; dependents show a stale badge until regenerated.
 
 ## Epic 11: Builder stories (resumability, verification, build log)
 
@@ -209,11 +228,13 @@ Acceptance criteria:
 | ON-11.3 | P0 | As a builder, I want the fleet, renderers and player to be separable milestones, each with a probe, so that sessions end at stable points. |
 | ON-11.4 | P0 | As a builder, I want LLM and TTS calls behind protocols with recorded fixtures, so that the selftest exercises the pipeline offline. |
 | ON-11.5 | P1 | As a builder, I want a "smoke" depth that produces one diagram, one register, one trace, and one 60-second video, so that an end-to-end run fits in a session. |
+| ON-11.6 | P1 | As a builder, I want a record mode that captures real LLM and TTS responses as fixtures during a live run, and a warning when a prompt has drifted from its recording, so that fixtures can be refreshed deliberately. |
 
 Acceptance criteria:
 - ON-11.1: `scripts/make-fixture-repo.sh` creates a git repository with known paths, an ERD-worthy schema, a fake CI file, and two authors; `--selftest-onboarding <fixture> <outDir>` ends with `SELFTEST PASS`.
 - ON-11.2: `docs/onboarding/BUILD-LOG.md` has an entry per session with the template in that file.
-- ON-11.4: `Researching`, `Narrating`, and `Transcribing` protocols have fixture-backed implementations.
+- ON-11.6: the record toggle writes recordings in the fixture layout; a request-hash mismatch logs a warning and the build log notes when fixtures were re-recorded.
+- ON-11.4: the `LLMTransport` seam (recorded request and response replay keyed by prompt name and turn) and the `Narrating` protocol (tone narrator with synthetic alignment) have fixture-backed implementations; the selftest never opens a network connection.
 
 ## Epic 12: Settings and cost
 
@@ -222,9 +243,13 @@ Acceptance criteria:
 | ON-12.1 | P0 | As an onboarding engineer, I want the feature to use the existing Anthropic, ElevenLabs and gateway settings, so that setup is not repeated. |
 | ON-12.2 | P1 | As an onboarding engineer, I want a per-run token and dollar cap that stops the fleet gracefully with a partial package and a coverage report, so that a bad repo cannot burn my budget. |
 | ON-12.3 | P2 | As an onboarding engineer, I want to pick the narration voice per package, so that the series sounds consistent. |
+| ON-12.4 | P0 | As an onboarding engineer, I want an Onboarding section in Settings (planner and worker models, effort, parallelism, spend cap, default package folder, editor command, GitHub token, record-fixtures toggle), so that the feature is configurable without editing files. |
+| ON-12.5 | P1 | As an onboarding engineer, I want tokens, dollars and cache-hit rate by model during and after a run, and the coverage report opened from the hub when a run ends partial, so that cost and blind spots are visible where I look. |
 
 Acceptance criteria:
 - ON-12.2: hitting the cap ends the run with `manifest.status = "partial"` and a list of unproduced deliverables.
+- ON-12.4: the GitHub token field loads lazily in `.task`; `claude-opus-5` is added to the model list.
+- ON-12.5: the progress view shows per-model usage and cache-hit rate; the hub links the coverage report.
 
 ---
 
@@ -248,13 +273,13 @@ populates it).
 | M0 Planning docs | ON-11.2, ON-11.3 |
 | M1 Fixture, selftest scaffold, stills writer | ON-11.1 |
 | M2 Package format, anchors, store, git | ON-1.2, ON-1.3 (token storage), ON-2.7 (artifact store) |
-| M3 Player shell on a fixture package | ON-1.1, ON-3.5, ON-8.2, ON-8.3, ON-9.5 (bookmarks) |
+| M3 Player shell on a fixture package | ON-1.1, ON-1.8, ON-1.10 (sheet), ON-3.5, ON-8.2, ON-8.3, ON-8.7, ON-9.5 (bookmarks) |
 | M4 Narration, scene renderer, transcript, code-ref map | ON-6.2, ON-6.3, ON-6.4, ON-6.7, ON-7.1, ON-7.2, ON-7.3, ON-11.4 (narrator fixture), ON-12.3 |
-| M5 LLM runtime | ON-2.8, ON-11.4 (transport fixture), ON-12.1, ON-12.2 (meter) |
-| M6 Playback chat agent | ON-9.1, ON-9.2, ON-9.3, ON-9.4, ON-9.6, ON-9.7 |
-| M7 Fleet runtime and survey units | ON-1.3 (private clone), ON-1.4, ON-1.5, ON-1.7, ON-2.1 (emit_fact), ON-2.2, ON-2.3, ON-11.5 (smoke depth), ON-12.2 (cap ends run as partial) |
+| M5 LLM runtime | ON-2.8, ON-11.4 (transport fixture), ON-11.6, ON-12.1, ON-12.2 (meter) |
+| M6 Playback chat agent | ON-9.1, ON-9.2, ON-9.3, ON-9.4, ON-9.6, ON-9.7, ON-9.8, ON-9.9 |
+| M7 Fleet runtime and survey units | ON-1.3 (private clone), ON-1.4, ON-1.5, ON-1.7, ON-1.9, ON-1.10 (opt-in), ON-4.6 (issues unit), ON-12.4, ON-12.5, ON-2.1 (emit_fact), ON-2.2, ON-2.3, ON-11.5 (smoke depth), ON-12.2 (cap ends run as partial) |
 | M8 Research fleet | ON-2.4, ON-2.5, ON-2.6, ON-2.9, ON-5.1, ON-5.2, ON-5.3 (trace facts) |
 | M9 Diagrams and registers | ON-3.1, ON-3.2, ON-3.3, ON-3.4, ON-3.6, ON-4.1 to ON-4.11, ON-5.1 to ON-5.3 (projection) |
 | M10 Video scripts and the series | ON-5.4, ON-6.1, ON-6.5, ON-6.6 |
-| M11 Hub, cross-links, search, export | ON-8.1, ON-8.4, ON-8.5, ON-8.6 |
-| M12 Review, staleness, end-to-end smoke | ON-1.6, ON-10.1, ON-10.2, ON-10.3 |
+| M11 Hub, cross-links, search, export | ON-8.1, ON-8.4, ON-8.5, ON-8.6, ON-8.8, ON-8.9 |
+| M12 Review, staleness, end-to-end smoke | ON-1.6, ON-2.9 (briefing), ON-10.1, ON-10.2, ON-10.3, ON-10.4 |

@@ -120,6 +120,17 @@ Keychain behavior — permissions stick to the signed bundle identity.
   render them under dark appearance in a selftest probe (pattern exists).
 - API keys: Keychain only, never on disk, never in defaults.
 
+## In planning: Onboard to a Codebase
+
+A second mode that points the app at a GitHub repo and has a fleet of research
+agents produce an interactive onboarding package (diagrams, registers, traces,
+narrated code-walk videos with timestamped transcripts, a hub, a playback chat
+agent). Planning is complete and no code exists yet. Before touching it read,
+in order: `docs/onboarding/BUILD-LOG.md` (where the build is), then
+`docs/onboarding/ARCHITECTURE.md` (the contract and the milestone order), then
+`docs/onboarding/USER-STORIES.md`. The feature gets its own headless entry point
+(`--selftest-onboarding`), documented there once M1 lands.
+
 ## Known limitations / next work (from the pre-publication code review)
 
 Reviewed and consciously deferred — good first tasks:

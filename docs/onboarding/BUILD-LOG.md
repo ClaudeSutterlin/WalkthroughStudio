@@ -60,11 +60,16 @@ Next:
 ### S1: 2026-09-19 — Planning: user stories, architecture, build log
 Milestone(s): M0
 Built:
-- docs/onboarding/USER-STORIES.md: 12 epics, stable story IDs, acceptance criteria.
+- docs/onboarding/USER-STORIES.md: 12 epics, 83 stories with stable IDs and
+  acceptance criteria, a story-to-milestone map; twelve stories were added and
+  five amended after the critic pass (see ARCHITECTURE.md section 14).
 - docs/onboarding/ARCHITECTURE.md: synthesized from three independent design
-  proposals judged under feasibility, experience and risk lenses, with a
-  completeness critic pass. Contains the package format, fleet runtime, video
-  generation, transcript and coderef formats, player, playback agent, milestones.
+  proposals judged under feasibility, experience and risk lenses, then reviewed
+  by a completeness critic whose 51 findings are resolved in its section 14.
+  Contains the package format, fleet runtime, video generation, transcript and
+  coderef formats, player, playback agent, decisions, milestones, risks.
+  Correction: the milestone table and this entry cited the file before it was
+  written; it was drafted last in this session and committed with this entry.
 - docs/onboarding/BUILD-LOG.md: this file.
 Verified:
 - not verified: no code written this session by design (the human asked to pause
