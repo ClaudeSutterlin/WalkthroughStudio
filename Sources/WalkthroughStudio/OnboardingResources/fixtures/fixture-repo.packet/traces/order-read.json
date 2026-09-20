@@ -1,0 +1,234 @@
+{
+  "pathId": "order-read",
+  "title": "Read an order by id (GET get-order → OrderService.get → OrdersRepo.fetch)",
+  "entry": "code:src/api/orders_handler.py@fb63e78#L14-L16",
+  "scenario": "A read-order request that the (absent from this repository) hosting framework dispatches to handle_get_order(request, 42): a bare GET for order id 42 carrying no X-User header and no credential of any kind — say from an attacker walking ids 1, 2, 3, … — where the caller expects the row {\"id\": 42, \"user_id\": 7, \"total\": 29.99} back and gets exactly that.",
+  "hops": [
+    {
+      "n": 1,
+      "anchor": "code:src/api/orders_handler.py@fb63e78#L14-L16",
+      "summary": "handle_get_order(request, 42) is entered by whatever framework binds the route (none exists in src/) and goes straight to the service: require_user is imported on L2 and called on L9 by the sibling create handler three lines above, but this handler never calls it and in fact never touches `request` at all, so the unauthenticated caller passes the only place an authorization check could live.",
+      "factIds": [
+        "F-map-src-003",
+        "F-map-src-004",
+        "F-map-src-040",
+        "F-lens-security-tests-002",
+        "F-lens-landmines-glossary-011"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 2,
+      "anchor": "code:src/service/orders.py@fb63e78#L5-L7",
+      "callSite": "code:src/api/orders_handler.py@fb63e78#L15",
+      "summary": "OrderService() is constructed fresh for this one read and its __init__ hard-constructs OrdersRepo() with no injection seam, so a read request opens its own database resources before anyone has decided whether the caller may see the row.",
+      "factIds": [
+        "F-map-src-007",
+        "F-map-src-017",
+        "F-lens-security-tests-013",
+        "F-lens-landmines-glossary-003"
+      ]
+    },
+    {
+      "n": 3,
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L7-L9",
+      "callSite": "code:src/service/orders.py@fb63e78#L7",
+      "summary": "OrdersRepo.__init__ calls psycopg2.connect(\"dbname=orders\") with a hard-coded DSN — no host, user, password, sslmode or connect_timeout, so libpq environment defaults decide and the DATABASE_URL key in config/settings.example is never read — and this connection is never closed for or after the request.",
+      "factIds": [
+        "F-map-src-007",
+        "F-map-src-024",
+        "F-map-src-025",
+        "F-map-src-026",
+        "F-map-ops-013",
+        "F-lens-deploy-ops-014",
+        "F-lens-landmines-glossary-012",
+        "F-lens-landmines-glossary-013",
+        "F-lens-data-migrations-024"
+      ]
+    },
+    {
+      "n": 4,
+      "anchor": "code:src/service/orders.py@fb63e78#L13-L14",
+      "callSite": "code:src/api/orders_handler.py@fb63e78#L16",
+      "summary": "OrderService.get(42) is a single delegating line that hands order_id to self.repo.fetch unchanged: the business-logic layer adds no ownership check, no redaction and no shaping on the read path, so the id the caller supplied reaches the SQL exactly as received.",
+      "factIds": [
+        "F-map-src-019",
+        "F-lens-security-tests-003",
+        "F-lens-security-tests-012"
+      ]
+    },
+    {
+      "n": 5,
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+      "callSite": "code:src/service/orders.py@fb63e78#L14",
+      "summary": "OrdersRepo.fetch runs the parameterized SELECT id, user_id, total FROM orders WHERE id = %s with id alone and no user_id predicate, then unpacks fetchone() into a dict with no None guard (an unknown id raises TypeError here) — and because psycopg2 is not in autocommit and nothing commits, rolls back or closes, the SELECT leaves this session idle in transaction on the server.",
+      "factIds": [
+        "F-map-src-031",
+        "F-map-src-034",
+        "F-map-src-035",
+        "F-map-src-036",
+        "F-map-src-037",
+        "F-map-db-005",
+        "F-map-db-019",
+        "F-lens-security-tests-003",
+        "F-lens-security-tests-009"
+      ]
+    },
+    {
+      "n": 6,
+      "anchor": "code:src/api/orders_handler.py@fb63e78#L16",
+      "summary": "The repo's dict is returned straight out of the handler with no serialization or response-shaping layer between them, so the caller receives another customer's user_id verbatim and a total that is a decimal.Decimal (psycopg2's mapping of NUMERIC(10,2)) rather than the Python float the create path returns — a value stdlib json.dumps refuses to encode.",
+      "factIds": [
+        "F-map-src-004",
+        "F-map-db-018",
+        "F-lens-data-migrations-007",
+        "F-lens-landmines-glossary-005"
+      ],
+      "callSite": null
+    }
+  ],
+  "concerns": {
+    "entry": {
+      "status": "present",
+      "evidence": [
+        "code:src/api/orders_handler.py@fb63e78#L14-L16",
+        "code:src/api/orders_handler.py@fb63e78#L1-L3"
+      ],
+      "note": "The entry is a plain function handle_get_order(request, order_id); src/ imports no web framework and holds no route table, so the HTTP method and path are inferred from the name and from inventory's httpRoute heuristic, and the router that supplies order_id lives outside this repository. The `request` parameter is accepted and then never read anywhere in the function body, which is the visible tell for the missing authorization step."
+    },
+    "authorization": {
+      "status": "absent",
+      "evidence": [
+        "code:src/api/orders_handler.py@fb63e78#L14-L16",
+        "code:src/api/orders_handler.py@fb63e78#L2",
+        "code:src/api/orders_handler.py@fb63e78#L8-L9",
+        "code:src/auth/authz.py@fb63e78#L8-L10",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "commit:d7b0850aadb5334dca15c14081de583791b705fc"
+      ],
+      "note": "There is no authorization on this path at all. require_user exists (authz.py L8-L10) and the create handler calls it on L9, but handle_get_order has never called it: commit d7b0850 was scoped by its own subject to order creation and left this function byte-identical to the initial import 5837ccf. The gap is two-layered — adding require_user(request, row['user_id']) to L14-L16 still would not close it, because the row must be fetched before the owner is known and fetch selects by id alone with no user_id predicate; a correct fix scopes the SQL to the caller."
+    },
+    "validation": {
+      "status": "absent",
+      "evidence": [
+        "code:src/api/orders_handler.py@fb63e78#L14-L16",
+        "code:src/service/orders.py@fb63e78#L13-L14",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L29"
+      ],
+      "note": "order_id crosses all three layers untouched: no int coercion, no range or format check, no existence check before use. The parameterized %s placeholder means there is no SQL-injection surface, so a non-integer id is not a security problem — it is an unhandled psycopg2 error raised from inside the repo with nothing mapping it to a 400."
+    },
+    "businessLogic": {
+      "status": "absent",
+      "evidence": [
+        "code:src/service/orders.py@fb63e78#L13-L14",
+        "code:src/api/orders_handler.py@fb63e78#L14-L16",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31"
+      ],
+      "note": "The read path has no business logic: OrderService.get is one delegating line. The layer that exists to hold read rules — who may see this order, what fields are returned, whether cancelled or soft-deleted orders are visible, how NUMERIC is rendered — is empty, which is why every concern below lands either in the handler or in raw SQL and why the authorization hole has no natural home to be fixed in."
+    },
+    "persistence": {
+      "status": "present",
+      "evidence": [
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "code:db/schema.sql@fb63e78#L7-L11",
+        "code:src/repo/orders_repo.py@fb63e78#L8-L9"
+      ],
+      "note": "One parameterized SELECT of three of the orders table's four columns. created_at (added by migration 001, schema.sql L14) is never selected, so no reader can see when the order was placed; users is never joined even though user_id is handed back raw. The connection is opened per request at L8-L9 and is neither committed, rolled back nor closed after the SELECT."
+    },
+    "sideEffects": {
+      "status": "present",
+      "evidence": [
+        "code:src/repo/orders_repo.py@fb63e78#L8-L9",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "code:src/service/orders.py@fb63e78#L5-L7"
+      ],
+      "note": "Marked present because this read is not side-effect-free, not because it does anything useful: there is no queue, email or webhook anywhere on the path, but every GET leaves behind one leaked psycopg2 connection (opened in __init__, never closed) and one backend session sitting idle in transaction, since psycopg2 opens a transaction for the SELECT and nothing ends it. Those effects outlive the response and accumulate under ordinary read traffic."
+    },
+    "failureHandling": {
+      "status": "absent",
+      "evidence": [
+        "code:src/api/orders_handler.py@fb63e78#L14-L16",
+        "code:src/service/orders.py@fb63e78#L13-L14",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "code:src/repo/orders_repo.py@fb63e78#L11-L18"
+      ],
+      "note": "There is not one try/except on this path — the file's only except clause (L16) guards the insert, not the read. An id that does not exist makes fetchone() return None and row[0] on L31 raise TypeError from deep inside the repo, so 'not found' is indistinguishable from a bug and can never become a 404. A database that is down raises OperationalError out of the constructor at hop 3, before any handler logic runs. Nothing maps any of it to an HTTP status."
+    },
+    "idempotency": {
+      "status": "present",
+      "evidence": [
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "code:src/service/orders.py@fb63e78#L13-L14",
+        "code:src/api/orders_handler.py@fb63e78#L14-L16"
+      ],
+      "note": "Naturally idempotent, unlike the create path: the whole path is a single SELECT with no INSERT, UPDATE or commit, so repeating the request cannot change data. The caveat is capacity, not correctness — each repeat costs another connection and another idle-in-transaction session (see sideEffects), so a client that retries aggressively degrades the database without ever corrupting it."
+    },
+    "timeoutsRetries": {
+      "status": "absent",
+      "evidence": [
+        "code:src/repo/orders_repo.py@fb63e78#L8-L9",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31",
+        "code:src/repo/orders_repo.py@fb63e78#L11-L18"
+      ],
+      "note": "Neither timeouts nor retries exist here. psycopg2.connect takes no connect_timeout, no statement_timeout is set on the session, and fetch has no retry loop — the contrast is deliberate and visible: insert (L11-L18) retries OperationalError twice with backoff while the read next to it retries nothing. A black-holed database host therefore blocks the request at hop 3 for the OS TCP timeout, and a slow query blocks it indefinitely."
+    },
+    "logging": {
+      "status": "absent",
+      "evidence": [
+        "code:src/api/orders_handler.py@fb63e78#L1-L3",
+        "code:src/service/orders.py@fb63e78#L1-L2",
+        "code:src/repo/orders_repo.py@fb63e78#L1-L4",
+        "code:src/repo/orders_repo.py@fb63e78#L27-L31"
+      ],
+      "note": "No module on the path imports logging, metrics or tracing — the import blocks at the top of all three files are the complete list of what they pull in. There is no access log, no request id, no count of reads by id. An attacker enumerating order ids through this handler produces exactly the same silence as legitimate traffic, and after the fact the only record that a read happened is in PostgreSQL's own logs, if anyone enabled them."
+    }
+  },
+  "scaresMe": [
+    "Anyone who can reach this endpoint can read every order in the system: handle_get_order never calls require_user, order ids are a SERIAL sequence, and fetch selects by id alone, so a loop over 1, 2, 3, … returns each customer's user_id and order total with no credential ever presented. Nothing on the path logs anything, so you would not find out from your own systems — you would find out from a customer, a researcher, or a dump appearing somewhere.",
+    "Fixing this by pasting require_user into the handler would look right and still leak: the owner's user_id only exists after the row has been fetched, so the check would run on data that has already been read and would pass or fail on a header the same caller supplies. The real fix is a user_id predicate in the SELECT at orders_repo.py L27-L31, which is a different and larger change than the one a reviewer is likely to ask for.",
+    "Every GET opens a psycopg2 connection that is never closed and, because nothing commits or rolls back the SELECT, leaves a session idle in transaction on the server. Ordinary read traffic therefore pins snapshots, blocks VACUUM and walks toward max_connections; the first visible symptom is unrelated — order creation starts failing inside OrdersRepo.__init__, before its retry loop, with no log line — so the outage will be diagnosed in the wrong place.",
+    "Asking for an order that does not exist raises TypeError from orders_repo.py L31, because fetchone() returned None and row[0] was subscripted anyway. A deleted or mistyped id looks identical to a genuine bug in the repository layer, there is no 404 anywhere on this path, and whoever is on call sees a stack trace instead of a routine miss.",
+    "The same order has two different types depending on how you got it: create returns the Python float the service computed, this path returns decimal.Decimal from NUMERIC(10,2). Standard json.dumps raises TypeError on a Decimal, so unless the hosting framework happens to install a custom encoder, this handler's response cannot be serialized at all — and if it can, a client comparing the create response to a later read sees 29.990000000000002 against Decimal('29.99') and calls it a reconciliation failure.",
+    "If the database is unreachable but not refusing connections, the request blocks at psycopg2.connect for the operating system's TCP timeout: there is no connect_timeout, no statement_timeout, and the connect call sits outside the retry loop that protects the write path. Read traffic will pile up holding request threads long before anything raises.",
+    "None of this is covered by a test. tests/test_orders.sh re-implements sum(price*qty) in a heredoc and never imports src/, so CI stays green if someone deletes require_user from the create handler too, breaks fetch, or changes the SELECT — and the handlers are perfectly testable with a plain object, since they only duck-type .json and .headers, so the absence of tests is a choice rather than an obstacle.",
+    "One author has written every commit to src/ and six of the twelve commits in this repository touch orders_repo.py alone. The person who knows why fetch has no user_id predicate, and whether anything downstream depends on user_id being in the response, is a single point of failure for the fix as much as for the bug."
+  ],
+  "factIds": [
+    "F-map-src-003",
+    "F-map-src-004",
+    "F-map-src-007",
+    "F-map-src-016",
+    "F-map-src-017",
+    "F-map-src-019",
+    "F-map-src-024",
+    "F-map-src-025",
+    "F-map-src-026",
+    "F-map-src-031",
+    "F-map-src-034",
+    "F-map-src-035",
+    "F-map-src-036",
+    "F-map-src-037",
+    "F-map-src-038",
+    "F-map-src-040",
+    "F-map-db-005",
+    "F-map-db-018",
+    "F-map-db-019",
+    "F-map-ops-013",
+    "F-map-ci-011",
+    "F-map-ci-012",
+    "F-lens-data-migrations-007",
+    "F-lens-data-migrations-024",
+    "F-lens-deploy-ops-014",
+    "F-lens-security-tests-002",
+    "F-lens-security-tests-003",
+    "F-lens-security-tests-009",
+    "F-lens-security-tests-012",
+    "F-lens-security-tests-013",
+    "F-lens-landmines-glossary-003",
+    "F-lens-landmines-glossary-005",
+    "F-lens-landmines-glossary-011",
+    "F-lens-landmines-glossary-012",
+    "F-lens-landmines-glossary-013"
+  ],
+  "version": 1
+}

@@ -1,0 +1,168 @@
+{
+  "pathId": "production-deploy",
+  "title": "Deploy code to an environment (deploy/deploy.sh <env>)",
+  "entry": "code:deploy/deploy.sh@fb63e78#L1-L6",
+  "scenario": "An on-call engineer sitting at their laptop on commit fb63e78, with one uncommitted edit still in src/repo/orders_repo.py, runs `deploy/deploy.sh prod`: the script takes \"prod\" as $1, scp's the local src/ tree to deploy@prod.example.com:/srv/orders/, then ssh's to the same host and runs `sudo systemctl restart orders`.",
+  "hops": [
+    {
+      "n": 1,
+      "anchor": "code:deploy/deploy.sh@fb63e78#L1-L4",
+      "summary": "The script runs under `set -e` and takes its single input from `env=\"${1:?env}\"`, which rejects only an empty argument — there is no allowlist of environments, no confirmation prompt, and no check of what commit or branch the operator has checked out.",
+      "factIds": [],
+      "callSite": null
+    },
+    {
+      "n": 2,
+      "anchor": "code:deploy/deploy.sh@fb63e78#L5-L5",
+      "summary": "`scp -r src \"deploy@${env}.example.com:/srv/orders/\"` uploads the operator's local working copy of src/ — a directory on disk, not a git ref — over the previous copy, so uncommitted edits ship, files deleted from src/ are never removed on the host, and requirements.txt, config/, templates/ and db/ are never sent at all.",
+      "factIds": [],
+      "callSite": null
+    },
+    {
+      "n": 3,
+      "anchor": "code:deploy/deploy.sh@fb63e78#L6-L6",
+      "summary": "`ssh \"deploy@${env}.example.com\" \"sudo systemctl restart orders\"` hard-restarts the one systemd unit and the script ends there, so ssh's exit status is the only success signal and nothing probes the service afterwards.",
+      "callSite": "code:deploy/deploy.sh@fb63e78#L5-L5",
+      "factIds": []
+    },
+    {
+      "n": 4,
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L7-L18",
+      "summary": "What comes back up is the freshly copied code: each OrdersRepo opens its own psycopg2 connection in __init__, and insert() retries twice on OperationalError with no idempotency key, so a create request cut off by the restart can be retried into a duplicate order.",
+      "callSite": "code:deploy/deploy.sh@fb63e78#L6-L6",
+      "factIds": []
+    },
+    {
+      "n": 5,
+      "anchor": "code:db/schema.sql@fb63e78#L13-L16",
+      "summary": "The restarted process meets a database the deploy never touched — schema.sql has migration 001 folded in and a standing TODO that 002_split_addresses.sql is still unapplied — because db/ is outside what deploy.sh ships and migrations are run by hand.",
+      "callSite": "code:src/repo/orders_repo.py@fb63e78#L20-L25",
+      "factIds": []
+    }
+  ],
+  "concerns": {
+    "entry": {
+      "status": "present",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L1-L6",
+        "code:README.md@fb63e78#L4-L4"
+      ],
+      "note": "The six-line script is the only documented and only actual route from a commit to a running environment; nothing else in the repository invokes it."
+    },
+    "authorization": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L4-L6",
+        "code:.github/workflows/ci.yml@fb63e78#L1-L8"
+      ],
+      "note": "Nothing in the repository decides who may deploy or to which environment. The only control is possession of the deploy@ SSH credential plus passwordless sudo on the target host, neither defined nor reviewed here, and the CI workflow has no deploy job and no environment protection to gate one."
+    },
+    "validation": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L3-L6"
+      ],
+      "note": "`${1:?env}` only rejects an empty argument; any string is interpolated straight into ${env}.example.com as a hostname. There is no allowlist, no dry run, no diff of what is about to be copied, and no confirmation before the restart."
+    },
+    "businessLogic": {
+      "status": "present",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L5-L6"
+      ],
+      "note": "The entire procedure is two commands — overwrite src/ on the host, restart the unit. There is no build step, no packaged artifact and no versioned release."
+    },
+    "persistence": {
+      "status": "present",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L5-L5",
+        "code:db/schema.sql@fb63e78#L13-L16"
+      ],
+      "note": "Code is persisted by overwriting /srv/orders/ in place. Nothing writes down which revision landed, and schema state is changed outside the deploy entirely: 001 is folded into schema.sql while 002_split_addresses.sql sits unapplied."
+    },
+    "sideEffects": {
+      "status": "present",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L6-L6",
+        "code:src/repo/orders_repo.py@fb63e78#L11-L18"
+      ],
+      "note": "The restart terminates every in-flight request, with no drain and no second instance to absorb traffic; an insert killed between commit and return is exactly the case the repo's keyless retry loop turns into a duplicate order."
+    },
+    "failureHandling": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L3-L6",
+        "code:README.md@fb63e78#L6-L9"
+      ],
+      "note": "`set -e` only aborts: a failed scp stops before the restart, a failed restart stops after the copy, and either way the host is left half-updated. There is no health check, no automatic rollback, and README's stated remedy is to redeploy the previous commit by hand."
+    },
+    "idempotency": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L5-L6"
+      ],
+      "note": "Re-running is not equivalent to a clean install: `scp -r` adds and overwrites but never deletes, so a module removed from src/ lives on the host forever, and the restart fires unconditionally even when the copy changed nothing."
+    },
+    "timeoutsRetries": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L5-L6",
+        "code:src/repo/orders_repo.py@fb63e78#L13-L18"
+      ],
+      "note": "Neither scp nor ssh is given a ConnectTimeout, an overall timeout or a retry, so a hung or half-open connection stalls the deploy indefinitely — possibly with the file copy already applied and the restart never issued. The application layer takes retries seriously (two attempts with backoff); the deploy takes none."
+    },
+    "logging": {
+      "status": "absent",
+      "evidence": [
+        "code:deploy/deploy.sh@fb63e78#L1-L6",
+        "code:.github/workflows/ci.yml@fb63e78#L1-L8"
+      ],
+      "note": "The script prints nothing of its own, records no deployment event and leaves no file naming the shipped revision. The only output is scp/ssh chatter on the operator's terminal, and because CI never invokes the script there is no pipeline log of deploys either."
+    }
+  },
+  "scaresMe": [
+    "The script ships whatever happens to be in the operator's local src/ directory rather than a git ref, so an unfinished edit or a stale branch on one laptop becomes production, and the only way to find out what is actually running is to ssh in and diff /srv/orders against the repository by hand.",
+    "`sudo systemctl restart orders` is the entire rollout strategy: one unit, no second instance, no drain and no health check, so every deploy is a short outage and a deploy that crashes on import leaves the environment down until a customer or an external monitor notices.",
+    "Because `set -e` only aborts, an interrupted run leaves the host half-updated — new files copied, old process still serving, or a restart into a partial copy — and the next run papers over it silently.",
+    "The environment name is pasted straight into a hostname with nothing checking it, so `deploy/deploy.sh prod` and a fat-fingered `deploy/deploy.sh prod2` are equally acceptable and there is no confirmation step between typing it and the restart.",
+    "CI only runs tests/test_orders.sh on push and never calls deploy.sh, so code can reach production on a commit that CI never ran — or that was never pushed at all.",
+    "scp -r adds and overwrites but never deletes, so a file you believe you removed keeps sitting on the host and can keep being imported long after it left the repository.",
+    "requirements.txt, config/ and db/ are never shipped, so pinned dependencies and schema on the host drift from the repository; migration 002_split_addresses.sql sitting unapplied is that gap in the open, and you would discover it as a runtime error on a column that is not there.",
+    "Rollback means redeploying the previous commit by hand, which requires someone to know which commit was previously deployed — and nothing anywhere writes that down."
+  ],
+  "factIds": [
+    "F-map-ops-001",
+    "F-map-ops-002",
+    "F-map-ops-003",
+    "F-map-ops-004",
+    "F-map-ops-005",
+    "F-map-ops-006",
+    "F-map-ops-007",
+    "F-map-ops-008",
+    "F-map-ops-009",
+    "F-map-ops-010",
+    "F-map-ops-013",
+    "F-map-ops-015",
+    "F-map-ops-033",
+    "F-map-ops-034",
+    "F-map-ci-003",
+    "F-lens-deploy-ops-001",
+    "F-lens-deploy-ops-002",
+    "F-lens-deploy-ops-003",
+    "F-lens-deploy-ops-004",
+    "F-lens-deploy-ops-005",
+    "F-lens-deploy-ops-006",
+    "F-lens-deploy-ops-007",
+    "F-lens-deploy-ops-008",
+    "F-lens-deploy-ops-009",
+    "F-lens-deploy-ops-018",
+    "F-lens-deploy-ops-021",
+    "F-lens-deploy-ops-022",
+    "F-lens-deploy-ops-023",
+    "F-lens-security-tests-016",
+    "F-lens-dependencies-009",
+    "F-lens-landmines-glossary-004",
+    "F-lens-landmines-glossary-009",
+    "F-lens-landmines-glossary-012"
+  ],
+  "version": 1
+}

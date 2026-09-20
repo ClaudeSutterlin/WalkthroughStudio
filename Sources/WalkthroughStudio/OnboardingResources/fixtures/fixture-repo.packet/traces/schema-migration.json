@@ -1,0 +1,258 @@
+{
+  "pathId": "schema-migration",
+  "title": "Apply a schema migration by hand (db/migrations/ → psql → schema.sql)",
+  "entry": "code:db/migrations/002_split_addresses.sql@fb63e78#L1-L7",
+  "scenario": "An engineer decides the pending address split should finally ship to production: they open db/migrations/002_split_addresses.sql, read the header comment saying it is not yet applied, paste its seven lines into `psql` against the production orders database (the same database src/repo/orders_repo.py connects to as dbname=orders, holding one users row with email ada@example.com and address \"12 Analytical Ave, London\"), and then follow the unwritten convention by appending the same statements to db/schema.sql and flipping the header to \"-- applied\". They expect a new addresses table holding that postal address and a users table without the old column; what actually happens is that the addresses table is created empty and the address string is destroyed.",
+  "hops": [
+    {
+      "n": 1,
+      "anchor": "code:db/migrations/002_split_addresses.sql@fb63e78#L1-L7",
+      "summary": "The path begins with a seven-line SQL file whose only state is a free-text first line (\"-- NOT yet applied to schema.sql (see TODO there)\"): there is no migration runner, no schema_migrations table, no environment name and no invocation anywhere in the repository, so \"running\" this path means a human pasting L2-L7 into psql.",
+      "factIds": [
+        "F-map-db-011",
+        "F-map-db-012",
+        "F-map-db-013",
+        "F-lens-data-migrations-014"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 2,
+      "anchor": "code:db/migrations/001_orders.sql@fb63e78#L1-L2",
+      "callSite": "code:db/migrations/002_split_addresses.sql@fb63e78#L1",
+      "summary": "The only precedent for what \"applied\" looks like is migration 001, whose entire record of having run against any database is the comment \"-- applied\" on L1 — one flag committed to git for every environment deploy.sh can target — and whose ADD COLUMN ... DEFAULT now() also shows the author's habit of writing data-affecting DDL with no backfill comment; both migrations were written by the one person in db/ who has never committed to src/.",
+      "factIds": [
+        "F-map-db-009",
+        "F-map-db-022",
+        "F-lens-data-migrations-005",
+        "F-lens-data-migrations-015",
+        "F-lens-landmines-glossary-008"
+      ]
+    },
+    {
+      "n": 3,
+      "anchor": "code:README.md@fb63e78#L6-L9",
+      "summary": "The whole documented procedure is one sentence under ## Operations — \"Migrations are applied by hand; see db/migrations/.\" — which names no order, no approver, no backup, no verification and no per-environment record, so everything else in this path is convention inferred from commit 8facb98 rather than instruction.",
+      "factIds": [
+        "F-map-db-001",
+        "F-map-ops-024",
+        "F-lens-data-migrations-016"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 4,
+      "anchor": "code:deploy/deploy.sh@fb63e78#L1-L6",
+      "callSite": "code:README.md@fb63e78#L8",
+      "summary": "Confirming that nothing automates the step: the deploy script scp's src/ to deploy@<env>.example.com and restarts the orders service, never opening a database connection, so schema changes travel through a completely separate manual channel from code with no ordering guarantee between them and once per environment rather than once per repository.",
+      "factIds": [
+        "F-map-db-025",
+        "F-lens-deploy-ops-021"
+      ]
+    },
+    {
+      "n": 5,
+      "anchor": "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L6",
+      "summary": "The first statement creates addresses (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), line1/city/country TEXT) and commits on its own; every column except id is nullable with no UNIQUE or primary-address marker, and no INSERT ... SELECT follows it, so the table arrives empty and will stay empty because no code in src/ writes to it.",
+      "factIds": [
+        "F-map-db-012",
+        "F-lens-data-migrations-012",
+        "F-lens-data-migrations-013"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 6,
+      "anchor": "code:db/migrations/002_split_addresses.sql@fb63e78#L7",
+      "callSite": "code:db/migrations/002_split_addresses.sql@fb63e78#L2",
+      "summary": "The second statement, ALTER TABLE users DROP COLUMN address, autocommits separately and irreversibly deletes every stored postal address — plaintext PII that was never copied into the table created one statement earlier — with no pg_dump, snapshot or down script anywhere in the repository and no transaction tying the two statements together.",
+      "factIds": [
+        "F-map-db-004",
+        "F-map-db-013",
+        "F-map-db-018",
+        "F-lens-data-migrations-010",
+        "F-lens-data-migrations-017",
+        "F-lens-deploy-ops-006",
+        "F-lens-landmines-glossary-017"
+      ]
+    },
+    {
+      "n": 7,
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L20-L37",
+      "summary": "Blast radius on running code: the repository's three literal SQL strings (INSERT INTO orders, SELECT ... FROM orders WHERE id, SELECT ... FROM orders WHERE user_id) name only orders columns, so no live query breaks when users.address disappears — the migration is safe today purely by accident of what the code happens not to read, and that safety is invisible to any check.",
+      "factIds": [
+        "F-lens-data-migrations-002",
+        "F-lens-deploy-ops-021"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 8,
+      "anchor": "code:src/service/orders.py@fb63e78#L1-L14",
+      "summary": "The stated blocker is false: OrderService only sums item prices and delegates to OrdersRepo, and `git log -S address -- src/` returns no commit across all 12 commits of history, so nothing in src/service has ever read users.address and the TODO holding migration 002 back cites a dependency that never existed here.",
+      "factIds": [
+        "F-map-db-014",
+        "F-lens-data-migrations-018"
+      ],
+      "callSite": null
+    },
+    {
+      "n": 9,
+      "anchor": "code:db/schema.sql@fb63e78#L13-L16",
+      "callSite": "code:db/migrations/002_split_addresses.sql@fb63e78#L1",
+      "summary": "Step three of the convention is hand-editing the checked-in mirror: schema.sql already carries 001's ALTER verbatim under a \"-- 001_orders.sql\" comment (L13-L14), so the engineer must append 002's statements and delete the TODO on L16 — and until they do, the file that looks like the schema still declares users.address and knows nothing about addresses.",
+      "factIds": [
+        "F-map-db-010",
+        "F-map-db-021",
+        "F-lens-data-migrations-014",
+        "F-lens-data-migrations-016",
+        "F-lens-data-migrations-019"
+      ]
+    },
+    {
+      "n": 10,
+      "anchor": "code:.github/workflows/ci.yml@fb63e78#L1-L8",
+      "summary": "The path ends with no verification of any kind: CI's single job checks out the repo and runs tests/test_orders.sh, which asserts Python arithmetic in a heredoc and prints PASS without ever starting Postgres, so neither schema.sql nor either migration is loaded into a database anywhere in the pipeline and production is the first place the SQL is executed.",
+      "factIds": [
+        "F-map-db-024"
+      ],
+      "callSite": null
+    }
+  ],
+  "concerns": {
+    "entry": {
+      "status": "present",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L1-L7",
+        "code:README.md@fb63e78#L9",
+        "code:db/migrations/001_orders.sql@fb63e78#L1"
+      ],
+      "note": "The entry is a file a person opens, not code anything calls: the only trigger is a human reading the header comment and deciding to run it, and the only pointer to that fact is one sentence in the README."
+    },
+    "authorization": {
+      "status": "absent",
+      "evidence": [
+        "code:README.md@fb63e78#L6-L9",
+        "code:deploy/deploy.sh@fb63e78#L4-L6",
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L1-L7"
+      ],
+      "note": "Nothing states who may apply a migration or requires a second pair of eyes. The repository's only credentialed access path is deploy.sh's ssh deploy@<env>.example.com with sudo, and it never touches the database, so authority here reduces to whoever happens to hold psql credentials — a set the repository does not describe."
+    },
+    "validation": {
+      "status": "absent",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L1",
+        "code:db/schema.sql@fb63e78#L16",
+        "code:db/migrations/001_orders.sql@fb63e78#L1",
+        "code:.github/workflows/ci.yml@fb63e78#L6-L8"
+      ],
+      "note": "No precondition is ever checked: not that 001 already ran in this environment, not that the target database matches schema.sql, not that the SQL parses. The two free-text comments (the migration header and the schema.sql TODO) are the entire gate, and one of them is demonstrably wrong."
+    },
+    "businessLogic": {
+      "status": "present",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L6",
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L7",
+        "code:db/schema.sql@fb63e78#L1-L5"
+      ],
+      "note": "The intended change is legible — move a single free-text users.address into a one-to-many addresses table — but the step that would make it a split rather than a deletion, copying the existing values across before the DROP, is simply not in the file."
+    },
+    "persistence": {
+      "status": "present",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L7",
+        "code:db/schema.sql@fb63e78#L1-L11",
+        "code:src/repo/orders_repo.py@fb63e78#L9"
+      ],
+      "note": "The change lands in the one Postgres database the application also uses (psycopg2.connect(\"dbname=orders\")). There are two stores of truth — the live database and db/schema.sql — and they are reconciled only by a human remembering step three."
+    },
+    "sideEffects": {
+      "status": "present",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L7",
+        "code:src/repo/orders_repo.py@fb63e78#L1-L9",
+        "code:deploy/deploy.sh@fb63e78#L5-L6",
+        "code:templates/email.tmpl@fb63e78#L1-L3"
+      ],
+      "note": "No queue, webhook or email is involved (the confirmation template reads user.name and order fields, never address). The side effects are the irreversible data loss inside the database and the running service: OrdersRepo opens a connection per instance and never closes it, and only a deploy restarts the process, so nothing coordinates the schema change with the processes holding those connections."
+    },
+    "failureHandling": {
+      "status": "absent",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L1-L7",
+        "code:db/migrations/001_orders.sql@fb63e78#L1-L2",
+        "code:README.md@fb63e78#L8"
+      ],
+      "note": "Neither migration wraps its statements in BEGIN/COMMIT and neither has a down script, so under psql's autocommit a failure between the CREATE TABLE and the DROP COLUMN leaves a half-migrated database with no recorded state. The only rollback the repository documents — redeploy the previous commit — restores code, not schema."
+    },
+    "idempotency": {
+      "status": "absent",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L7",
+        "code:db/migrations/001_orders.sql@fb63e78#L1-L2",
+        "code:db/schema.sql@fb63e78#L13-L14"
+      ],
+      "note": "No CREATE TABLE IF NOT EXISTS, no DROP COLUMN IF EXISTS, and no tracking table: a second run errors partway, and the only ledger is a comment in git that is per-repository rather than per-database. Because schema.sql already contains 001's ALTER, the obvious recovery move (rebuild from schema.sql, then run the migrations folder) also fails, on \"column created_at already exists\"."
+    },
+    "timeoutsRetries": {
+      "status": "absent",
+      "evidence": [
+        "code:db/migrations/002_split_addresses.sql@fb63e78#L7",
+        "code:src/repo/orders_repo.py@fb63e78#L9",
+        "code:src/repo/orders_repo.py@fb63e78#L11-L18"
+      ],
+      "note": "The DROP COLUMN needs an ACCESS EXCLUSIVE lock on users and the file sets no lock_timeout or statement_timeout, so it waits behind any open transaction while new application statements queue behind it; the application's connection string sets no timeouts either, and its only retry policy (two attempts on OperationalError, deliberately reduced from three) belongs to order inserts, not to this path."
+    },
+    "logging": {
+      "status": "absent",
+      "evidence": [
+        "code:db/migrations/001_orders.sql@fb63e78#L1",
+        "code:db/schema.sql@fb63e78#L13-L16",
+        "code:deploy/deploy.sh@fb63e78#L1-L6"
+      ],
+      "note": "Nothing records that a migration ran: no tracking table, no log line, no operator, no environment, no timestamp. The git commit dates the writing of the file, not its application, and the '-- applied' comment cannot distinguish staging from production."
+    }
+  },
+  "scaresMe": [
+    "Running migration 002 exactly as written deletes every customer's postal address: it creates the addresses table and drops users.address with no INSERT ... SELECT between them, and nothing in the repository takes a backup, so the data is gone the moment the second statement commits. You would find out from a support ticket, not from an error.",
+    "The two statements are not wrapped in a transaction and there is no down script, so a failure or a Ctrl-C between them leaves the database half-migrated — addresses created, users.address still present, or the reverse — with no recorded state to tell the next person which half ran. The only way to find out is \\\\d users in psql.",
+    "The '-- applied' marker is a single comment in git while deploy.sh targets any number of <env>.example.com hosts, each with its own database, so the repository literally cannot tell you whether staging, production or both have received 001 or 002. Anyone who trusts the header instead of inspecting each database is guessing.",
+    "The stated reason 002 is blocked — the schema.sql TODO saying users.address 'is still read by src/service' — was never true: a pickaxe search over the whole 12-commit history finds no mention of address anywhere in src/. That leaves two bad outcomes: someone applies the migration believing the blocker is resolved without checking anything else, or nobody ever applies it because nobody trusts the note.",
+    "The documented rollback (redeploy the previous commit) cannot undo this path at all; code and schema ship through unrelated manual channels, and after the DROP there is no artifact in the repository capable of restoring the column or its contents.",
+    "No database is ever started in CI — the workflow runs a shell script that asserts Python arithmetic — so a typo, a wrong environment or a wrong order is discovered for the first time in production, against live data.",
+    "The three-step convention (run the SQL, append it to schema.sql, flip the header) is written down nowhere; it can only be reverse-engineered from commit 8facb98. Skipping the second step is what makes schema.sql and db/migrations/ disagree, and nothing detects that drift.",
+    "Both migrations were written by the only author in db/ who has never committed to src/, a bus factor of one on the only path that changes production data structure. If that person is unavailable, the person running psql is working from a nine-word README sentence."
+  ],
+  "factIds": [
+    "F-map-db-001",
+    "F-map-db-004",
+    "F-map-db-009",
+    "F-map-db-010",
+    "F-map-db-011",
+    "F-map-db-012",
+    "F-map-db-013",
+    "F-map-db-014",
+    "F-map-db-018",
+    "F-map-db-021",
+    "F-map-db-022",
+    "F-map-db-024",
+    "F-map-db-025",
+    "F-map-ops-024",
+    "F-lens-data-migrations-002",
+    "F-lens-data-migrations-005",
+    "F-lens-data-migrations-010",
+    "F-lens-data-migrations-012",
+    "F-lens-data-migrations-013",
+    "F-lens-data-migrations-014",
+    "F-lens-data-migrations-015",
+    "F-lens-data-migrations-016",
+    "F-lens-data-migrations-017",
+    "F-lens-data-migrations-018",
+    "F-lens-data-migrations-019",
+    "F-lens-deploy-ops-006",
+    "F-lens-deploy-ops-021",
+    "F-lens-landmines-glossary-008",
+    "F-lens-landmines-glossary-017"
+  ],
+  "version": 1
+}

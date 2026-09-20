@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+  "generatedAt": "2025-02-06T10:00:00+00:00",
+  "directories": [
+    {
+      "path": ".",
+      "files": 2,
+      "filesRead": 2,
+      "level": "traced",
+      "facts": 46,
+      "verified": 45,
+      "reason": null
+    },
+    {
+      "path": ".github/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "traced",
+      "facts": 20,
+      "verified": 20,
+      "reason": null
+    },
+    {
+      "path": "config/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "verified",
+      "facts": 10,
+      "verified": 10,
+      "reason": null
+    },
+    {
+      "path": "db/",
+      "files": 3,
+      "filesRead": 3,
+      "level": "traced",
+      "facts": 63,
+      "verified": 61,
+      "reason": null
+    },
+    {
+      "path": "deploy/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "traced",
+      "facts": 36,
+      "verified": 35,
+      "reason": null
+    },
+    {
+      "path": "src/",
+      "files": 4,
+      "filesRead": 4,
+      "level": "traced",
+      "facts": 118,
+      "verified": 113,
+      "reason": null
+    },
+    {
+      "path": "templates/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "verified",
+      "facts": 10,
+      "verified": 10,
+      "reason": null
+    },
+    {
+      "path": "tests/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "verified",
+      "facts": 22,
+      "verified": 22,
+      "reason": null
+    },
+    {
+      "path": "vendor/",
+      "files": 1,
+      "filesRead": 1,
+      "level": "verified",
+      "facts": 2,
+      "verified": 2,
+      "reason": null
+    }
+  ],
+  "paths": {
+    "candidates": 10,
+    "traced": 4,
+    "untraced": [
+      {
+        "id": "ci-smoke-test",
+        "reason": "Not a flow the business depends on: the workflow runs a hermetic arithmetic assert that imports no project module, protects no branch, produces no artifact and is never consumed by deploy.sh, so it gates nothing. Its facts (F-map-ci-*, F-lens-security-tests-010) are cited from the production-deploy and order-creation paths instead of traced separately."
+      },
+      {
+        "id": "order-confirmation-email",
+        "reason": "No entry point exists at HEAD: nothing renders or sends the template, no template engine or mail client is declared, and the context it needs (user.name) has no backing column. It is an unwired asset (F-map-ops-019, F-lens-deploy-ops-019, F-lens-landmines-glossary-006), so there is no code path to follow hop by hop."
+      },
+      {
+        "id": "list-orders-for-user",
+        "reason": "Unreachable from the HTTP surface: no handler or service calls list_for_user (F-map-src-032), so despite its N+1 hotfix history and missing index (F-map-db-008) there is no entry point to trace. Anyone exposing it must add require_user themselves (F-lens-landmines-glossary-011)."
+      },
+      {
+        "id": "user-identity",
+        "reason": "No such flow exists in the repository: nothing inserts into users, there is no authentication, and identity is a plain X-User header (F-map-src-013, F-lens-data-migrations-003). The only identity-related code, require_user, is traced as the authorization hop of order-creation."
+      },
+      {
+        "id": "grpc-client-stub",
+        "reason": "Generated code imported by nothing, with no .proto source, protoc step or protobuf runtime in the repository (F-lens-deploy-ops-020, F-lens-landmines-glossary-007). vendor/ is inventoried only and must not be mapped or traced."
+      },
+      {
+        "id": "database-bootstrap",
+        "reason": "A developer setup procedure rather than a business flow, and entirely unscripted: the README omits it, schema.sql plus the migrations folder conflict on 001, and no users seed exists so the first order fails on the FK (F-map-db-010, F-map-db-017, F-map-ops-026, F-lens-landmines-glossary-010). Its landmines are cited from the schema-migration and order-creation paths."
+      }
+    ]
+  },
+  "checks": [],
+  "deliverablesPlanned": 0,
+  "deliverablesProduced": 0
+}

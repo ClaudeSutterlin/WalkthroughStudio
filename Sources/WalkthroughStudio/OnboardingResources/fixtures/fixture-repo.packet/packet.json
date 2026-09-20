@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "producer": {
+    "name": "claude-code-skill",
+    "version": "0.1",
+    "model": "claude-fable-5-1",
+    "startedAt": "2025-02-06T10:00:00+00:00",
+    "finishedAt": "2026-09-20T01:05:00+00:00",
+    "notes": "assembled by assemble_packet.py"
+  },
+  "repo": {
+    "url": null,
+    "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+    "defaultBranch": "main",
+    "localPath": "/tmp/claude-0/-home-user-WalkthroughStudio/39a042c9-1c2b-5bc2-9a06-d6510d9fa60f/scratchpad/fixture-a",
+    "name": "fixture-a"
+  },
+  "scope": "complete",
+  "summary": "This repository is a fifteen-file Python order service kept as a test fixture: two HTTP handler functions (create an order, get an order), a ten-line authorization module, a service that sums line items into a total, and a thirty-seven-line repository that reaches a single PostgreSQL database named orders through hand-written SQL. Twelve commits by two authors between 2025-01-04 and 2025-02-06 built it, every directory has a bus factor of one, and all seven commits touching src/ are by the same person. There is no web framework, no route binding, no configuration layer and no logging, so the service cannot actually be run from this checkout alone. What it does carry is unusually legible risk: reading an order needs no credential at all, order creation retries its INSERT without an idempotency key (duplicate orders already reached production and the fix lowered the retry count rather than closing the hole), every request leaks a database connection, migration 002 is written to drop users.address without copying the data, and the only test never imports any of this code, so CI is green by construction.",
+  "counts": {
+    "facts": 213,
+    "verified": 206,
+    "refuted": 5,
+    "unknown": 2,
+    "traces": 4,
+    "unreadDirs": 0
+  },
+  "briefing": null
+}

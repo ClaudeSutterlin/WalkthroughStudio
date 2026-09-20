@@ -272,7 +272,7 @@ def main():
         dump(pk / "decisions.json", {"version": 1, "headSHA": head, "decisions": decisions})
     if decided.get("topFindings"):
         (pk / "drafts" / "docs").mkdir(parents=True, exist_ok=True)
-        body = "# Top findings\n\nWritten by the producer at hand-off. Anchors are [[...]] citations.\n\n" + "\n".join(f"{i}. {x}" for i, x in enumerate(decided["topFindings"], 1)) + "\n"
+        body = "# Top findings\n\nWritten by the producer at hand-off. Claims cite code anchors in double brackets.\n\n" + "\n".join(f"{i}. {x}" for i, x in enumerate(decided["topFindings"], 1)) + "\n"
         (pk / "drafts" / "docs" / "top-findings.md").write_text(body)
 
     # ---- coverage --------------------------------------------------------------

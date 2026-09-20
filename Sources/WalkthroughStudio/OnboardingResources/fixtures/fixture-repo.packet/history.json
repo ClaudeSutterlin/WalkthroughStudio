@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+  "commits": 12,
+  "firstCommit": "2025-01-04",
+  "lastCommit": "2025-02-06",
+  "shallow": false,
+  "authors": [
+    {
+      "name": "Ada Lovelace",
+      "commits": 8,
+      "share": 0.6667
+    },
+    {
+      "name": "Grace Hopper",
+      "commits": 4,
+      "share": 0.3333
+    }
+  ],
+  "hotspots": [
+    {
+      "path": "src/repo/orders_repo.py",
+      "commits": 6,
+      "lastTouched": "2025-02-06",
+      "authors": 1
+    },
+    {
+      "path": "src/api/orders_handler.py",
+      "commits": 3,
+      "lastTouched": "2025-02-06",
+      "authors": 1
+    },
+    {
+      "path": "db/schema.sql",
+      "commits": 3,
+      "lastTouched": "2025-01-25",
+      "authors": 2
+    },
+    {
+      "path": "README.md",
+      "commits": 2,
+      "lastTouched": "2025-02-03",
+      "authors": 2
+    },
+    {
+      "path": "vendor/generated/client_pb2.py",
+      "commits": 1,
+      "lastTouched": "2025-02-03",
+      "authors": 1
+    },
+    {
+      "path": "templates/email.tmpl",
+      "commits": 1,
+      "lastTouched": "2025-01-31",
+      "authors": 1
+    },
+    {
+      "path": "db/migrations/002_split_addresses.sql",
+      "commits": 1,
+      "lastTouched": "2025-01-25",
+      "authors": 1
+    },
+    {
+      "path": "db/migrations/001_orders.sql",
+      "commits": 1,
+      "lastTouched": "2025-01-19",
+      "authors": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "commits": 1,
+      "lastTouched": "2025-01-10",
+      "authors": 1
+    },
+    {
+      "path": "tests/test_orders.sh",
+      "commits": 1,
+      "lastTouched": "2025-01-10",
+      "authors": 1
+    },
+    {
+      "path": "src/auth/authz.py",
+      "commits": 1,
+      "lastTouched": "2025-01-07",
+      "authors": 1
+    },
+    {
+      "path": "config/settings.example",
+      "commits": 1,
+      "lastTouched": "2025-01-04",
+      "authors": 1
+    },
+    {
+      "path": "deploy/deploy.sh",
+      "commits": 1,
+      "lastTouched": "2025-01-04",
+      "authors": 1
+    },
+    {
+      "path": "requirements.txt",
+      "commits": 1,
+      "lastTouched": "2025-01-04",
+      "authors": 1
+    },
+    {
+      "path": "src/service/orders.py",
+      "commits": 1,
+      "lastTouched": "2025-01-04",
+      "authors": 1
+    }
+  ],
+  "ownership": [
+    {
+      "dir": ".",
+      "commits": 2,
+      "authors": [
+        {
+          "name": "Grace Hopper",
+          "share": 0.5,
+          "commits": 1
+        },
+        {
+          "name": "Ada Lovelace",
+          "share": 0.5,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": ".github/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Grace Hopper",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "config/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Ada Lovelace",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "db/",
+      "commits": 3,
+      "authors": [
+        {
+          "name": "Grace Hopper",
+          "share": 0.6667,
+          "commits": 2
+        },
+        {
+          "name": "Ada Lovelace",
+          "share": 0.3333,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "deploy/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Ada Lovelace",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "src/",
+      "commits": 7,
+      "authors": [
+        {
+          "name": "Ada Lovelace",
+          "share": 1.0,
+          "commits": 7
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "templates/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Ada Lovelace",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "tests/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Grace Hopper",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    },
+    {
+      "dir": "vendor/",
+      "commits": 1,
+      "authors": [
+        {
+          "name": "Grace Hopper",
+          "share": 1.0,
+          "commits": 1
+        }
+      ],
+      "busFactor": 1
+    }
+  ],
+  "stale": [],
+  "parallel": [],
+  "messageKeywords": {
+    "revert": 1,
+    "hotfix": 1,
+    "fix": 0,
+    "todo": 0,
+    "fixme": 0,
+    "wip": 0,
+    "hack": 0
+  },
+  "notableCommits": [
+    {
+      "anchor": "commit:27caac59e7c6dec5425b6e2bb60f0f23e7cac3bc",
+      "subject": "Revert retry count to 2 after duplicate orders in production",
+      "author": "Ada Lovelace",
+      "date": "2025-01-28",
+      "why": "revert or hotfix in the subject line"
+    },
+    {
+      "anchor": "commit:30bfa828b4b5a162bbb9c2bf9487ae82f3ace6c6",
+      "subject": "hotfix: list_for_user issued N+1 queries under load",
+      "author": "Ada Lovelace",
+      "date": "2025-01-16",
+      "why": "revert or hotfix in the subject line"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+  "dependencies": [
+    {
+      "name": "requests",
+      "version": "2.19.0",
+      "manifest": "code:requirements.txt@fb63e78#L1",
+      "ecosystem": "pypi",
+      "license": "Apache-2.0",
+      "eol": "end-of-life",
+      "cves": [
+        {
+          "id": "CVE-2018-18074",
+          "severity": "high",
+          "url": "https://api.osv.dev/v1/vulns/GHSA-x84v-xcm2-53pg",
+          "note": "Insufficiently Protected Credentials: Authorization header forwarded on HTTPS-to-HTTP redirect. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N. Affects <2.20.0; fixed 2.20.0 (2018-10-18). Aliases GHSA-x84v-xcm2-53pg, PYSEC-2018-28."
+        },
+        {
+          "id": "CVE-2023-32681",
+          "severity": "medium",
+          "url": "https://api.osv.dev/v1/vulns/GHSA-j8r2-6x86-q33q",
+          "note": "Proxy-Authorization header leaked to destination on HTTPS via proxy. CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N. Affects 2.3.0 to <2.31.0; fixed 2.31.0 (2023-05-22). Aliases GHSA-j8r2-6x86-q33q, PYSEC-2023-74."
+        },
+        {
+          "id": "CVE-2024-35195",
+          "severity": "medium",
+          "url": "https://api.osv.dev/v1/vulns/GHSA-9wx4-h78v-vm56",
+          "note": "Session keeps verify=False for all later requests to the same host after the first. CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:H/A:N. Fixed 2.32.0. Aliases GHSA-9wx4-h78v-vm56, PYSEC-2026-1873."
+        },
+        {
+          "id": "CVE-2024-47081",
+          "severity": "medium",
+          "url": "https://api.osv.dev/v1/vulns/GHSA-9hjg-9r4m-mvj7",
+          "note": ".netrc credentials leaked via malicious URLs. CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N. Fixed 2.32.4 (2025-06-09). Aliases GHSA-9hjg-9r4m-mvj7, PYSEC-2026-1872."
+        },
+        {
+          "id": "CVE-2026-25645",
+          "severity": "medium",
+          "url": "https://api.osv.dev/v1/vulns/GHSA-gc5v-m9x4-r6x2",
+          "note": "Insecure temp file reuse in extract_zipped_paths(). CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:N/I:H/A:N. Fixed 2.33.0 (2026-03-25). Aliases GHSA-gc5v-m9x4-r6x2, PYSEC-2026-2275."
+        }
+      ],
+      "direct": true,
+      "note": "License from PyPI metadata ('Apache 2.0', classifier 'OSI Approved :: Apache Software License'), normalised to SPDX Apache-2.0. Released 2018-06-12; superseded by 2.19.1 two days later and by 2.20.0 on 2018-10-18; latest at time of research is 2.34.2 (2026-05-14). requests publishes no LTS branches or support policy, so 'end-of-life' here means: no 2.19.x line receives fixes and every listed advisory is fixed only in later minor versions. CVE list is the complete OSV result for PyPI requests 2.19.0 (5 advisories, severity mapped MODERATE->medium). Not imported anywhere in src/ (see F-map-ops-030), so runtime exploitability at HEAD is nil; remediation is removing the line, not upgrading. Its declared transitive range urllib3>=1.21.1,<1.24 resolves to urllib3 1.23 (2018), which OSV lists with 11 advisories (5 HIGH); see F-lens-dependencies-004.",
+      "evidence": [
+        "code:requirements.txt@fb63e78#L1",
+        "url:https://pypi.org/pypi/requests/2.19.0/json",
+        "url:https://pypi.org/pypi/requests/json",
+        "url:https://api.osv.dev/v1/query",
+        "url:https://api.osv.dev/v1/vulns/GHSA-x84v-xcm2-53pg",
+        "url:https://api.osv.dev/v1/vulns/GHSA-j8r2-6x86-q33q",
+        "url:https://api.osv.dev/v1/vulns/GHSA-9wx4-h78v-vm56",
+        "url:https://api.osv.dev/v1/vulns/GHSA-9hjg-9r4m-mvj7",
+        "url:https://api.osv.dev/v1/vulns/GHSA-gc5v-m9x4-r6x2"
+      ]
+    },
+    {
+      "name": "psycopg2",
+      "version": "2.8.6",
+      "manifest": "code:requirements.txt@fb63e78#L2",
+      "ecosystem": "pypi",
+      "license": "LGPL-3.0-or-later",
+      "eol": "end-of-life",
+      "cves": [],
+      "direct": true,
+      "note": "PyPI metadata says 'LGPL with exceptions' (classifier 'GNU Library or Lesser General Public License (LGPL)'). The SPDX id LGPL-3.0-or-later and the OpenSSL-linking exception are from the researcher's knowledge of psycopg2's LICENSE file, which was NOT fetched; confidence 0.8 on the exact version. Released 2020-09-06 and is the last release of the 2.8 series (confirmed from the PyPI release list); 2.9.0 shipped 2021-06-16 and the current release is 2.9.13 (2026-09-09), so the 2.8 line is end-of-life. Its Python classifiers stop at 3.8 (2.7, 3.4-3.8) while 2.9.13 declares 3.10-3.15. CVEs: OSV returns no advisories for PyPI psycopg2 or psycopg2-binary at ANY version, so the empty list is a real negative result, not 'unknown'. Caveat: psycopg2 links against the system libpq, whose own CVEs are tracked under PostgreSQL, not PyPI; that exposure depends on the host and is unknown from this repository. It is the only dependency actually imported (src/repo/orders_repo.py). No transitive requirements (requires_dist is null).",
+      "evidence": [
+        "code:requirements.txt@fb63e78#L2",
+        "code:src/repo/orders_repo.py@fb63e78#L4-L9",
+        "url:https://pypi.org/pypi/psycopg2/2.8.6/json",
+        "url:https://pypi.org/pypi/psycopg2/json",
+        "url:https://api.osv.dev/v1/query"
+      ]
+    }
+  ]
+}

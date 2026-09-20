@@ -22,7 +22,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S2 |
 | M1 Fixture repo, selftest scaffold, stills writer | built (not compiled) | fixtureRepoProbe, stillsWriterProbe | S2 |
 | M2 Package format, anchors, git, Research Packet contract | in-progress (Swift half built, not compiled; packet half: Python contract done, Swift pending) | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
-| M3 Claude Code producer skill and the fixture packet | in-progress | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
+| M3 Claude Code producer skill and the fixture packet | verified (Python side; Swift probe pending) | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
@@ -187,14 +187,33 @@ Limits hit:
   commits a9e74c3 through b79c9a4. Resume point: `Workflow({scriptPath,
   resumeFromRunId})` for each run, which replays completed agents from cache;
   resumed at 18:41 UTC.
+Packet result (M3, end of session):
+- The fixture packet validates with zero errors and zero warnings and is checked
+  in at Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet/
+  (600 KB, 15 files). 213 facts (206 verified, 5 refuted, 2 unknown) from 4
+  mappers and 5 lenses, judged by 18 paired verifier units (410 confirmed, 12
+  refuted, 4 unknown). 4 critical paths traced out of 10 candidates, each of the
+  6 untraced with a reason. 10 decisions, 30 glossary terms, 2051 anchors all
+  resolving at fb63e787. No secret from config/settings.example appears anywhere
+  in the packet.
+- Acceptance findings all present: the orders_repo hotspot, bus factor 1 per
+  directory, users.email as PII, migration 002 written but unapplied, the
+  idempotency gap (order-creation trace marks the concern absent with four
+  evidence anchors), no rollback in deploy.sh, the stale requests 2.19.0 pin.
+- Acceptance criterion corrected: vendor/ reaching level `verified` is honest,
+  not a failure. A mapper read the generated stub and found something real
+  (protoc output that nothing imports, with no .proto source or protoc step), so
+  the criterion now requires generated directories to be flagged with a reason
+  rather than to stay unread.
+
 Next:
-1. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;
+1. When the packet-half Swift workflow finishes: commit, then update
+   fixturePacketProbe's vendor/ assertion to match the corrected criterion
+   (flagged generated with a reason, level consistent with filesRead).
+2. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;
    assemble_packet.py --packet <survey copy> --units units/ --repo <fixture>
    --model claude-fable-5-1; fix validator errors; copy into
    Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet/.
-2. When the Swift review and fix finish: commit, then a workflow for the packet
-   half of M2 (PacketModels, PacketValidator, PacketImporter, `--validate-packet`,
-   packetValidateProbe, fixturePacketProbe) mirroring validate_packet.py rules.
 3. On the Mac: `swift build`; fix compile errors; `scripts/make-fixture-repo.sh
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look

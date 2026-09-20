@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+  "totalFiles": 15,
+  "totalBytes": 4432,
+  "topLevel": [
+    {
+      "path": ".",
+      "files": 2,
+      "bytes": 333,
+      "languages": {
+        "md": 1,
+        "txt": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": ".github/",
+      "files": 1,
+      "bytes": 154,
+      "languages": {
+        "yml": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "config/",
+      "files": 1,
+      "bytes": 88,
+      "languages": {
+        "example": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "db/",
+      "files": 3,
+      "bytes": 692,
+      "languages": {
+        "sql": 3
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "deploy/",
+      "files": 1,
+      "bytes": 212,
+      "languages": {
+        "sh": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "src/",
+      "files": 4,
+      "bytes": 2564,
+      "languages": {
+        "py": 4
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "templates/",
+      "files": 1,
+      "bytes": 86,
+      "languages": {
+        "tmpl": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "tests/",
+      "files": 1,
+      "bytes": 236,
+      "languages": {
+        "sh": 1
+      },
+      "generated": false,
+      "reason": null
+    },
+    {
+      "path": "vendor/",
+      "files": 1,
+      "bytes": 67,
+      "languages": {
+        "py": 1
+      },
+      "generated": true,
+      "reason": "generated or vendored code"
+    }
+  ],
+  "languages": {
+    "example": 1,
+    "md": 1,
+    "py": 5,
+    "sh": 2,
+    "sql": 3,
+    "tmpl": 1,
+    "txt": 1,
+    "yml": 1
+  },
+  "entryPoints": [
+    {
+      "anchor": "code:.github/workflows/ci.yml@fb63e78",
+      "kind": "ci",
+      "note": null
+    },
+    {
+      "anchor": "code:src/api/orders_handler.py@fb63e78",
+      "kind": "httpRoute",
+      "note": "name heuristic; confirm by reading"
+    },
+    {
+      "anchor": "code:tests/test_orders.sh@fb63e78",
+      "kind": "test",
+      "note": "name heuristic; confirm by reading"
+    }
+  ],
+  "manifests": [
+    "code:requirements.txt@fb63e78"
+  ],
+  "ci": [
+    "code:.github/workflows/ci.yml@fb63e78"
+  ],
+  "infra": [
+    "code:deploy/deploy.sh@fb63e78"
+  ],
+  "docs": [
+    "code:README.md@fb63e78"
+  ]
+}
