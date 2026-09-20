@@ -460,6 +460,19 @@ struct GitRunner: Sendable {
         return text.split(separator: "\u{0}", omittingEmptySubsequences: true).map(String.init)
     }
 
+    /// True when `path` is a DIRECTORY (a tree) at `sha`. `ls-tree -d` matches
+    /// trees only, so a file path — a `code:` anchor with a stray trailing
+    /// slash — answers false here, as it does in the reference validator's
+    /// `git ls-tree -d <sha> <path>`. A recursive `lsTree` would answer true
+    /// for such a path and let a packet the reference validator rejects import.
+    func treeExists(sha: String, path: String, repo: URL) async throws -> Bool {
+        var trimmed = path
+        while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        guard !trimmed.isEmpty else { return true }  // the root tree is always there
+        let text = try await run(["ls-tree", "-d", "--name-only", sha, trimmed], in: repo)
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     /// Paths of every worktree registered with `repo` (the main one first).
     func worktreeList(repo: URL) async throws -> [String] {
         let text = try await run(["worktree", "list", "--porcelain"], in: repo)

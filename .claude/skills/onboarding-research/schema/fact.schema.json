@@ -48,7 +48,8 @@
       "description": "one sentence"
     },
     "attributes": {
-      "type": "object"
+      "type": "object",
+      "description": "kind-specific. For dataEntity and dataField facts: pii is a boolean or the string \"unknown\" (a machine-readable flag the ERD projector colours by); put the nuance in piiNote. rows and retention are a value or \"unknown\"."
     },
     "evidence": {
       "type": "array",

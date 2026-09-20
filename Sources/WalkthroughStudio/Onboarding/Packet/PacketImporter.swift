@@ -13,7 +13,9 @@
 //     a corrected packet without first cleaning up a half-copied directory.
 //   * The copy replaces `packet/` atomically enough: the new tree is staged
 //     next to it and moved into place, so a crash mid-copy cannot leave a
-//     packet that is half one producer's and half another's.
+//     packet that is half one producer's and half another's. For the same
+//     reason the new manifest VALUE is built before the copy begins, so the
+//     only step left after packet/ changes is one atomic manifest write.
 
 import Foundation
 
@@ -47,8 +49,13 @@ enum PacketImporter {
         guard report.ok else {
             throw StudioError(rejectionMessage(for: report, root: packet.root))
         }
+        // Build the new manifest value BEFORE replacing packet/: a throw from
+        // reading the old manifest must not leave a package whose packet/ is
+        // the new producer's while manifest.producer still names the old one.
+        // What remains is the manifest write, which PackageStore does atomically.
+        let manifest = try PacketImporter.manifest(for: packet, in: store)
         try copyPacket(from: packet.root, into: store)
-        try updateManifest(in: store, from: packet)
+        try store.writeManifest(manifest)
         return report
     }
 
@@ -98,10 +105,18 @@ enum PacketImporter {
     // MARK: Manifest
 
     /// Records the packet's producer in `manifest.json`, creating a minimal
-    /// manifest when the package does not have one yet. Fields the package
-    /// already knows (its own head sha, remote, branch) are left alone; empty
-    /// ones are filled from `packet.json`.
+    /// manifest when the package does not have one yet.
     static func updateManifest(in store: PackageStore, from packet: ResearchPacket) throws {
+        try store.writeManifest(try PacketImporter.manifest(for: packet, in: store))
+    }
+
+    /// The manifest the package should carry after importing `packet`: the
+    /// package's existing one with the producer recorded, or a minimal new one.
+    /// Pure apart from reading the current manifest — nothing is written, so a
+    /// caller can build the value before it starts replacing files.
+    /// Fields the package already knows (its own head sha, remote, branch) are
+    /// left alone; empty ones are filled from `packet.json`.
+    static func manifest(for packet: ResearchPacket, in store: PackageStore) throws -> OnboardingManifest {
         var manifest: OnboardingManifest
         if store.hasManifest {
             manifest = try store.readManifest()
@@ -127,6 +142,6 @@ enum PacketImporter {
             model: producer.model,
             finishedAt: producer.finishedAt
         )
-        try store.writeManifest(manifest)
+        return manifest
     }
 }

@@ -86,7 +86,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     for line in report.consoleLines { print(line) }
                     exit(report.ok ? 0 : 1)
                 } catch {
-                    print("ERROR   \(packetDir.lastPathComponent): \(error.localizedDescription)")
+                    // PacketReader throws "<file>: <reason>"; print it at that
+                    // file, like `ERROR   facts.jsonl: file missing` in
+                    // validate_packet.py, not at the packet directory — the two
+                    // reports have to be greppable side by side.
+                    let text = (error as? StudioError)?.message ?? error.localizedDescription
+                    var location = packetDir.lastPathComponent
+                    var reason = text
+                    if let split = PacketReader.splitFileReason(text) {
+                        location = split.file
+                        reason = split.reason
+                    }
+                    print("ERROR   \(location): \(reason)")
+                    print("stats   {}")
                     print("PACKET INVALID: 1 errors, 0 warnings")
                     exit(1)
                 }

@@ -13,7 +13,8 @@ Emit facts as JSON Lines, one object per line, nothing else, following this shap
 
 Kinds: component (what a module is and does), interface (public functions, types,
 protocols), endpoint (routes, CLI commands, jobs), dataEntity (tables, models; attributes
-must include pii, rows, retention as values or "unknown"), dataField, config (settings,
+must include pii as a boolean or "unknown" with any nuance in piiNote, plus rows and
+retention as values or "unknown"), dataField, config (settings,
 env vars, feature flags), integration (external calls: HTTP, queues, vendors),
 deployStep, risk (anything that can break or bite, with severity in attributes),
 landmine (non-obvious gotcha that would cost a newcomer a day), term (domain word),

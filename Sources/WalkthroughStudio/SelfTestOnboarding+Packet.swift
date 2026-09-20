@@ -10,7 +10,7 @@
 //   fixturePacketProbe — the packet actually carries the findings the fixture
 //     repository was built to contain (ARCHITECTURE.md 15.3): the hotspot, the
 //     PII column, the unapplied migration, the missing rollback, the ancient
-//     pinned dependency, bus factor 1 everywhere, vendor/ never researched,
+//     pinned dependency, bus factor 1 everywhere, generated code flagged,
 //     and an idempotency gap on the traced order path.
 //
 // Both read the packet from Bundle.module (Package.swift copies
@@ -25,13 +25,18 @@ enum FixturePacketFacts {
     static let directoryName = "fixture-repo.packet"
     static let bundleSubdirectory = "OnboardingResources/fixtures"
 
+    // These spellings ARE the contract between the producer skill and the
+    // content half: a packet that names the same findings differently is a
+    // packet the projectors cannot read. If a regenerated packet disagrees
+    // with one of them, change the packet (or this constant, deliberately) —
+    // do not loosen the probe until it passes.
     static let hotspotSubject = "orders_repo.py"
     static let piiEntity = "users"
     static let migrationClaim = "002"
     static let rollbackSubject = "deploy.sh"
     static let dependencyName = "requests"
     static let dependencyVersion = "2.19.0"
-    static let unresearchedDir = "vendor/"
+    static let generatedDir = "vendor/"
     static let tracedEntryFile = "orders_handler.py"
 }
 
@@ -296,7 +301,11 @@ extension SelfTest {
             throw StudioError("fixturePacketProbe: \(FixturePacketFacts.dependencyName) \(requests.version) is neither CVE-flagged nor end-of-life (cves: \(requests.cves.isUnknown ? "unknown" : "[]"), eol: \(requests.eol))")
         }
 
-        // 6. Every directory is owned by one person.
+        // 6. Every directory is owned by one person. Not over-specified: the
+        //    fixture has two authors, and busFactor is the smallest number of
+        //    authors covering 50 percent of a directory's commits — with two
+        //    authors one of them always reaches 50 percent, so 1 is the only
+        //    correct answer for every directory in this repository.
         let ownership = packet.history.ownership
         guard !ownership.isEmpty else {
             throw StudioError("fixturePacketProbe: history.json has no ownership entries")
@@ -305,13 +314,30 @@ extension SelfTest {
             throw StudioError("fixturePacketProbe: ownership of \(shared.dir) has busFactor \(shared.busFactor), expected 1")
         }
 
-        // 7. vendor/ was never researched.
-        guard let vendor = packet.coverage.directories.first(where: { $0.path == FixturePacketFacts.unresearchedDir }) else {
-            let paths = packet.coverage.directories.map { $0.path }.joined(separator: ", ")
-            throw StudioError("fixturePacketProbe: coverage.json has no \(FixturePacketFacts.unresearchedDir) entry (has: \(paths))")
+        // 7. Generated code is flagged as generated, and its coverage is honest.
+        //    Reading vendor/ is allowed and produced a real finding here (protoc
+        //    output nothing imports), so the level is whatever the evidence
+        //    supports; what must hold is that inventory marks it generated with a
+        //    reason and that coverage does not claim more than was read.
+        guard let vendorInventory = packet.inventory.topLevel.first(where: { $0.path == FixturePacketFacts.generatedDir }) else {
+            let paths = packet.inventory.topLevel.map { $0.path }.joined(separator: ", ")
+            throw StudioError("fixturePacketProbe: inventory.json has no \(FixturePacketFacts.generatedDir) entry (has: \(paths))")
         }
-        guard vendor.level == "unread" || vendor.level == "inventoried" else {
-            throw StudioError("fixturePacketProbe: \(FixturePacketFacts.unresearchedDir) is at level \(vendor.level), expected unread or inventoried")
+        guard vendorInventory.generated else {
+            throw StudioError("fixturePacketProbe: \(FixturePacketFacts.generatedDir) is not flagged generated in inventory.json")
+        }
+        guard let reason = vendorInventory.reason, !reason.isEmpty else {
+            throw StudioError("fixturePacketProbe: \(FixturePacketFacts.generatedDir) is flagged generated with no reason")
+        }
+        guard let vendor = packet.coverage.directories.first(where: { $0.path == FixturePacketFacts.generatedDir }) else {
+            let paths = packet.coverage.directories.map { $0.path }.joined(separator: ", ")
+            throw StudioError("fixturePacketProbe: coverage.json has no \(FixturePacketFacts.generatedDir) entry (has: \(paths))")
+        }
+        if vendor.filesRead == 0 && vendor.level != "unread" {
+            throw StudioError("fixturePacketProbe: \(FixturePacketFacts.generatedDir) read no files but sits at level \(vendor.level)")
+        }
+        if vendor.level == "unread" && vendor.reason == nil {
+            throw StudioError("fixturePacketProbe: \(FixturePacketFacts.generatedDir) is unread with no reason")
         }
 
         // 8. The traced order path reports the idempotency gap as a finding.
@@ -331,7 +357,7 @@ extension SelfTest {
             throw StudioError("fixturePacketProbe: no trace entered at \(FixturePacketFacts.tracedEntryFile) reports idempotency absent (\(seen))")
         }
 
-        print("selftest: fixturePacketProbe OK (\(packet.facts.count) facts, \(packet.traces.count) traces; hotspot, users.pii, migration \(FixturePacketFacts.migrationClaim), \(FixturePacketFacts.rollbackSubject) rollback, \(FixturePacketFacts.dependencyName) \(requests.version), busFactor 1 x\(ownership.count), \(FixturePacketFacts.unresearchedDir) \(vendor.level), idempotency absent in \(idempotencyTrace))")
+        print("selftest: fixturePacketProbe OK (\(packet.facts.count) facts, \(packet.traces.count) traces; hotspot, users.pii, migration \(FixturePacketFacts.migrationClaim), \(FixturePacketFacts.rollbackSubject) rollback, \(FixturePacketFacts.dependencyName) \(requests.version), busFactor 1 x\(ownership.count), \(FixturePacketFacts.generatedDir) \(vendor.level), idempotency absent in \(idempotencyTrace))")
     }
 
     // MARK: Small helpers

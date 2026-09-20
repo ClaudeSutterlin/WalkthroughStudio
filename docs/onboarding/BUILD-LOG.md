@@ -21,7 +21,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 |---|---|---|---|
 | M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S2 |
 | M1 Fixture repo, selftest scaffold, stills writer | built (not compiled) | fixtureRepoProbe, stillsWriterProbe | S2 |
-| M2 Package format, anchors, git, Research Packet contract | in-progress (Swift half built, not compiled; packet half: Python contract done, Swift pending) | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
+| M2 Package format, anchors, git, Research Packet contract | built (not compiled) | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
 | M3 Claude Code producer skill and the fixture packet | verified (Python side; Swift probe pending) | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
@@ -122,6 +122,17 @@ Built:
 - Fixture packet research (M3): 4 mapper units and 5 lens units produced 213
   facts, all 254 anchors resolving at the pinned SHA, no secret leaked; 30
   glossary terms; dependencies filled with url: evidence.
+- Swift, M2 packet half: Onboarding/Packet/PacketModels.swift (every packet
+  record plus `ResearchPacket` and `PacketReader`), PacketValidator.swift (the
+  Swift twin of validate_packet.py: schema constraints, anchor resolution
+  through `PacketAnchorResolver`, the cross-file rules, completeness gates,
+  `PacketValidationReport` with the Python console wording),
+  PacketImporter.swift, `--validate-packet <packetDir> <repoDir>` in
+  WalkthroughStudioApp.swift, and SelfTestOnboarding+Packet.swift with
+  `packetValidateProbe` (M2) and `fixturePacketProbe` (M3), both registered in
+  `SelfTestOnboarding.runOnboarding`. `GitRunner.treeExists` added for it.
+  About 2,900 lines, again written without a compiler; the review and fix pass
+  is recorded below.
 Verified:
 - scripts/make-fixture-repo.sh: two runs give the same head SHA; probe facts
   (6 touches of orders_repo.py, deploy.sh dated 2025-01-04, email in schema,
@@ -178,6 +189,67 @@ Broke / learned:
     `manifestRoundTripProbe` asserts Foundation's pretty-printed text
     (`"createdAt" : "2026-09-21T14:13:20Z"`, `"capUSD" : 25`), the first
     assertion to relax to value checks if it fails.
+- Swift read-through review of the M2 packet half (no compiler), and what the
+  fixer changed. The theme: every finding but one was the Swift and Python
+  validators disagreeing about the SAME packet, which is the one thing this
+  contract cannot afford — a producer diffs the two reports.
+  - Schema conformance (PACKET.md section 7 rule 1) had no Swift equivalent at
+    all: only the cross-file rules ran, so a packet `validate_packet.py`
+    rejects imported cleanly. Added `PacketValidationRun.checkSchemaConstraints`
+    for the constraints that matter — fact `id` pattern, `claim` 10 to 600,
+    `confidence` 0 to 1, fact `kind`/`status`, `verdicts[].verdict`,
+    `entryPoints[].kind`, `checks[].check`/`status`, `cves[].severity`,
+    `dependencies[].ecosystem`, non-empty `hops`, the five required
+    `messageKeywords` keys — at the locations and in the wording jsonschema
+    produces (`facts.jsonl:<n>:confidence`, `'x' is not one of ['a', 'b']`).
+    The fact kind/status and coverage level/concern status checks moved out of
+    the hand-rolled passes into it so each defect is reported once, at the
+    schema's own location. `additionalProperties: false` stays unenforced on
+    purpose (the models ignore unknown keys); the header says so.
+  - Fact messages were numbered from the array index, i.e. among the NON-BLANK
+    lines; Python numbers the real file line. One blank line in facts.jsonl and
+    every location below it disagreed. `ResearchPacket` now carries
+    `factLines` (parallel to `facts`) and `factLine(at:)`; the existing
+    `sourceLine(ofFact:)` is deliberately not used here, since it holds the
+    first line for an id and would point a duplicate-id error at the original.
+  - `PacketAnchorResolver.directoryExists` used `git ls-tree -r` and accepted
+    any output, so `code:src/api/orders_handler.py/@fb63e78` — a file with a
+    stray slash — resolved in Swift and failed in Python. New
+    `GitRunner.treeExists` runs `ls-tree -d --name-only`, which matches trees
+    only (verified against the fixture repo: `src` and `db` answer, a file path
+    gives empty output).
+  - The sha7 pin check lowercased the anchor's sha while `Anchor.isHex` accepts
+    A-F, so `...@FB63E78` passed in Swift; Python's `CODE_RE` is lowercase-only,
+    so there the anchor is not pinned at all. Swift now rejects a non-lowercase
+    sha7 with Python's own wording ("code anchor without @sha7 ...").
+  - `--validate-packet` printed a reader failure at the packet DIRECTORY
+    (`ERROR   fixture-repo.packet: facts.jsonl: file missing`) where Python
+    prints `ERROR   facts.jsonl: file missing`. Added
+    `PacketReader.splitFileReason`, which unwraps `<file>: <reason>` only when
+    the prefix is a location the reader produces; the tool also prints a
+    `stats   {}` line now, like `finish()`. Still open, and noted for a later
+    session: `PacketReader.load` throws on the FIRST bad file instead of
+    collecting per-file failures into the report, so a broken packet yields one
+    error where Python yields the whole report.
+  - `PacketImporter.importPacket` replaced `packet/` before writing the
+    manifest, so a failing manifest write left the new producer's packet under
+    the old producer's name — the half-imported state the file header forbids.
+    The pure part is now `manifest(for:in:)`, built before the copy; only the
+    atomic write follows it.
+  - The no-repository warning's wording ("no repository given" vs Python's
+    "no --repo given") is now a documented, deliberate exception, with the
+    header naming both known exceptions instead of claiming identical wording.
+  - Two findings rejected after checking them against the tree. (1) A reviewer
+    read the two new probes as unconditional on a fixture packet that "does not
+    exist yet" and asked for them to be skipped; the packet landed in this same
+    session (commit 94cc274) and ships via `.copy("OnboardingResources")`, so
+    both probes stay hard failures. (2) A reviewer called
+    `fixturePacketProbe`'s `busFactor == 1` assertion over-specified because
+    two authors "could" yield 2; with two authors one of them always holds at
+    least 50 percent of a directory's commits, and all nine ownership entries
+    in the checked-in packet are 1. The assertion stands, with a comment
+    explaining why, and the `FixturePacketFacts` constants are now labelled as
+    the producer/content contract rather than probe guesses.
 Limits hit:
 - Session usage limit at about 12:50 UTC (reset 16:40 UTC) killed 22 agents:
   Swift workflow wf_132b805e-587 finished 3 of 6 (writers done; both reviewers
@@ -206,11 +278,28 @@ Packet result (M3, end of session):
   the criterion now requires generated directories to be flagged with a reason
   rather than to stay unread.
 
+Packet-half Swift (M2, end of session):
+- PacketModels, PacketValidator, PacketImporter, SelfTestOnboarding+Packet and
+  the `--validate-packet <packetDir> <repoDir>` flag are written (about 3,400
+  lines) and reviewed by a read-through that found no compile errors, two
+  runtime bugs and five contract mismatches; the fixer applied seven findings
+  and rejected two with evidence from the tree.
+- Because there is no Swift compiler here, fixturePacketProbe's eight assertions
+  were simulated in Python against the checked-in packet. Two failed and both
+  were real:
+  (a) `pii` was prose ("yes: email is marked PII in schema") rather than a
+      boolean, so the ERD projector could not colour a node by it. The contract
+      now requires a boolean or "unknown" with the nuance in `piiNote`, the
+      assembler normalises it (5 facts here), and PACKET.md, the fact schema and
+      the mapper template say so.
+  (b) the probe still demanded vendor/ stay unread. Rewritten to assert what
+      actually matters: inventory flags generated directories with a reason, and
+      coverage never claims a level the read count cannot support.
+  All eight assertions now pass against the real packet data, which is the
+  closest this environment can get to running the probe.
+
 Next:
-1. When the packet-half Swift workflow finishes: commit, then update
-   fixturePacketProbe's vendor/ assertion to match the corrected criterion
-   (flagged generated with a reason, level consistent with filesRead).
-2. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;
+1. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;
    assemble_packet.py --packet <survey copy> --units units/ --repo <fixture>
    --model claude-fable-5-1; fix validator errors; copy into
    Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet/.

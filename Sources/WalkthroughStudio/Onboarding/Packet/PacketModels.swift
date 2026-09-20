@@ -1706,6 +1706,11 @@ struct ResearchPacket {
     /// message can name the line a reader would open rather than the fact's
     /// index among the non-blank lines. Empty for a packet built in memory.
     let factSourceLines: [String: Int]
+    /// The 1-based facts.jsonl line each entry of `facts` was read from,
+    /// parallel to `facts` (blank lines are skipped but still counted, as the
+    /// reference validator counts them). Empty for a packet built in memory;
+    /// the validator then falls back to the array index.
+    let factLines: [Int]
     let paths: PacketPaths
     let traces: [String: PacketTrace]
     let decisions: PacketDecisions?
@@ -1717,7 +1722,8 @@ struct ResearchPacket {
     init(root: URL, manifest: PacketManifest, inventory: PacketInventory, history: PacketHistory,
          dependencies: PacketDependencies?, facts: [PacketFact], paths: PacketPaths,
          traces: [String: PacketTrace], decisions: PacketDecisions?, glossary: PacketGlossary?,
-         coverage: PacketCoverage, draftMarkdownFiles: [URL], factSourceLines: [String: Int] = [:]) {
+         coverage: PacketCoverage, draftMarkdownFiles: [URL], factSourceLines: [String: Int] = [:],
+         factLines: [Int] = []) {
         self.root = root
         self.manifest = manifest
         self.inventory = inventory
@@ -1725,6 +1731,7 @@ struct ResearchPacket {
         self.dependencies = dependencies
         self.facts = facts
         self.factSourceLines = factSourceLines
+        self.factLines = factLines
         self.paths = paths
         self.traces = traces
         self.decisions = decisions
@@ -1748,6 +1755,14 @@ struct ResearchPacket {
     /// from disk; nil for a packet built in memory or an unknown id.
     func sourceLine(ofFact id: String) -> Int? {
         factSourceLines[id]
+    }
+
+    /// The facts.jsonl line `facts[index]` was read from, falling back to
+    /// `index + 1` for a packet built in memory. Messages about a fact use
+    /// this rather than `sourceLine(ofFact:)`, which holds the FIRST line
+    /// carrying an id and so would point a duplicate-id error at the original.
+    func factLine(at index: Int) -> Int {
+        factLines.indices.contains(index) ? factLines[index] : index + 1
     }
 
     /// Facts content may use: verified and unknown, never refuted or proposed.
@@ -1812,7 +1827,8 @@ enum PacketReader {
             glossary: glossary,
             coverage: coverage,
             draftMarkdownFiles: drafts,
-            factSourceLines: PacketReader.sourceLines(of: factLines)
+            factSourceLines: PacketReader.sourceLines(of: factLines),
+            factLines: factLines.map { $0.line }
         )
     }
 
@@ -1987,6 +2003,32 @@ enum PacketReader {
         @unknown default:
             return decodingError.localizedDescription
         }
+    }
+
+    /// Splits a reader error of the shape `<file>: <reason>` into its parts,
+    /// but only when the prefix names a location this reader produces
+    /// (a required or optional file, `traces/<id>.json`, or `facts.jsonl:<n>`).
+    /// A caller printing a report can then say `ERROR   facts.jsonl: file missing`
+    /// like the reference validator instead of naming the packet directory.
+    /// Returns nil for any other message, so the caller keeps its own wording.
+    static func splitFileReason(_ text: String) -> (file: String, reason: String)? {
+        guard let separator = text.range(of: ": ") else { return nil }
+        let file = String(text[text.startIndex..<separator.lowerBound])
+        let reason = String(text[separator.upperBound...])
+        guard !reason.isEmpty, isKnownLocation(file) else { return nil }
+        return (file, reason)
+    }
+
+    /// True for the `where` strings `load` puts in front of a failure.
+    static func isKnownLocation(_ file: String) -> Bool {
+        if requiredFiles.contains(file) || optionalFiles.contains(file) { return true }
+        if file.hasPrefix(PacketTrace.directoryName + "/"), file.hasSuffix(".json") { return true }
+        let factsPrefix = PacketFact.fileName + ":"
+        if file.hasPrefix(factsPrefix) {
+            let line = file.dropFirst(factsPrefix.count)
+            return !line.isEmpty && line.allSatisfy { $0.isNumber }
+        }
+        return false
     }
 
     /// "repo/headSHA", "topLevel/[2]/path" in the reference validator's slash style.

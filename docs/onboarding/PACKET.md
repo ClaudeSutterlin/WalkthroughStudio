@@ -102,8 +102,11 @@ Rules:
   `refuted` (a refuting verdict that cites counter-evidence), `unknown`
   (verifiers disagreed or could not tell). Content uses verified and unknown
   facts (unknown with hedged wording) and never refuted ones.
-- `dataEntity` facts carry `attributes.pii`, `attributes.rows`,
-  `attributes.retention`, each a value or `"unknown"`.
+- `dataEntity` and `dataField` facts carry `attributes.pii`, `attributes.rows`
+  and `attributes.retention`. `pii` is a boolean or `"unknown"`, because the
+  entity relationship diagram colours nodes by it; any nuance ("yes: email is
+  annotated, address is not") goes in `attributes.piiNote`. `rows` and
+  `retention` are a value or `"unknown"`.
 
 ## 5. Traces
 

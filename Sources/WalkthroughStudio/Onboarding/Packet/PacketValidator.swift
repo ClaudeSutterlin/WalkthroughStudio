@@ -7,6 +7,9 @@
 // the same "where" strings and message wording, so a producer that fixed every
 // line the Python tool printed sees the same report on import:
 //
+//   0. the enum, range, length and required-key constraints of the schemas
+//      themselves (`checkSchemaConstraints`), because the app is the only gate
+//      for a packet that never ran through validate_packet.py
 //   1. required files and headSHA agreement between files
 //   2. every anchor parses (Anchor.parse) and resolves: code: anchors are
 //      pinned to a prefix of repo.headSHA and, when a repository is given, the
@@ -26,6 +29,15 @@
 //      at level mapped are errors (a survey skeleton is not a packet)
 //   7. packet.json counts versus computed counts (warnings)
 //   8. [[anchor]] citations in drafts/*.md
+//
+// Known wording exceptions to "the same message wording" above, both
+// deliberate: the no-repository warning says "no repository given" where the
+// Python tool says "no --repo given" (the app has no such flag), and a
+// malformed anchor carries `Anchor.parse`'s own reason inside
+// "malformed anchor (<reason>)" rather than the Python Anchor class's.
+// Schema rules that are still NOT enforced here are listed on
+// `checkSchemaConstraints`; the chief one is `additionalProperties: false`,
+// since the models ignore unknown keys by design.
 //
 // Anchor resolution goes through `PacketAnchorResolver`, which caches every
 // git answer per (sha, path) so a 200-fact packet costs a few dozen git
@@ -208,15 +220,16 @@ final class PacketAnchorResolver {
         return nil
     }
 
-    /// True when at least one tracked file lives under `path` at `head`.
+    /// True when `path` is a directory (a tree) at `head`. Directory-only, like
+    /// the reference validator's `git ls-tree -d`: a file path with a trailing
+    /// slash must NOT resolve, or the app would import a packet Python rejects.
     func directoryExists(path: String) async -> Bool {
         var trimmed = path
         while trimmed.hasSuffix("/") { trimmed.removeLast() }
         let key = head + ":" + trimmed + "/"
         if let known = directories[key] { return known }
         gitCalls += 1
-        let entries = (try? await git.lsTree(sha: head, path: trimmed, repo: repo)) ?? []
-        let exists = !entries.isEmpty
+        let exists = (try? await git.treeExists(sha: head, path: trimmed, repo: repo)) ?? false
         directories[key] = exists
         return exists
     }
@@ -240,24 +253,19 @@ struct PacketValidator {
     let repo: URL?
     let git: GitRunner
 
+    // The schema's own lists live on the models (in schema order, which the
+    // enum messages need); these are aliases so they cannot drift apart.
+
     /// The ten concern keys every trace carries (PACKET.md section 5).
-    static let concernKeys: [String] = [
-        "entry", "authorization", "validation", "businessLogic", "persistence",
-        "sideEffects", "failureHandling", "idempotency", "timeoutsRetries", "logging",
-    ]
+    static let concernKeys: [String] = PacketTrace.concernKeys
 
-    static let coverageLevels: [String] = ["unread", "inventoried", "mapped", "verified", "traced"]
+    static let coverageLevels: [String] = PacketCoverage.levels
 
-    static let factKinds: Set<String> = [
-        "component", "interface", "endpoint", "dependency", "dataEntity", "dataField", "flowHop",
-        "decision", "risk", "owner", "hotspot", "testCoverage", "migration", "config", "integration",
-        "deployStep", "incidentPattern", "term", "landmine", "metric", "buildResult", "security",
-        "observability",
-    ]
+    static let factKinds: Set<String> = Set(PacketFact.kinds)
 
-    static let factStatuses: Set<String> = ["proposed", "verified", "refuted", "unknown"]
+    static let factStatuses: Set<String> = Set(PacketFact.statuses)
 
-    static let scopes: Set<String> = ["smoke", "preview", "complete"]
+    static let scopes: Set<String> = Set(PacketManifest.scopes)
 
     init(packet: ResearchPacket, repo: URL?, git: GitRunner) {
         self.packet = packet
@@ -299,6 +307,7 @@ private final class PacketValidationRun {
 
     func run() async throws -> PacketValidationReport {
         await checkManifestAndHeads()
+        checkSchemaConstraints()
         collectFactIDs()
         await checkFacts()
         await checkInventoryHistoryDependencies()
@@ -341,6 +350,8 @@ private final class PacketValidationRun {
             if !PacketFields.isFullSHA(head) {
                 report.error("packet.json:repo/headSHA", "not a 40-hex sha")
             }
+            // Deliberately NOT the Python wording ("no --repo given: ..."):
+            // the app has no --repo flag to name. Same `where`, same meaning.
             report.warn("validator", "no repository given: code: and commit: anchors are parsed but not resolved")
         }
 
@@ -371,6 +382,152 @@ private final class PacketValidationRun {
         if !text.isEmpty, text != head {
             report.error("\(file).json:headSHA", "does not match packet.json repo.headSHA")
         }
+    }
+
+    // MARK: 1b. Schema constraints
+
+    /// The enum, range, length and required-key constraints the JSON Schemas
+    /// state, checked here because the app is the only gate for a packet that
+    /// never went through `validate_packet.py` (PACKET.md section 7, rule 1).
+    /// Locations and wording follow what `jsonschema` produces through the
+    /// Python tool's `validate_schema`, i.e. `<file>:<path/with/slashes>` and
+    /// "'x' is not one of ['a', 'b']", so the two reports line up line for line.
+    ///
+    /// Not enforced here (see the file header): `additionalProperties: false`
+    /// — the models ignore unknown keys on purpose, so an extra key imports
+    /// and only the Python tool objects; the anchor `pattern`s, which
+    /// `Anchor.parse` covers more strictly; `required` keys other than
+    /// messageKeywords, whose absence the models' non-optional fields already
+    /// turn into a decode failure; and the numeric `minimum: 0` counters.
+    private func checkSchemaConstraints() {
+        // facts.jsonl — one object per line, numbered like the file.
+        for (index, fact) in packet.facts.enumerated() {
+            let at = "facts.jsonl:\(packet.factLine(at: index))"
+            if !PacketValidationRun.matchesIDPattern(fact.id) {
+                report.error("\(at):id", PacketValidationRun.patternMessage(fact.id, PacketValidationRun.idPattern))
+            }
+            if !PacketFact.kinds.contains(fact.kind) {
+                report.error("\(at):kind", PacketValidationRun.enumMessage(fact.kind, PacketFact.kinds))
+            }
+            if !PacketFact.statuses.contains(fact.status) {
+                report.error("\(at):status", PacketValidationRun.enumMessage(fact.status, PacketFact.statuses))
+            }
+            if fact.claim.count < 10 {
+                report.error("\(at):claim", PacketValidationRun.lengthMessage(fact.claim, tooLong: false))
+            } else if fact.claim.count > 600 {
+                report.error("\(at):claim", PacketValidationRun.lengthMessage(fact.claim, tooLong: true))
+            }
+            if fact.confidence < 0 {
+                report.error("\(at):confidence", "\(fact.confidence) is less than the minimum of 0")
+            } else if fact.confidence > 1 {
+                report.error("\(at):confidence", "\(fact.confidence) is greater than the maximum of 1")
+            }
+            for (j, verdict) in fact.verdicts.enumerated() where !PacketFact.Verdict.verdicts.contains(verdict.verdict) {
+                report.error("\(at):verdicts/\(j)/verdict",
+                             PacketValidationRun.enumMessage(verdict.verdict, PacketFact.Verdict.verdicts))
+            }
+        }
+
+        // inventory.json
+        for (j, entry) in packet.inventory.entryPoints.enumerated() {
+            if !PacketInventory.EntryPoint.kinds.contains(entry.kind) {
+                report.error("inventory.json:entryPoints/\(j)/kind",
+                             PacketValidationRun.enumMessage(entry.kind, PacketInventory.EntryPoint.kinds))
+            }
+        }
+
+        // history.json — the five keyword buckets every packet must report.
+        for key in PacketHistory.requiredMessageKeywords where packet.history.messageKeywords[key] == nil {
+            report.error("history.json:messageKeywords", "'\(key)' is a required property")
+        }
+
+        // dependencies.json
+        if let dependencies = packet.dependencies {
+            for (j, dependency) in dependencies.dependencies.enumerated() {
+                if !PacketDependencies.Dependency.ecosystems.contains(dependency.ecosystem) {
+                    report.error("dependencies.json:dependencies/\(j)/ecosystem",
+                                 PacketValidationRun.enumMessage(dependency.ecosystem,
+                                                                 PacketDependencies.Dependency.ecosystems))
+                }
+                if case .list(let cves) = dependency.cves {
+                    for (k, cve) in cves.enumerated() where !PacketCVE.severities.contains(cve.severity) {
+                        report.error("dependencies.json:dependencies/\(j)/cves/\(k)/severity",
+                                     PacketValidationRun.enumMessage(cve.severity, PacketCVE.severities))
+                    }
+                }
+            }
+        }
+
+        // coverage.json
+        for (j, directory) in packet.coverage.directories.enumerated() {
+            if !PacketCoverage.levels.contains(directory.level) {
+                report.error("coverage.json:directories/\(j)/level",
+                             PacketValidationRun.enumMessage(directory.level, PacketCoverage.levels))
+            }
+        }
+        for (j, check) in packet.coverage.checks.enumerated() {
+            if !PacketCoverage.checkNames.contains(check.check) {
+                report.error("coverage.json:checks/\(j)/check",
+                             PacketValidationRun.enumMessage(check.check, PacketCoverage.checkNames))
+            }
+            if !PacketCoverage.checkStatuses.contains(check.status) {
+                report.error("coverage.json:checks/\(j)/status",
+                             PacketValidationRun.enumMessage(check.status, PacketCoverage.checkStatuses))
+            }
+        }
+
+        // traces/*.json
+        for traceID in packet.traces.keys.sorted() {
+            guard let trace = packet.traces[traceID] else { continue }
+            if trace.hops.isEmpty {
+                report.error("traces/\(traceID).json:hops", "[] is too short")
+            }
+            for key in PacketTrace.concernKeys {
+                guard let concern = trace.concerns[key] else { continue }  // missing: reported as a cross-file rule
+                if !PacketConcern.statuses.contains(concern.status) {
+                    report.error("traces/\(traceID).json:concerns/\(key)/status",
+                                 PacketValidationRun.enumMessage(concern.status, PacketConcern.statuses))
+                }
+            }
+        }
+    }
+
+    /// The id pattern shared by fact, path, decision and term ids.
+    private static let idPattern = "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+
+    /// `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$` without a regex engine.
+    private static func matchesIDPattern(_ text: String) -> Bool {
+        guard !text.isEmpty, text.count <= 128 else { return false }
+        for (offset, character) in text.enumerated() {
+            let isAlphanumeric = character.isASCII && (character.isLetter || character.isNumber)
+            if offset == 0 {
+                if !isAlphanumeric { return false }
+            } else if !(isAlphanumeric || character == "_" || character == "." || character == ":" || character == "-") {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// "'x' is not one of ['a', 'b']" — jsonschema's wording, so a producer
+    /// can grep either tool's report for the same line.
+    private static func enumMessage(_ value: String, _ allowed: [String]) -> String {
+        let list = allowed.map { "'\($0)'" }.joined(separator: ", ")
+        return truncate("'\(value)' is not one of [\(list)]")
+    }
+
+    private static func patternMessage(_ value: String, _ pattern: String) -> String {
+        truncate("'\(value)' does not match '\(pattern)'")
+    }
+
+    private static func lengthMessage(_ value: String, tooLong: Bool) -> String {
+        truncate("'\(value)' is too \(tooLong ? "long" : "short")")
+    }
+
+    /// `validate_schema` writes `err.message[:300]`; do the same so a long
+    /// claim does not flood the report.
+    private static func truncate(_ message: String) -> String {
+        message.count <= 300 ? message : String(message.prefix(300))
     }
 
     // MARK: 2. Anchors
@@ -411,7 +568,15 @@ private final class PacketValidationRun {
                 report.error(where_, "code anchor without @sha7 (packets must pin every code anchor): \(text)")
                 return anchor
             }
-            if !head.isEmpty, !head.hasPrefix(sha7.lowercased()) {
+            // `Anchor.parse` accepts A-F in a sha, the reference validator's
+            // CODE_RE does not: there an upper-case sha7 never reads as a
+            // pinned anchor at all and the anchor falls through to the
+            // unpinned pattern. Same verdict, same wording, here.
+            if sha7 != sha7.lowercased() {
+                report.error(where_, "code anchor without @sha7 (packets must pin every code anchor): \(text)")
+                return anchor
+            }
+            if !head.isEmpty, !head.hasPrefix(sha7) {
                 report.error(where_, "sha7 \(sha7) is not a prefix of headSHA: \(text)")
                 return anchor
             }
@@ -486,7 +651,10 @@ private final class PacketValidationRun {
 
     private func collectFactIDs() {
         for (index, fact) in packet.facts.enumerated() {
-            let line = index + 1
+            // The REAL facts.jsonl line, not the index among the non-blank
+            // lines: a blank line would otherwise shift every message below it
+            // out of step with the reference validator's numbering.
+            let line = packet.factLine(at: index)
             if factIDs.contains(fact.id) {
                 report.error("facts.jsonl:\(line)", "duplicate fact id \(fact.id)")
             } else {
@@ -497,16 +665,13 @@ private final class PacketValidationRun {
 
     private func checkFacts() async {
         for (index, fact) in packet.facts.enumerated() {
-            let line = index + 1
+            let line = packet.factLine(at: index)
             let where_ = "facts.jsonl:\(line)(\(fact.id))"
             kindCounts[fact.kind, default: 0] += 1
             statusCounts[fact.status, default: 0] += 1
-            if !PacketValidator.factKinds.contains(fact.kind) {
-                report.error(where_, "unknown fact kind \"\(fact.kind)\"")
-            }
-            if !PacketValidator.factStatuses.contains(fact.status) {
-                report.error(where_, "unknown fact status \"\(fact.status)\"")
-            }
+            // `kind` and `status` are enum constraints; they are reported by
+            // `checkSchemaConstraints` at the schema's own location
+            // (facts.jsonl:<n>:kind), not here.
 
             let evidence = PacketFields.list(fact.evidence)
             if evidence.isEmpty {
@@ -689,10 +854,9 @@ private final class PacketValidationRun {
                     report.error("\(where_):concerns", "missing concern \(key)")
                     continue
                 }
+                // An unknown status is a schema constraint, reported by
+                // `checkSchemaConstraints` at concerns/<key>/status.
                 let evidence = PacketFields.list(concern.evidence)
-                if concern.status != "present", concern.status != "absent", concern.status != "unknown" {
-                    report.error("\(where_):concerns.\(key)", "status must be present, absent or unknown (got \"\(concern.status)\")")
-                }
                 if concern.status == "present" || concern.status == "absent", evidence.isEmpty {
                     report.error("\(where_):concerns.\(key)", "status \(concern.status) requires evidence anchors")
                 }
@@ -724,9 +888,8 @@ private final class PacketValidationRun {
             seen.insert(directory.path)
             let level = directory.level
             byLevel[level, default: 0] += 1
-            if !PacketValidator.coverageLevels.contains(level) {
-                report.error(where_, "unknown level \"\(level)\"")
-            }
+            // An unknown level is a schema constraint, reported by
+            // `checkSchemaConstraints` at coverage.json:directories/<j>/level.
             if !inventoryDirs.isEmpty, !inventoryDirs.contains(directory.path) {
                 report.error(where_, "directory is not in inventory.topLevel")
             }

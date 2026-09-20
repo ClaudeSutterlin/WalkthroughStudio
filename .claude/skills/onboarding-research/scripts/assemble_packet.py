@@ -128,9 +128,26 @@ def main():
             f.setdefault("verdicts", [])
             f.setdefault("status", "proposed")
             f.setdefault("confidence", 0.5)
-            if f.get("kind") == "dataEntity":
+            if f.get("kind") in ("dataEntity", "dataField"):
                 for k in ("pii", "rows", "retention"):
                     f["attributes"].setdefault(k, "unknown")
+                # Producers write pii as prose ("yes: email is marked PII"), which
+                # reads well but cannot drive the ERD colouring. Keep the prose as
+                # piiNote and leave a boolean (or "unknown") behind in pii.
+                raw = f["attributes"].get("pii")
+                if not isinstance(raw, bool) and raw != "unknown":
+                    text = json.dumps(raw) if isinstance(raw, (list, dict)) else str(raw)
+                    lowered = text.strip().lower()
+                    if lowered.startswith(("yes", "true", "indirect", "[")) or "pii" in lowered:
+                        flag = True
+                    elif lowered.startswith(("no", "false", "none")):
+                        flag = False
+                    else:
+                        flag = "unknown"
+                    f["attributes"]["pii"] = flag
+                    if text.strip().lower() not in ("yes", "no", "true", "false"):
+                        f["attributes"].setdefault("piiNote", text)
+                        warnings.append(f"{fid}: pii was prose; kept it in piiNote and set pii={json.dumps(flag)}")
             ev = []
             for j, e in enumerate(f.get("evidence", [])):
                 if isinstance(e, str):
