@@ -22,7 +22,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S2 |
 | M1 Fixture repo, selftest scaffold, stills writer | built (not compiled) | fixtureRepoProbe, stillsWriterProbe | S2 |
 | M2 Package format, anchors, git, Research Packet contract | built (not compiled) | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
-| M3 Claude Code producer skill and the fixture packet | verified (Python side; Swift probe pending) | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
+| M3 Claude Code producer skill and the fixture packet | verified, and the skill runs standalone from an isolated copy | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
@@ -364,6 +364,20 @@ Broke / learned (hub):
 - Mermaid's default note colour is yellow, which broke the brand on the trace
   sequence diagrams; note, actor and signal colours are now set explicitly in
   both the hub and the render harness.
+
+Skill packaging sweep (end of session):
+- `.claude/skills/onboarding-research/` is a complete, installable skill: SKILL.md
+  with frontmatter, 10 JSON Schemas, 5 unit prompt templates, and 5 scripts
+  (survey, assemble, validate, project, make_fixture_repo).
+- Portability was tested, not assumed: the folder was copied on its own to a
+  scratch directory and run from there. It built its own fixture repository,
+  surveyed it, assembled and validated a packet with zero errors, and projected
+  the full deliverable set. No reference to this repository is needed at runtime.
+- Two references did dangle and are fixed: SKILL.md pointed at
+  docs/onboarding/PACKET.md and at scripts/make-fixture-repo.sh "in the
+  Walkthrough Studio repository". The skill now carries reference/PACKET.md and
+  scripts/make_fixture_repo.sh, and `scripts/check-skill-sync.sh` fails the verify
+  loop if either copy drifts from the repository's.
 
 Next:
 1. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;

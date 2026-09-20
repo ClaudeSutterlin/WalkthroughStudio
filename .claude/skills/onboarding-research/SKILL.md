@@ -1,6 +1,6 @@
 ---
 name: onboarding-research
-description: Produce a Research Packet for the repository you are working in, so Walkthrough Studio can build an interactive onboarding package (diagrams, registers, critical-path traces, narrated code-walk videos, a hub, a playback chat agent) from it. Use when asked to "research this codebase for onboarding", "produce a research packet", "onboard someone to this repo", or to prepare acquisition due diligence on a codebase. The packet format is docs/onboarding/PACKET.md in the Walkthrough Studio repository.
+description: Produce a Research Packet for the repository you are working in, so Walkthrough Studio can build an interactive onboarding package (diagrams, registers, critical-path traces, narrated code-walk videos, a hub, a playback chat agent) from it. Use when asked to "research this codebase for onboarding", "produce a research packet", "onboard someone to this repo", or to prepare acquisition due diligence on a codebase. The packet format is reference/PACKET.md inside this skill.
 ---
 
 # Onboarding research: produce a Research Packet
@@ -10,6 +10,9 @@ so the packet should read like a senior engineer's field notes, every claim
 pinned to code. The consumer is Walkthrough Studio, which turns the packet into
 content. Everything you write must pass `scripts/validate_packet.py` with zero
 errors; that is the definition of done.
+
+The packet format is specified in `reference/PACKET.md`, which travels with this
+skill; read section 3 (anchors) and section 4 (facts) before you write anything.
 
 Rules that never bend:
 1. Every fact has at least one `code:` (or `commit:`/`cmd:`) evidence anchor
@@ -139,9 +142,9 @@ the warnings you left.
 
 ## Acceptance test for this skill
 
-`scripts/make-fixture-repo.sh /tmp/fixture-repo` in the Walkthrough Studio
-repository builds a deterministic repository (head `fb63e787…`). A packet
-produced from it must validate with zero errors and contain facts for: the
+`scripts/make_fixture_repo.sh /tmp/fixture-repo` (shipped with this skill) builds
+a deterministic repository (head `fb63e787...`). A packet produced from it must
+validate with zero errors and contain facts for: the
 `src/repo/orders_repo.py` hotspot (6 commits, one author), bus factor 1 in
 every directory, `users.email` as PII, migration 002 written but not applied,
 the idempotency gap in order creation (retry without key), no rollback in

@@ -120,16 +120,39 @@ Keychain behavior — permissions stick to the signed bundle identity.
   render them under dark appearance in a selftest probe (pattern exists).
 - API keys: Keychain only, never on disk, never in defaults.
 
-## In planning: Onboard to a Codebase
+## Onboard to a Codebase (in build)
 
 A second mode that points the app at a GitHub repo and has a fleet of research
 agents produce an interactive onboarding package (diagrams, registers, traces,
 narrated code-walk videos with timestamped transcripts, a hub, a playback chat
-agent). Planning is complete and no code exists yet. Before touching it read,
-in order: `docs/onboarding/BUILD-LOG.md` (where the build is), then
+agent). Research and content are separated by the Research Packet contract
+(`docs/onboarding/PACKET.md`): any coding agent can produce a packet, and the app
+builds every deliverable from it. Before touching it read, in order:
+`docs/onboarding/BUILD-LOG.md` (where the build is and what is verified), then
 `docs/onboarding/ARCHITECTURE.md` (the contract and the milestone order), then
-`docs/onboarding/USER-STORIES.md`. The feature gets its own headless entry point
-(`--selftest-onboarding`), documented there once M1 lands.
+`docs/onboarding/USER-STORIES.md`.
+
+Verify loop for this feature (no Swift needed for the first three):
+
+```sh
+scripts/check-skill-sync.sh                                   # skill copies have not drifted
+scripts/make-fixture-repo.sh /tmp/fixture-repo                # deterministic, head fb63e787
+python3 scripts/validate-packet.py Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet --repo /tmp/fixture-repo
+python3 .claude/skills/onboarding-research/scripts/project_packet.py \
+  --packet Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet \
+  --out /tmp/pkg --repo /tmp/fixture-repo                     # diagrams, registers, traces, hub
+node scripts/render-mermaid.mjs /tmp/pkg/diagrams \
+  Sources/WalkthroughStudio/OnboardingResources/hub/vendor/mermaid.min.js /tmp/pkg/diagrams-rendered
+swift build && ./.build/debug/WalkthroughStudio --selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out
+```
+
+**Look at the rendered diagrams and the hub.** Every diagram defect found so far
+(arrows pointing backwards, a deployment chain asserting a sequence the evidence
+did not support, labels truncating mid-word, Mermaid's yellow notes breaking the
+brand) was invisible in the source and obvious in the picture.
+
+The producer side ships as an installable Claude Code skill at
+`.claude/skills/onboarding-research/`, which runs standalone in any repository.
 
 ## Known limitations / next work (from the pre-publication code review)
 
