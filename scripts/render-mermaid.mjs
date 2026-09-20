@@ -27,7 +27,10 @@ for (const f of files) {
       window.mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'base', themeVariables: {
         primaryColor: '#FFFBF5', primaryTextColor: '#1A1612', primaryBorderColor: '#1A1612',
         lineColor: '#1A1612', secondaryColor: '#F2E8DC', tertiaryColor: '#FFFBF5',
-        fontFamily: 'Georgia, serif', fontSize: '15px' } });
+        fontFamily: 'Georgia, serif', fontSize: '15px',
+        noteBkgColor: '#F2E8DC', noteTextColor: '#1A1612', noteBorderColor: '#E3D5C3',
+        actorBkg: '#FFFBF5', actorBorder: '#1A1612', actorTextColor: '#1A1612',
+        signalColor: '#1A1612', signalTextColor: '#1A1612' } });
       const { svg: markup } = await window.mermaid.render('g' + Math.floor(performance.now() * 1000), text);
       document.getElementById('d').innerHTML = markup;
       const svg = document.querySelector('#d svg');

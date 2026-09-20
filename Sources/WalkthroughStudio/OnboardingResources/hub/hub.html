@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding</title>
+<link rel="stylesheet" href="hub.css">
+</head>
+<body>
+<nav>
+  <div class="brand">Onboarding</div>
+  <div class="repo" id="repo">loading...</div>
+  <div class="section-label">Recommended order</div>
+  <div id="order"></div>
+</nav>
+
+<main>
+  <div class="stage-head">
+    <button class="back" id="back" hidden>Back</button>
+    <span class="crumb" id="crumb"></span>
+  </div>
+  <div id="stage"></div>
+</main>
+
+<aside>
+  <div class="card">
+    <h4>Search</h4>
+    <input id="search" type="search" placeholder="Find a topic or a file" autocomplete="off">
+    <div id="results"></div>
+  </div>
+  <div class="card" id="context-card">
+    <h4>Where this is covered</h4>
+    <div id="context" class="empty">Open a diagram node or a code chip.</div>
+  </div>
+  <div class="card">
+    <h4>Coverage</h4>
+    <div id="coverage"></div>
+  </div>
+  <div class="card">
+    <h4>This research</h4>
+    <div id="stats"></div>
+  </div>
+</aside>
+
+<script src="vendor/mermaid.min.js"></script>
+<script src="hub.js"></script>
+</body>
+</html>

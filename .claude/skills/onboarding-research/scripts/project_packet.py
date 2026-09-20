@@ -673,6 +673,151 @@ def build_backlinks(pk, docs, diagram_links, trace_docs):
     return out
 
 
+INLINE_CODE = re.compile(r"`([^`]+)`")
+BOLD = re.compile(r"\*\*([^*]+)\*\*")
+CITATION = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+HEADING_CHIP = re.compile(r"\{(video|code|doc|diagram|trace):\s*([^}]+)\}")
+
+
+def esc(text):
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
+def anchor_label(anchor):
+    """A chip caption a reader can scan: file name plus line range, not the whole path."""
+    m = CODE_RE.match(anchor)
+    if m:
+        name = Path(m.group("path").rstrip("/")).name or m.group("path")
+        if m.group("a"):
+            span = f"L{m.group('a')}" + (f"-{m.group('b')}" if m.group("b") and m.group("b") != m.group("a") else "")
+            return f"{name} {span}"
+        return name
+    kind, _, rest = anchor.partition(":")
+    return f"{kind} {rest.split('#')[0][:28]}"
+
+
+def inline_html(text):
+    """Inline markdown plus the [[anchor]] citation grammar, which becomes a chip the
+    hub can route. Escaping happens first so a claim containing < cannot inject markup."""
+    out = esc(text)
+    out = BOLD.sub(r"<strong>\1</strong>", out)
+    out = INLINE_CODE.sub(r"<code>\1</code>", out)
+
+    def chip(m):
+        anchor, label = m.group(1), m.group(2)
+        return (f'<a class="chip" href="#" data-anchor="{esc(anchor)}" '
+                f'title="{esc(anchor)}">{esc(label or anchor_label(anchor))}</a>')
+    return CITATION.sub(chip, out)
+
+
+def markdown_to_html(md):
+    """Deliberately small: headings with stable slugs, lists, tables, fenced code,
+    paragraphs, and the heading chip suffixes. Anything richer belongs in the packet."""
+    lines = md.split("\n")
+    if lines and lines[0].strip() == "---":            # strip front matter
+        end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), 0)
+        lines = lines[end + 1:]
+    html, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped:
+            i += 1
+            continue
+        if stripped.startswith("```"):
+            i += 1
+            block = []
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                block.append(lines[i])
+                i += 1
+            i += 1
+            html.append("<pre><code>" + esc("\n".join(block)) + "</code></pre>")
+            continue
+        if stripped.startswith("#"):
+            level = len(stripped) - len(stripped.lstrip("#"))
+            text = stripped[level:].strip()
+            chips = HEADING_CHIP.findall(text)
+            text = HEADING_CHIP.sub("", text).strip()
+            slug = slugify(text)
+            chip_html = "".join(
+                f'<a class="chip" href="#" data-anchor="{esc(kind + ":" + value.strip())}">'
+                f'{esc(anchor_label(kind + ":" + value.strip()))}</a>' for kind, value in chips)
+            html.append(f'<h{level} id="{slug}">{inline_html(text)}'
+                        f'<span class="heading-chips">{chip_html}</span></h{level}>')
+            i += 1
+            continue
+        if stripped.startswith("|"):
+            rows = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                rows.append([c.strip() for c in lines[i].strip().strip("|").split("|")])
+                i += 1
+            if len(rows) >= 2 and set("".join(rows[1]).replace(" ", "")) <= set("-:"):
+                head, body = rows[0], rows[2:]
+            else:
+                head, body = None, rows
+            table = ["<table>"]
+            if head:
+                table.append("<thead><tr>" + "".join(f"<th>{inline_html(c)}</th>" for c in head) + "</tr></thead>")
+            table.append("<tbody>")
+            for r in body:
+                table.append("<tr>" + "".join(f"<td>{inline_html(c)}</td>" for c in r) + "</tr>")
+            table.append("</tbody></table>")
+            html.append("".join(table))
+            continue
+        if re.match(r"^([-*]|\d+\.)\s", stripped):
+            ordered = bool(re.match(r"^\d+\.\s", stripped))
+            items = []
+            while i < len(lines) and re.match(r"^([-*]|\d+\.)\s", lines[i].strip()):
+                items.append(re.sub(r"^([-*]|\d+\.)\s", "", lines[i].strip()))
+                i += 1
+            tag = "ol" if ordered else "ul"
+            html.append(f"<{tag}>" + "".join(f"<li>{inline_html(x)}</li>" for x in items) + f"</{tag}>")
+            continue
+        para = []
+        while i < len(lines) and lines[i].strip() and not lines[i].strip().startswith(("#", "|", "```")) \
+                and not re.match(r"^([-*]|\d+\.)\s", lines[i].strip()):
+            para.append(lines[i].strip())
+            i += 1
+        html.append("<p>" + inline_html(" ".join(para)) + "</p>")
+    return "\n".join(html)
+
+
+def emit_code(pk, out, repo):
+    """Every file any deliverable cites, at the pinned commit, as JSON the hub reads.
+    The app's CodeView calls GitRunner.show instead; the static export has no git, so
+    the bytes have to travel with the package."""
+    import subprocess
+    wanted = set()
+    for f in pk.usable():
+        for a in pk.anchors_of(f):
+            cp = code_path(a)
+            if cp and not cp.endswith("/"):
+                wanted.add(cp)
+    for t in pk.traces.values():
+        for h in t["hops"]:
+            cp = code_path(h["anchor"])
+            if cp and not cp.endswith("/"):
+                wanted.add(cp)
+    written, missing = 0, []
+    for path in sorted(wanted):
+        try:
+            text = subprocess.run(["git", "-C", repo, "show", f"{pk.manifest['repo']['headSHA']}:{path}"],
+                                  capture_output=True, text=True, check=True).stdout
+        except subprocess.CalledProcessError:
+            missing.append(path)
+            continue
+        target = out / "code" / (path + ".json")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"path": path, "sha": pk.sha7, "lines": text.split("\n")}, indent=0))
+        written += 1
+    # A container node carries a directory anchor, so the hub needs to know which files
+    # travelled with the package in order to show a listing instead of a 404.
+    (out / "code" / "index.json").write_text(json.dumps(
+        {"version": 1, "sha": pk.sha7, "paths": sorted(wanted - set(missing))}, indent=2) + "\n")
+    return written, missing
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--packet", required=True)
@@ -696,12 +841,17 @@ def main():
     docs = build_registers(pk)
     for doc_id, text in docs.items():
         (out / "docs" / f"{doc_id}.md").write_text(text)
+        (out / "docs" / f"{doc_id}.html").write_text(markdown_to_html(text))
 
     trace_docs = build_trace_docs(pk)
     for pid, text in trace_docs.items():
         (out / "traces" / f"{pid}.md").write_text(text)
+        (out / "traces" / f"{pid}.html").write_text(markdown_to_html(text))
         (out / "traces" / f"{pid}.mmd").write_text(trace_diagram(pk, pk.traces[pid]))
 
+    if a.repo:
+        written, missing = emit_code(pk, out, a.repo)
+        print(f"  code files {written}" + (f", missing {len(missing)}: {missing[:3]}" if missing else ""))
     hub = build_hub(pk, docs, diagrams, trace_docs)
     (out / "hub" / "index.json").write_text(json.dumps(hub, indent=2) + "\n")
     backlinks = build_backlinks(pk, docs, diagram_links, trace_docs)

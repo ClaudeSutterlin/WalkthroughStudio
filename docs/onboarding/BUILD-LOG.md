@@ -29,7 +29,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
 | M8 Projectors: Mermaid diagrams, registers, traces | reference implementation verified (Python); Swift port pending | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
-| M10 Hub, cross-links, search, export, coverage tracker | planned | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
+| M10 Hub, cross-links, search, export, coverage tracker | hub built and driven in a browser; Swift wiring pending | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
 | M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
 | M12 Review, staleness, end-to-end smoke, hardening | planned | smokeEndToEndProbe, stalenessProbe, reviewStateProbe, secretLeakProbe | |
 
@@ -339,6 +339,31 @@ Broke / learned (diagrams, all found by rendering and looking, never by reading)
   drawn as a dashed, disconnected node, which is the finding itself.
 - Labels were truncating mid-word ("deploy/de"); they now break on word
   boundaries.
+
+M10 hub (end of session):
+- `Sources/WalkthroughStudio/OnboardingResources/hub/{hub.html,hub.css,hub.js}` is the
+  real viewer: three panes (recommended order, stage, companion), one `route()`
+  resolver over the anchor grammar (mirroring LinkRouter), live Mermaid with
+  clickable nodes, a code view with line highlighting, a directory view, a
+  backlink panel, search, and the coverage tracker from D18. The app loads these
+  files in a WKWebView and HubExporter ships them verbatim, so this is product
+  code, not a harness.
+- The projector now also emits `docs/*.html` and `traces/*.html` (the reference
+  for MarkdownLite: same slugs, same chip extraction) and `code/<path>.json` plus
+  `code/index.json` for every file a deliverable cites, so anchor-to-code works
+  with no git in the static export.
+- Verified by serving the package and driving it in headless chromium: 21 items in
+  the recommended order, 13 clickable diagram nodes, diagram node to directory
+  view, doc chip to code view at the right lines, backlinks populated, 12 search
+  hits, and no page errors (the one 404 is the browser asking for a favicon).
+
+Broke / learned (hub):
+- Container nodes carry directory anchors, which have no file to open. The hub
+  consults `code/index.json` first and shows a directory listing instead of
+  fetching a 404 on every container click.
+- Mermaid's default note colour is yellow, which broke the brand on the trace
+  sequence diagrams; note, actor and signal colours are now set explicitly in
+  both the hub and the render harness.
 
 Next:
 1. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;

@@ -1,0 +1,106 @@
+/* Onboarding hub. Brand tokens match Brand in Models.swift: coral #DA4F45,
+   cream #FFFBF5, charcoal #1A1612, Georgia serif headlines. The app loads this
+   file in a WKWebView and HubExporter ships it verbatim in the static export. */
+:root {
+  --coral: #DA4F45; --cream: #FFFBF5; --charcoal: #1A1612;
+  --soft: #F2E8DC; --line: #E3D5C3; --muted: #6E6257;
+  --ok: #3F7D58; --warn: #B8862B;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--cream); color: var(--charcoal);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: grid; grid-template-columns: 290px minmax(0, 1fr) 320px; height: 100vh;
+}
+h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; line-height: 1.25; }
+h1 { font-size: 26px; margin: 0 0 14px; }
+h2 { font-size: 20px; margin: 26px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+h3 { font-size: 17px; margin: 18px 0 8px; }
+a { color: var(--coral); }
+
+nav, aside { overflow-y: auto; background: var(--cream); }
+nav { border-right: 1px solid var(--line); padding: 20px 16px; }
+aside { border-left: 1px solid var(--line); padding: 20px 16px; }
+main { overflow-y: auto; padding: 28px 34px 80px; }
+
+.brand { font-family: Georgia, serif; font-size: 19px; margin-bottom: 4px; }
+.repo { color: var(--muted); font-size: 12px; word-break: break-all; margin-bottom: 16px; }
+.section-label {
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted); margin: 18px 0 8px;
+}
+.item {
+  display: flex; gap: 9px; align-items: baseline; width: 100%; text-align: left;
+  padding: 7px 9px; border: 0; border-radius: 7px; background: none;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.item:hover { background: var(--soft); }
+.item[aria-current="true"] { background: var(--soft); box-shadow: inset 3px 0 0 var(--coral); }
+.item .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 17px; }
+.item .t { flex: 1; }
+.item .m { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.item.done .t { color: var(--muted); }
+
+.chip {
+  display: inline-block; padding: 1px 7px; margin: 0 3px 3px 0; border-radius: 999px;
+  background: var(--soft); border: 1px solid var(--line); color: var(--charcoal);
+  font-size: 12px; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.chip:hover { border-color: var(--coral); color: var(--coral); }
+.chip.dangling { border-style: dashed; color: var(--muted); cursor: not-allowed; }
+.chip.dangling::after { content: " ?"; }
+.heading-chips { margin-left: 9px; font-weight: 400; }
+
+main table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14px; }
+main th, main td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+main th { background: var(--soft); font-weight: 600; }
+main code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+main pre { background: var(--soft); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+main li { margin: 5px 0; }
+
+.stage-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.crumb { color: var(--muted); font-size: 12px; }
+.back {
+  border: 1px solid var(--line); background: var(--cream); border-radius: 7px;
+  padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; color: var(--charcoal);
+}
+.back:hover { border-color: var(--coral); color: var(--coral); }
+
+.code-file { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.code-file header {
+  background: var(--soft); padding: 7px 12px; font-size: 12px;
+  display: flex; justify-content: space-between; border-bottom: 1px solid var(--line);
+}
+.code-file pre { margin: 0; background: var(--cream); padding: 10px 0; border-radius: 0; }
+.code-file .row { display: flex; font: 12.5px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.code-file .ln {
+  width: 52px; flex: none; text-align: right; padding-right: 12px;
+  color: var(--muted); user-select: none;
+}
+.code-file .src { white-space: pre; padding-right: 14px; }
+.code-file .row.hl { background: rgba(218, 79, 69, .11); box-shadow: inset 3px 0 0 var(--coral); }
+
+.diagram { background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; }
+.diagram svg { max-width: 100%; height: auto; }
+.diagram .node[data-anchor] { cursor: pointer; }
+.diagram .node[data-anchor]:hover rect { stroke: var(--coral); stroke-width: 3px; }
+
+.card { border: 1px solid var(--line); border-radius: 9px; padding: 12px; margin-bottom: 14px; background: var(--cream); }
+.card h4 { margin: 0 0 8px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cov-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 12.5px; }
+.cov-row .p { flex: 1; font-family: ui-monospace, Menlo, monospace; }
+.bar { width: 62px; height: 7px; border-radius: 4px; background: var(--soft); overflow: hidden; flex: none; }
+.bar i { display: block; height: 100%; }
+.lv-traced i { background: var(--coral); }
+.lv-verified i { background: var(--ok); }
+.lv-mapped i { background: var(--warn); }
+.lv-inventoried i, .lv-unread i { background: var(--muted); }
+.cov-row .lvl { color: var(--muted); font-size: 11px; width: 68px; text-align: right; }
+.stat { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; }
+.stat b { font-variant-numeric: tabular-nums; }
+#search { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--cream); color: inherit; font: inherit; font-size: 13px; }
+.result { padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+.result:hover { background: var(--soft); }
+.result .where { color: var(--muted); font-size: 11px; }
+.empty { color: var(--muted); font-size: 12.5px; }
