@@ -1701,6 +1701,11 @@ struct ResearchPacket {
     let history: PacketHistory
     let dependencies: PacketDependencies?
     let facts: [PacketFact]
+    /// Fact id -> the 1-based line of facts.jsonl it was read from (the FIRST
+    /// line carrying that id, as the reference validator records it), so a
+    /// message can name the line a reader would open rather than the fact's
+    /// index among the non-blank lines. Empty for a packet built in memory.
+    let factSourceLines: [String: Int]
     let paths: PacketPaths
     let traces: [String: PacketTrace]
     let decisions: PacketDecisions?
@@ -1712,13 +1717,14 @@ struct ResearchPacket {
     init(root: URL, manifest: PacketManifest, inventory: PacketInventory, history: PacketHistory,
          dependencies: PacketDependencies?, facts: [PacketFact], paths: PacketPaths,
          traces: [String: PacketTrace], decisions: PacketDecisions?, glossary: PacketGlossary?,
-         coverage: PacketCoverage, draftMarkdownFiles: [URL]) {
+         coverage: PacketCoverage, draftMarkdownFiles: [URL], factSourceLines: [String: Int] = [:]) {
         self.root = root
         self.manifest = manifest
         self.inventory = inventory
         self.history = history
         self.dependencies = dependencies
         self.facts = facts
+        self.factSourceLines = factSourceLines
         self.paths = paths
         self.traces = traces
         self.decisions = decisions
@@ -1736,6 +1742,12 @@ struct ResearchPacket {
     /// The first fact with that id.
     func fact(id: String) -> PacketFact? {
         facts.first(where: { $0.id == id })
+    }
+
+    /// The 1-based facts.jsonl line a fact was read from, when the packet came
+    /// from disk; nil for a packet built in memory or an unknown id.
+    func sourceLine(ofFact id: String) -> Int? {
+        factSourceLines[id]
     }
 
     /// Facts content may use: verified and unknown, never refuted or proposed.
@@ -1778,7 +1790,8 @@ enum PacketReader {
         let inventory = try readRequired(PacketInventory.self, PacketInventory.fileName, in: root)
         let history = try readRequired(PacketHistory.self, PacketHistory.fileName, in: root)
         let dependencies = try readOptional(PacketDependencies.self, PacketDependencies.fileName, in: root)
-        let facts = try readFacts(in: root)
+        let factLines = try readFactLines(in: root)
+        let facts = factLines.map { $0.fact }
         let paths = try readRequired(PacketPaths.self, PacketPaths.fileName, in: root)
         let traces = try readTraces(in: root)
         let decisions = try readOptional(PacketDecisions.self, PacketDecisions.fileName, in: root)
@@ -1798,7 +1811,8 @@ enum PacketReader {
             decisions: decisions,
             glossary: glossary,
             coverage: coverage,
-            draftMarkdownFiles: drafts
+            draftMarkdownFiles: drafts,
+            factSourceLines: PacketReader.sourceLines(of: factLines)
         )
     }
 
@@ -1820,9 +1834,21 @@ enum PacketReader {
         return try decode(type, from: try readData(url, name: name), file: name)
     }
 
+    /// One fact and the 1-based line of facts.jsonl it was read from.
+    struct FactLine {
+        let line: Int
+        let fact: PacketFact
+    }
+
     /// facts.jsonl: one Fact per line; blank lines are skipped; a bad line is
     /// reported as "facts.jsonl:<line>: <reason>" with a 1-based line number.
     static func readFacts(in root: URL) throws -> [PacketFact] {
+        try readFactLines(in: root).map { $0.fact }
+    }
+
+    /// `readFacts` keeping each fact's line number (the reference validator
+    /// numbers its fact messages the same way).
+    static func readFactLines(in root: URL) throws -> [FactLine] {
         let name = PacketFact.fileName
         let url = root.appendingPathComponent(name)
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -1832,12 +1858,18 @@ enum PacketReader {
         guard let text = String(data: data, encoding: .utf8) else {
             throw StudioError("\(name): not UTF-8")
         }
-        return try parseFacts(text, file: name)
+        return try parseFactLines(text, file: name)
     }
 
     /// The JSONL parser behind `readFacts`, exposed so probes can feed text directly.
     static func parseFacts(_ text: String, file: String = PacketFact.fileName) throws -> [PacketFact] {
-        var facts: [PacketFact] = []
+        try parseFactLines(text, file: file).map { $0.fact }
+    }
+
+    /// The JSONL parser proper: blank lines are skipped but still counted, so
+    /// `line` is the line a reader would open in the file.
+    static func parseFactLines(_ text: String, file: String = PacketFact.fileName) throws -> [FactLine] {
+        var facts: [FactLine] = []
         let decoder = OnboardingJSON.decoder()
         var lineNumber = 0
         for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
@@ -1846,12 +1878,24 @@ enum PacketReader {
             if line.hasSuffix("\r") { line.removeLast() }
             if line.trimmingCharacters(in: .whitespaces).isEmpty { continue }
             do {
-                facts.append(try decoder.decode(PacketFact.self, from: Data(line.utf8)))
+                let fact = try decoder.decode(PacketFact.self, from: Data(line.utf8))
+                facts.append(FactLine(line: lineNumber, fact: fact))
             } catch {
                 throw StudioError("\(file):\(lineNumber): \(describe(error))")
             }
         }
         return facts
+    }
+
+    /// Fact id -> its first line, for `ResearchPacket.factSourceLines`
+    /// (a duplicate id keeps the line of the first occurrence, as the
+    /// reference validator does).
+    static func sourceLines(of factLines: [FactLine]) -> [String: Int] {
+        var lines: [String: Int] = [:]
+        for entry in factLines where lines[entry.fact.id] == nil {
+            lines[entry.fact.id] = entry.line
+        }
+        return lines
     }
 
     /// traces/*.json keyed by file stem, sorted by name; absent directory = no traces.
