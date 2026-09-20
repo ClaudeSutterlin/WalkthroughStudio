@@ -27,7 +27,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
-| M8 Projectors: Mermaid diagrams, registers, traces | planned | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
+| M8 Projectors: Mermaid diagrams, registers, traces | reference implementation verified (Python); Swift port pending | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
 | M10 Hub, cross-links, search, export, coverage tracker | planned | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
 | M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
@@ -297,6 +297,48 @@ Packet-half Swift (M2, end of session):
       coverage never claims a level the read count cannot support.
   All eight assertions now pass against the real packet data, which is the
   closest this environment can get to running the probe.
+
+M8 projectors (reference implementation, end of session):
+- `.claude/skills/onboarding-research/scripts/project_packet.py` turns a validated
+  packet into 4 diagrams, 14 registers, 4 trace documents, a hub index and a
+  backlink index, deterministically and with no model in the loop. The Swift
+  DiagramProjector, RegisterProjector and HubProjector mirror it, as
+  PacketValidator mirrors validate_packet.py.
+- `scripts/render-mermaid.mjs` renders any folder of .mmd through the vendored
+  Mermaid build in headless chromium and writes SVG plus PNG. This is the
+  verification harness for diagrams in an environment with no Swift toolchain,
+  and it is how the defects below were found.
+- Verified: every fact is projected with its citation, and zero refuted facts
+  reach any deliverable (asserted by the projector's own exit code). All eight
+  .mmd files render.
+
+Broke / learned (diagrams, all found by rendering and looking, never by reading):
+- `git mv -k` silently no-ops on an untracked file and still exits 0, so the
+  `|| mv` fallback never fired and the following `rm -rf` of the old directory
+  destroyed the vendored mermaid.min.js. It was never committed and nobody
+  noticed for a day. Restored from the scratchpad copy, hash re-verified against
+  the pin in MERMAID-LICENSE.txt, and committed this time. Never chain
+  `git mv -k` with a `||` fallback.
+- A `%%{init}%%` theme directive inside the .mmd made Mermaid mark the element
+  processed and emit no SVG at all. `mermaid.run()` also races its own
+  startOnLoad pass. Use `mermaid.render(id, text)` and pass brand tokens through
+  `initialize`; the .mmd files stay portable and BrandTheme stays the one source
+  of brand tokens.
+- Mermaid parses labels as markdown, so a backtick in a trace summary renders as
+  "Unsupported markdown: codespan" instead of the label. Producers write
+  backticks constantly, so the projector strips them.
+- A trace walks into callees and back out, so drawing an edge per consecutive hop
+  pair produced arrows pointing backwards (repo to handler). Edges now run from
+  an earlier first appearance to a later one, which is what a call tree is.
+- A parent directory that is itself an edge endpoint cannot be rendered as a bare
+  subgraph, or Mermaid invents a phantom node for the group id. `db/` holds
+  schema.sql, so it stays a real node.
+- Chaining deployStep findings with arrows asserted a sequence the evidence does
+  not support (several are observations such as "CI is not a gate"). The
+  deployment diagram is now built from the deploy trace's ordered hops, with CI
+  drawn as a dashed, disconnected node, which is the finding itself.
+- Labels were truncating mid-word ("deploy/de"); they now break on word
+  boundaries.
 
 Next:
 1. When the packet workflow finishes: scratchpad/split_units.py <journal> units/;
