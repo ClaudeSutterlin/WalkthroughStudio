@@ -67,6 +67,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+
+        // Hidden headless Research Packet validator, the Swift twin of
+        // .claude/skills/onboarding-research/scripts/validate_packet.py
+        // (docs/onboarding/PACKET.md section 7):
+        //   WalkthroughStudio --validate-packet <packetDir> <repoDir>
+        // Prints the same report and exits 0 only with zero errors.
+        if let flagIndex = CommandLine.arguments.firstIndex(of: "--validate-packet"),
+           CommandLine.arguments.count > flagIndex + 2 {
+            setvbuf(stdout, nil, _IONBF, 0)
+            let packetDir = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 1])
+            let repoDir = URL(fileURLWithPath: CommandLine.arguments[flagIndex + 2])
+            Task { @MainActor in
+                do {
+                    let packet = try PacketReader.load(packetDir)
+                    let validator = PacketValidator(packet: packet, repo: repoDir, git: GitRunner())
+                    let report = try await validator.validate()
+                    for line in report.consoleLines { print(line) }
+                    exit(report.ok ? 0 : 1)
+                } catch {
+                    print("ERROR   \(packetDir.lastPathComponent): \(error.localizedDescription)")
+                    print("PACKET INVALID: 1 errors, 0 warnings")
+                    exit(1)
+                }
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

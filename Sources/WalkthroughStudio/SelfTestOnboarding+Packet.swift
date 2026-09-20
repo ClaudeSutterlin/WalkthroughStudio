@@ -102,6 +102,8 @@ extension SelfTest {
         let broken = ctx.scratch.appendingPathComponent("broken.packet", isDirectory: true)
         try? fileManager.removeItem(at: broken)
         try fileManager.copyItem(at: good, to: broken)
+        // copyItem preserves the bundle's modes; the copy has to be editable.
+        SelfTest.makeWritable(broken)
 
         let danglingAnchor = try SelfTest.breakFirstEvidenceAnchor(in: broken, packet: packet)
         let orphanID = try SelfTest.appendOrphanFact(to: broken)
@@ -174,7 +176,6 @@ extension SelfTest {
     /// file that does not exist). Returns the anchor it wrote.
     static func breakFirstEvidenceAnchor(in root: URL, packet: ResearchPacket) throws -> String {
         let factsURL = root.appendingPathComponent(PacketFact.fileName)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: factsURL.path)
         let text = try String(contentsOf: factsURL, encoding: .utf8)
         var lines = text.components(separatedBy: "\n")
         guard let index = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) else {
@@ -188,9 +189,9 @@ extension SelfTest {
         }
 
         var dangling = "code:no/such/file/anywhere.py@" + String(packet.headSHA.prefix(7))
-        if let parsed = Anchor(string: rawAnchor), case .code(let path, let sha7, _) = parsed,
-           let sha7, !path.hasSuffix("/") {
-            dangling = Anchor.code(path: path, sha7: sha7, lines: 900_000...900_100).string
+        if let parsed = Anchor(string: rawAnchor), case .code(let path, let pinned, _) = parsed,
+           let sha = pinned, !path.hasSuffix("/") {
+            dangling = Anchor.code(path: path, sha7: sha, lines: 900_000...900_100).string
         }
         first["anchor"] = dangling
         evidence[0] = first
@@ -233,7 +234,6 @@ extension SelfTest {
             throw StudioError("packetValidateProbe: paths.json has no ranked path with a trace file to delete")
         }
         let traces = root.appendingPathComponent(PacketTrace.directoryName, isDirectory: true)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: traces.path)
         try FileManager.default.removeItem(at: traces.appendingPathComponent("\(victim.id).json"))
         return victim.id
     }
@@ -244,7 +244,8 @@ extension SelfTest {
     /// a shape the content half can actually read (kind, subject, attributes,
     /// concerns), not only as prose.
     static func fixturePacketProbe(_ ctx: OnboardingProbeContext) async throws {
-        let packet = try PacketReader.load(try SelfTest.fixturePacketURL())
+        let root = try SelfTest.fixturePacketURL()
+        let packet = try PacketReader.load(root)
 
         // 1. The hotspot is a first-class fact.
         guard packet.facts.contains(where: { $0.kind == "hotspot" && $0.subject.contains(FixturePacketFacts.hotspotSubject) }) else {
@@ -334,6 +335,23 @@ extension SelfTest {
     }
 
     // MARK: Small helpers
+
+    /// Gives the owner write permission on every file and directory under
+    /// `root` (a packet copied out of a read-only app bundle keeps the
+    /// bundle's modes, and this probe has to edit and delete inside the copy).
+    static func makeWritable(_ root: URL) {
+        let fileManager = FileManager.default
+        var targets: [URL] = [root]
+        if let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
+            for case let url as URL in enumerator { targets.append(url) }
+        }
+        for url in targets {
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else { continue }
+            let mode = isDirectory.boolValue ? 0o755 : 0o644
+            try? fileManager.setAttributes([.posixPermissions: mode], ofItemAtPath: url.path)
+        }
+    }
 
     /// True for JSON `true`, and for the strings "true" / "yes" a producer may
     /// have written instead.

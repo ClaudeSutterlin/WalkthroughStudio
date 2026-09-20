@@ -171,29 +171,6 @@ enum PacketFields {
     }
 }
 
-/// Raw JSON access to facts.jsonl for the one field the typed models keep as
-/// an opaque blob: `attributes`. The validator needs to know whether a
-/// dataEntity fact carries pii / rows / retention keys, and the fixture probe
-/// asserts `attributes.pii == true`; both read the line's JSON object directly
-/// rather than depending on how PacketModels represents free-form JSON.
-enum PacketRawJSON {
-    /// fact id -> its `attributes` object (empty when absent or not an object).
-    /// Lines that fail to parse are skipped: PacketReader already rejected them.
-    static func factAttributes(in root: URL) throws -> [String: [String: Any]] {
-        let url = root.appendingPathComponent("facts.jsonl")
-        let text = try String(contentsOf: url, encoding: .utf8)
-        var result: [String: [String: Any]] = [:]
-        for line in text.components(separatedBy: "\n") {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
-            guard let object = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8)) as? [String: Any],
-                  let id = object["id"] as? String else { continue }
-            result[id] = object["attributes"] as? [String: Any] ?? [:]
-        }
-        return result
-    }
-}
-
 // MARK: - Anchor resolution against the repository
 
 /// git access at the packet's pinned sha, memoized per (sha, path) and per
@@ -476,10 +453,7 @@ private final class PacketValidationRun {
                 report.error(where_, "hop beyond trace length: \(text)")
             }
         case .cmd(let unit, let n):
-            let file = packet.root
-                .appendingPathComponent("commands", isDirectory: true)
-                .appendingPathComponent(unit, isDirectory: true)
-                .appendingPathComponent("\(n).txt")
+            let file = packet.commandOutputURL(unit: unit, n: n)
             if !FileManager.default.fileExists(atPath: file.path) {
                 report.error(where_, "command output file missing for \(text) (expected commands/<unit>/<n>.txt)")
             }
@@ -522,8 +496,6 @@ private final class PacketValidationRun {
     }
 
     private func checkFacts() async {
-        let rawAttributes = (try? PacketRawJSON.factAttributes(in: packet.root)) ?? [:]
-
         for (index, fact) in packet.facts.enumerated() {
             let line = index + 1
             let where_ = "facts.jsonl:\(line)(\(fact.id))"
@@ -580,8 +552,9 @@ private final class PacketValidationRun {
             }
 
             if fact.kind == "dataEntity" {
-                let attributes = rawAttributes[fact.id] ?? [:]
-                for key in ["pii", "rows", "retention"] where attributes[key] == nil {
+                // A key written as JSON null counts as present ("unknown" in
+                // another spelling), exactly like the Python `k not in attrs`.
+                for key in PacketFact.dataEntityAttributeKeys where fact.attributes[key] == nil {
                     report.warn(where_, "dataEntity fact lacks attributes.\(key) (use \"unknown\" rather than omitting)")
                 }
             }

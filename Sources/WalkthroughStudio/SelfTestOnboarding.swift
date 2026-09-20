@@ -69,6 +69,8 @@ extension SelfTest {
             ("manifestRoundTripProbe", { probeCtx in try await Self.manifestRoundTripProbe(probeCtx) }),
             ("packageStoreProbe", { probeCtx in try await Self.packageStoreProbe(probeCtx) }),
             ("gitRunnerProbe", { probeCtx in try await Self.gitRunnerProbe(probeCtx) }),
+            ("packetValidateProbe", { probeCtx in try await Self.packetValidateProbe(probeCtx) }),
+            ("fixturePacketProbe", { probeCtx in try await Self.fixturePacketProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]
