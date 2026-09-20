@@ -145,6 +145,39 @@ Broke / learned:
 - Workflow scripts have no filesystem access: unit outputs are merged by
   assemble_packet.py outside the workflow (scratchpad/split_units.py splits the
   journal into the units/ layout).
+- Swift read-through review (two reviewers, no compiler) of the M1/M2 files,
+  and what the fixer changed:
+  - `RepoAcquisition.acquire`, `.url` branch on reopen: `git fetch` never moves
+    the clone's own HEAD, so an unpinned re-acquire re-pinned the ORIGINAL
+    clone-time sha instead of the default branch head section 3 promises. Now
+    resolves `refs/remotes/origin/HEAD` after the fetch and falls back to `HEAD`
+    only when that ref is missing (older clones); fresh clones and `.local`
+    keep `pinnedSHA ?? "HEAD"`.
+  - `SelfTestSupport.runProcess`: drained stdout to EOF and then stderr on the
+    calling thread (two-pipe deadlock once a child writes > 64 KB to stderr;
+    no timeout). Both pipes now drain on background queues into a
+    lock-protected `StreamBuffer`, with a `timeout` parameter (default 120 s)
+    that SIGKILLs the child and throws `StudioError`, mirroring
+    `GitRunner.Child`.
+  - `GitRunner.parseLinePorcelain`: `let final = Int(parts[2])` bound a
+    contextual keyword as an identifier; renamed to `finalLineNumber`. The
+    codebase otherwise avoids keyword identifiers (`override` is backticked in
+    `OnboardingManifest.Models`).
+  - `WalkthroughStudioApp`: `--probe` was parsed into a `var onlyProbe`
+    captured by the `Task { @MainActor in }` closure; now an immediately
+    evaluated `let` like the existing `--selftest` block.
+  - Contract mismatch, not code: ARCHITECTURE.md rows M1 (lines 83 and 530)
+    named `pixel(_:x:y:)` and a `snapshot(view:size:appearance:)` helper. The
+    implementation is `pixel(in:x:y:)` and `snapshot` is deferred until the
+    onboarding sheet probes need the offscreen-snapshot pattern; both rows now
+    say so. The five NSHostingView harnesses in SelfTest.swift are untouched.
+  - Left as is, to revisit only if the Mac run fails: `StillsVideoWriter`
+    relies on `endSession(atSourceTime: total + trailingHold)` to hold the last
+    sample for the trailing second (if stills-probe.mp4 measures ~9.5 s, add a
+    schedule entry at `total + trailingHold - repeatInterval`);
+    `manifestRoundTripProbe` asserts Foundation's pretty-printed text
+    (`"createdAt" : "2026-09-21T14:13:20Z"`, `"capUSD" : 25`), the first
+    assertion to relax to value checks if it fails.
 Limits hit:
 - Session usage limit at about 12:50 UTC (reset 16:40 UTC) killed 22 agents:
   Swift workflow wf_132b805e-587 finished 3 of 6 (writers done; both reviewers
