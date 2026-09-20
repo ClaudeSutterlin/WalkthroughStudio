@@ -51,6 +51,43 @@ def code_path(anchor):
     return m.group("path") if m else None
 
 
+ANCHOR_PREFIXES = ("code:", "video:", "doc:", "diagram:", "trace:", "fact:", "commit:", "cmd:", "issue:", "url:")
+BARE_CODE_RE = re.compile(r"^[^\s:]+@[0-9a-f]{7,40}(#L\d+(-L\d+)?)?$")
+BARE_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def repair_anchor(raw, where, warnings):
+    """Producers occasionally drop the scheme prefix. Repair the unambiguous
+    cases (path@sha7#Lx -> code:..., a bare 40-hex sha -> commit:...) and drop
+    anything else with a warning, so one sloppy agent cannot invalidate a packet."""
+    if not isinstance(raw, str) or not raw.strip():
+        warnings.append(f"{where}: dropped a non-string anchor")
+        return None
+    raw = raw.strip()
+    if raw.startswith(ANCHOR_PREFIXES):
+        return raw
+    if BARE_CODE_RE.match(raw):
+        warnings.append(f"{where}: added the missing 'code:' prefix to {raw}")
+        return "code:" + raw
+    if BARE_SHA_RE.match(raw):
+        warnings.append(f"{where}: added the missing 'commit:' prefix to {raw}")
+        return "commit:" + raw
+    if raw.startswith("http://") or raw.startswith("https://"):
+        warnings.append(f"{where}: added the missing 'url:' prefix to {raw}")
+        return "url:" + raw
+    warnings.append(f"{where}: dropped an unparseable anchor {raw!r}")
+    return None
+
+
+def repair_anchors(raws, where, warnings):
+    out = []
+    for i, a in enumerate(raws or []):
+        fixed = repair_anchor(a, f"{where}[{i}]", warnings)
+        if fixed:
+            out.append(fixed)
+    return out
+
+
 def dump(path, obj):
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
 
@@ -95,14 +132,22 @@ def main():
                 for k in ("pii", "rows", "retention"):
                     f["attributes"].setdefault(k, "unknown")
             ev = []
-            for e in f.get("evidence", []):
+            for j, e in enumerate(f.get("evidence", [])):
                 if isinstance(e, str):
                     e = {"anchor": e}
                 e = {k: v for k, v in e.items() if k in ("anchor", "excerpt", "note") and v is not None}
+                anchor = repair_anchor(e.get("anchor"), f"{fid}:evidence[{j}]", warnings)
+                if not anchor:
+                    continue
+                e["anchor"] = anchor
                 if "excerpt" in e and len(e["excerpt"]) > 6000:
                     e["excerpt"] = e["excerpt"][:5990] + "\n[truncated]"
                 ev.append(e)
             f["evidence"] = ev
+            if not ev:
+                warnings.append(f"{fid}: every evidence anchor was unusable; fact dropped")
+                seen.discard(fid)
+                continue
             f["claim"] = str(f.get("claim", "")).strip()
             facts.append(f)
     fact_ids = {f["id"] for f in facts}
@@ -113,7 +158,8 @@ def main():
         for v in vs.get("verdicts", []):
             if v.get("id") in fact_ids:
                 by_id[v["id"]].append({"verifier": vs.get("verifier", "verifier"), "verdict": v.get("verdict", "unknown"),
-                                       "reason": v.get("reason", ""), "evidence": [e for e in v.get("evidence", []) if isinstance(e, str)]})
+                                       "reason": v.get("reason", ""),
+                                       "evidence": repair_anchors(v.get("evidence"), f"{v['id']}:verdict[{vs.get('verifier','verifier')}].evidence", warnings)})
             else:
                 warnings.append(f"verdict for unknown fact {v.get('id')} dropped")
     for f in facts:
@@ -153,7 +199,8 @@ def main():
                 d.setdefault("license", "unknown"); d.setdefault("eol", "unknown"); d.setdefault("cves", "unknown")
                 dependencies["dependencies"].append(d)
         for g in u.get("glossary") or []:
-            entry = {"term": g["term"], "definition": g["definition"], "definedAt": g.get("definedAt") or None,
+            entry = {"term": g["term"], "definition": g["definition"],
+                     "definedAt": repair_anchor(g["definedAt"], f"glossary {g['term']}:definedAt", warnings) if g.get("definedAt") else None,
                      "factIds": [x for x in g.get("factIds", []) if x in usable]}
             glossary.append(entry)
     dump(pk / "dependencies.json", dependencies)
@@ -173,6 +220,9 @@ def main():
             h = dict(h)
             h["n"] = i
             h["factIds"] = [x for x in h.get("factIds", []) if x in usable]
+            h["anchor"] = repair_anchor(h.get("anchor"), f"trace {t.get('pathId')}:hop{i}", warnings) or h.get("anchor")
+            if h.get("callSite"):
+                h["callSite"] = repair_anchor(h["callSite"], f"trace {t.get('pathId')}:hop{i}.callSite", warnings)
             if not h.get("callSite"):
                 h["callSite"] = None
             hops.append(h)
@@ -180,7 +230,7 @@ def main():
         concerns = {}
         for c in CONCERNS:
             cc = dict((t.get("concerns") or {}).get(c) or {"status": "unknown", "evidence": []})
-            cc.setdefault("evidence", [])
+            cc["evidence"] = repair_anchors(cc.get("evidence"), f"trace {t.get('pathId')}:concern {c}", warnings)
             if cc.get("status") in ("present", "absent") and not cc["evidence"]:
                 cc["status"] = "unknown"
                 cc["note"] = (cc.get("note") or "") + " [status downgraded: no evidence]"
@@ -189,6 +239,7 @@ def main():
                 cc.pop("note", None)
             concerns[c] = cc
         t["concerns"] = concerns
+        t["entry"] = repair_anchor(t.get("entry"), f"trace {t.get('pathId')}:entry", warnings) or t.get("entry")
         if not t.get("scaresMe"):
             t["scaresMe"] = ["The tracer did not state a risk; treat this path as unreviewed."]
         traces[t["pathId"]] = t
@@ -197,6 +248,7 @@ def main():
     for p in paths_in.get("paths", []):
         p = dict(p)
         p["factIds"] = [x for x in p.get("factIds", []) if x in usable]
+        p["entry"] = repair_anchor(p.get("entry"), f"path {p.get('id')}:entry", warnings) or p.get("entry")
         p["traced"] = p["id"] in traces
         if not p["traced"]:
             warnings.append(f"path {p['id']} has no trace; marked untraced")
@@ -211,6 +263,7 @@ def main():
     for d in decided.get("decisions", []):
         d = dict(d)
         d["factIds"] = [x for x in d.get("factIds", []) if x in usable]
+        d["evidence"] = repair_anchors(d.get("evidence"), f"decision {d.get('id')}:evidence", warnings)
         if not d.get("evidence"):
             warnings.append(f"decision {d.get('id')} dropped: no evidence")
             continue
