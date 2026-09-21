@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "diagramId": "erd",
+  "nodes": {
+    "USERS": {
+      "anchor": "code:db/schema.sql@fb63e78#L1-L5",
+      "owner": null,
+      "factIds": [
+        "F-map-db-002",
+        "F-map-db-003",
+        "F-map-db-004"
+      ],
+      "attributes": {
+        "rows": "unknown",
+        "retention": "unknown",
+        "pii": true,
+        "piiNote": "yes: email (marked -- PII in schema), address"
+      }
+    },
+    "ORDERS": {
+      "anchor": "code:db/schema.sql@fb63e78#L7-L14",
+      "owner": null,
+      "factIds": [
+        "F-map-db-005",
+        "F-map-db-006",
+        "F-map-db-007",
+        "F-map-src-036",
+        "F-lens-data-migrations-012"
+      ],
+      "attributes": {
+        "rows": "unknown",
+        "retention": "unknown",
+        "pii": true,
+        "piiNote": "indirect: user_id links to users (email/address)"
+      }
+    },
+    "ADDRESSES": {
+      "anchor": "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L6",
+      "owner": null,
+      "factIds": [
+        "F-map-db-012"
+      ],
+      "attributes": {
+        "rows": "0 (table not created)",
+        "retention": "unknown",
+        "pii": true,
+        "piiNote": "yes: postal address (line1, city, country)"
+      }
+    }
+  },
+  "edges": {
+    "USERS->ORDERS": {
+      "protocol": "foreign key",
+      "contract": "code:db/schema.sql@fb63e78#L7-L14",
+      "factIds": [
+        "F-map-db-005"
+      ]
+    },
+    "USERS->ADDRESSES": {
+      "protocol": "foreign key",
+      "contract": "code:db/migrations/002_split_addresses.sql@fb63e78#L2-L6",
+      "factIds": [
+        "F-map-db-012"
+      ]
+    }
+  }
+}

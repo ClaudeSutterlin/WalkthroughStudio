@@ -1,0 +1,30 @@
+graph TD
+  subgraph g_src["src/"]
+    d_src_api["src/api/<br/>Ada Lovelace 100%"]
+    d_src_auth["src/auth/<br/>Ada Lovelace 100%"]
+    d_src_repo["src/repo/<br/>Ada Lovelace 100%"]
+    d_src_service["src/service/<br/>Ada Lovelace 100%"]
+  end
+  d[".<br/>2 files<br/>Grace Hopper 50%"]
+  d_github[".github/<br/>1 files<br/>Grace Hopper 100%"]
+  d_github_workflows[".github/workflows/<br/>Grace Hopper 100%"]
+  d_config["config/<br/>1 files<br/>Ada Lovelace 100%"]
+  d_db["db/<br/>3 files<br/>Grace Hopper 67%"]
+  d_db_migrations["db/migrations/<br/>Grace Hopper 67%"]
+  d_deploy["deploy/<br/>1 files<br/>Ada Lovelace 100%"]
+  d_templates["templates/<br/>1 files<br/>Ada Lovelace 100%"]
+  d_tests["tests/<br/>1 files<br/>Grace Hopper 100%"]
+  d -->|"schema-migration"| d_deploy
+  d_db_migrations -->|"schema-migration"| d
+  d_db_migrations -->|"schema-migration"| d_src_repo
+  d_db -->|"schema-migration"| d_github_workflows
+  d_deploy -->|"production-deploy"| d_src_repo
+  d_src_api -->|"order-creation"| d_src_auth
+  d_src_api -->|"order-read"| d_src_service
+  d_src_auth -->|"order-creation"| d_src_service
+  d_src_repo -->|"2 paths"| d_db
+  d_src_repo -->|"schema-migration"| d_src_service
+  d_src_service -->|"schema-migration"| d_db
+  d_src_service -->|"2 paths"| d_src_repo
+  classDef hot stroke:#DA4F45,stroke-width:3px;
+  class d_db,d_src_api,d_src_repo hot;

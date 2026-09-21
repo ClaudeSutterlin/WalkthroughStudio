@@ -1,0 +1,288 @@
+{
+  "version": 1,
+  "diagramId": "c4-container",
+  "nodes": {
+    "d_src_api": {
+      "anchor": "code:src/api/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-ci-009",
+        "F-map-ci-011",
+        "F-map-ci-011",
+        "F-map-ci-015",
+        "F-map-db-006",
+        "F-map-db-007",
+        "F-map-db-008",
+        "F-map-db-014"
+      ]
+    },
+    "d_src_auth": {
+      "anchor": "code:src/auth/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-ci-009",
+        "F-map-ci-011",
+        "F-map-ci-011",
+        "F-map-ci-015",
+        "F-map-db-006",
+        "F-map-db-007",
+        "F-map-db-008",
+        "F-map-db-014"
+      ]
+    },
+    "d_src_repo": {
+      "anchor": "code:src/repo/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-ci-009",
+        "F-map-ci-011",
+        "F-map-ci-011",
+        "F-map-ci-015",
+        "F-map-db-006",
+        "F-map-db-007",
+        "F-map-db-008",
+        "F-map-db-014"
+      ]
+    },
+    "d_src_service": {
+      "anchor": "code:src/service/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-ci-009",
+        "F-map-ci-011",
+        "F-map-ci-011",
+        "F-map-ci-015",
+        "F-map-db-006",
+        "F-map-db-007",
+        "F-map-db-008",
+        "F-map-db-014"
+      ]
+    },
+    "d": {
+      "anchor": "code:./@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-ci-003",
+        "F-map-ci-005",
+        "F-map-ci-021",
+        "F-map-db-001",
+        "F-map-db-010",
+        "F-map-ops-002",
+        "F-map-ops-005",
+        "F-map-ops-006"
+      ]
+    },
+    "d_github": {
+      "anchor": "code:.github/@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-ci-001",
+        "F-map-ci-002",
+        "F-map-ci-003",
+        "F-map-ci-004",
+        "F-map-ci-005",
+        "F-map-ci-006",
+        "F-map-ci-007",
+        "F-map-ci-016"
+      ]
+    },
+    "d_github_workflows": {
+      "anchor": "code:.github/workflows/@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-ci-001",
+        "F-map-ci-002",
+        "F-map-ci-003",
+        "F-map-ci-004",
+        "F-map-ci-005",
+        "F-map-ci-006",
+        "F-map-ci-007",
+        "F-map-ci-016"
+      ]
+    },
+    "d_config": {
+      "anchor": "code:config/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-ops-011",
+        "F-map-ops-012",
+        "F-map-ops-013",
+        "F-map-ops-014",
+        "F-map-ops-016",
+        "F-map-src-026",
+        "F-lens-data-migrations-024",
+        "F-lens-deploy-ops-008"
+      ]
+    },
+    "d_db": {
+      "anchor": "code:db/@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-db-001",
+        "F-map-db-002",
+        "F-map-db-003",
+        "F-map-db-004",
+        "F-map-db-004",
+        "F-map-db-005",
+        "F-map-db-006",
+        "F-map-db-007"
+      ]
+    },
+    "d_db_migrations": {
+      "anchor": "code:db/migrations/@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-db-001",
+        "F-map-db-002",
+        "F-map-db-003",
+        "F-map-db-004",
+        "F-map-db-004",
+        "F-map-db-005",
+        "F-map-db-006",
+        "F-map-db-007"
+      ]
+    },
+    "d_deploy": {
+      "anchor": "code:deploy/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-db-025",
+        "F-map-ops-001",
+        "F-map-ops-002",
+        "F-map-ops-003",
+        "F-map-ops-004",
+        "F-map-ops-005",
+        "F-map-ops-006",
+        "F-map-ops-007"
+      ]
+    },
+    "d_templates": {
+      "anchor": "code:templates/@fb63e78",
+      "owner": "Ada Lovelace",
+      "factIds": [
+        "F-map-db-016",
+        "F-map-ops-017",
+        "F-map-ops-018",
+        "F-map-ops-019",
+        "F-map-ops-020",
+        "F-map-ops-021",
+        "F-map-ops-022",
+        "F-lens-data-migrations-019"
+      ]
+    },
+    "d_tests": {
+      "anchor": "code:tests/@fb63e78",
+      "owner": "Grace Hopper",
+      "factIds": [
+        "F-map-ci-006",
+        "F-map-ci-007",
+        "F-map-ci-008",
+        "F-map-ci-009",
+        "F-map-ci-010",
+        "F-map-ci-010",
+        "F-map-ci-011",
+        "F-map-ci-012"
+      ]
+    }
+  },
+  "edges": {
+    "d->d_deploy": {
+      "protocol": "call",
+      "contract": "code:deploy/deploy.sh@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_db_migrations->d": {
+      "protocol": "call",
+      "contract": "code:README.md@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_db_migrations->d_src_repo": {
+      "protocol": "call",
+      "contract": "code:src/repo/orders_repo.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_db->d_github_workflows": {
+      "protocol": "call",
+      "contract": "code:.github/workflows/ci.yml@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_deploy->d_src_repo": {
+      "protocol": "call",
+      "contract": "code:src/repo/orders_repo.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "production-deploy"
+      ]
+    },
+    "d_src_api->d_src_auth": {
+      "protocol": "call",
+      "contract": "code:src/auth/authz.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "order-creation"
+      ]
+    },
+    "d_src_api->d_src_service": {
+      "protocol": "call",
+      "contract": "code:src/service/orders.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "order-read"
+      ]
+    },
+    "d_src_auth->d_src_service": {
+      "protocol": "call",
+      "contract": "code:src/service/orders.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "order-creation"
+      ]
+    },
+    "d_src_repo->d_db": {
+      "protocol": "call",
+      "contract": "code:db/schema.sql@fb63e78",
+      "factIds": [],
+      "traces": [
+        "order-creation",
+        "production-deploy"
+      ]
+    },
+    "d_src_repo->d_src_service": {
+      "protocol": "call",
+      "contract": "code:src/service/orders.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_src_service->d_db": {
+      "protocol": "call",
+      "contract": "code:db/schema.sql@fb63e78",
+      "factIds": [],
+      "traces": [
+        "schema-migration"
+      ]
+    },
+    "d_src_service->d_src_repo": {
+      "protocol": "call",
+      "contract": "code:src/repo/orders_repo.py@fb63e78",
+      "factIds": [],
+      "traces": [
+        "order-creation",
+        "order-read"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+graph LR
+  system["fixture-a"]
+  ext_OrdersRepo_init["OrdersRepo.__init__"]
+  system -->|"calls"| ext_OrdersRepo_init
+  ext_psycopg2_connect_OrdersRepo_init["psycopg2.connect (OrdersRepo.__init__)"]
+  system -->|"calls"| ext_psycopg2_connect_OrdersRepo_init
+  ext_OrdersRepo_insert_non_retried_database_error["OrdersRepo.insert (non-retried database errors)"]
+  system -->|"calls"| ext_OrdersRepo_insert_non_retried_database_error
+  ext_ssh_scp_to_deploy_env_example_com["ssh/scp to deploy@<env>.example.com"]
+  system -->|"calls"| ext_ssh_scp_to_deploy_env_example_com
+  ext_outbound_email_templates_email_tmpl["outbound email (templates/email.tmpl)"]
+  system -->|"calls"| ext_outbound_email_templates_email_tmpl
+  classDef sys fill:#DA4F45,stroke:#1A1612,color:#FFFBF5;
+  class system sys;

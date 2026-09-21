@@ -1,0 +1,38 @@
+---
+id: security-posture
+title: Security posture
+minutes: 4
+evidence: [lens-data-migrations, lens-dependencies, lens-deploy-ops, lens-security-tests, map-ci, map-db, map-ops, map-src]
+order: 10
+---
+
+# Security posture
+
+## Findings
+
+- The workflow declares no permissions block and uses no secrets, so it runs with the repository's default GITHUB_TOKEN permissions and has no credential exposure surface of its own. [[fact:F-map-ci-020]] [[code:.github/workflows/ci.yml@fb63e78#L1-L8]]
+- PII (users.email, users.address) is stored in plaintext with no encryption, hashing, or tenant column; the only isolation is orders.user_id, and the schema has no row-level security, audit columns, or soft-delete. [[fact:F-map-db-018]] [[code:db/schema.sql@fb63e78#L1-L11]]
+- Deployment relies on interactive ssh access as the 'deploy' user with passwordless sudo for systemctl on every host; no key, host-key or credential handling exists in the repository. [[fact:F-map-ops-008]] [[code:deploy/deploy.sh@fb63e78#L5-L6]]
+- The example config embeds a database password in the DSN and a secret-shaped token, and the repository has no .gitignore, so a copied config/settings file with real values would be committed by default. [[fact:F-map-ops-014]] [[code:config/settings.example@fb63e78#L1-L2]]
+- Reading an order is unauthenticated and unauthorized: handle_get_order never calls require_user, so any caller can fetch any order (including its user_id) by id. [[fact:F-map-src-004]] [[code:src/api/orders_handler.py@fb63e78#L14-L16]]
+- Identity is taken from a plain X-User header with no authentication, signature or session check, so any client that can set headers can act as any user unless an upstream gateway strips and re-sets X-User. [[fact:F-map-src-013]] [[code:src/auth/authz.py@fb63e78#L8-L10]]
+- All three SQL statements in the repo use psycopg2 parameter placeholders (%s with a tuple), so src/ has no SQL-injection surface at HEAD. [[fact:F-map-src-037]] [[code:src/repo/orders_repo.py@fb63e78#L22]]
+- The DSN 'dbname=orders' sets no sslmode, host, user or password, so the connection uses libpq defaults: local socket with peer/trust auth when no PGHOST is set, and when PGHOST points at a remote server sslmode=prefer, which silently falls back to plaintext if the server lacks SSL, so PII (emails via the FK'd users rows, order history) can cross the network unencrypted with nothing in the repository requiring otherwise. [[fact:F-lens-data-migrations-024]] [[code:src/repo/orders_repo.py@fb63e78#L9]]
+- OSV lists five advisories affecting requests 2.19.0, not just the two named by the mapper: CVE-2018-18074 (HIGH, fixed 2.20.0), CVE-2023-32681 (medium, 2.31.0), CVE-2024-35195 (medium, 2.32.0), CVE-2024-47081 (medium, 2.32.4) and CVE-2026-25645 (medium, 2.33.0), so the minimum clean version today is 2.33.0. [[fact:F-lens-dependencies-003]] [[code:requirements.txt@fb63e78#L1]]
+- OSV has no advisories for PyPI psycopg2 or psycopg2-binary at any version, so psycopg2 2.8.6 carries no known package-level CVE; the caveat is that psycopg2 links the host's libpq, whose CVEs are tracked under PostgreSQL and cannot be assessed from this repository. [[fact:F-lens-dependencies-008]] [[code:requirements.txt@fb63e78#L2]]
+- No secret is deployed or injected by any step: the service authenticates to Postgres through whatever libpq finds on the host (peer auth, PG* environment variables in the unit, or ~/.pgpass), so the production database credential lives only on the host and the repository has no record of how it is set or rotated. [[fact:F-lens-deploy-ops-008]] [[code:src/repo/orders_repo.py@fb63e78#L9]]
+- The only authorization check in the codebase compares two values the same client supplies, the X-User header and request.json['user_id'], so it enforces self-consistency of the request rather than authorization: a caller creates orders for any user by setting both to that user's id. [[fact:F-lens-security-tests-001]] [[code:src/api/orders_handler.py@fb63e78#L8-L9]]
+- handle_get_order has never had an authorization step: the commit that introduced authz was scoped by its own subject to 'order creation' and its diff left the get handler untouched, which is byte-identical to the initial import. [[fact:F-lens-security-tests-002]] [[code:src/api/orders_handler.py@fb63e78#L14-L16]]
+- Order ids are a SERIAL sequence and OrdersRepo.fetch selects by id alone with no user_id predicate, so every order is enumerable by incrementing the id, and adding require_user to handle_get_order would not close the hole without also scoping the repo query to the caller's user_id. [[fact:F-lens-security-tests-003]] [[code:db/schema.sql@fb63e78#L7-L11]]
+- PostgreSQL is the only input validator in the system (the users(id) FK, the NUMERIC(10,2) column and integer parsing of order_id), and the exceptions it raises for bad input (psycopg2.IntegrityError, psycopg2.DataError) are not psycopg2.OperationalError, so they bypass the retry loop and propagate out of the handler unmapped to any HTTP status. [[fact:F-lens-security-tests-004]] [[code:src/repo/orders_repo.py@fb63e78#L14-L18]]
+- require_user fails closed when the X-User header is absent: headers.get returns None, which never equals str(user_id), so an unauthenticated request to handle_create_order is rejected rather than allowed. [[fact:F-lens-security-tests-005]] [[code:src/auth/authz.py@fb63e78#L9-L10]]
+- There is no audit trail: orders has no actor, updated_at or audit table, src/ has no logging, and the only record of who placed an order is orders.user_id, which is the body-supplied value that the authz check merely compared to a spoofable header, so a fraudulent order is indistinguishable from a legitimate one after the fact. [[fact:F-lens-security-tests-007]] [[code:db/schema.sql@fb63e78#L7-L14]]
+- Production database credentials live entirely outside the repository and outside any documented place: the code passes only 'dbname=orders' to psycopg2, deploy.sh ships just src/ and restarts a systemd unit, so host, user and password must come from libpq environment variables or ~/.pgpass in the unit's environment on each host, with no rotation path and no record of which hosts hold what. [[fact:F-lens-security-tests-008]] [[code:src/repo/orders_repo.py@fb63e78#L9]]
+- deploy.sh copies the operator's local working tree of src/ (including uncommitted edits) rather than a CI-built artifact at a known commit, so what runs in production need not correspond to any commit, let alone one that passed CI, and there is no record on the host or in the repository of which revision was deployed when. [[fact:F-lens-security-tests-016]] [[code:deploy/deploy.sh@fb63e78#L3-L6]]
+
+## Configuration
+
+- CI relies on the ubuntu-latest runner's preinstalled python3 with no setup-python step, so the Python version under test is whatever the runner image ships and changes silently over time. [[fact:F-map-ci-007]] [[code:.github/workflows/ci.yml@fb63e78#L5-L8]]
+- config/settings.example is a two-line KEY=VALUE sample declaring DATABASE_URL as a Postgres DSN pointing at a local 'orders' database with an embedded username and password. [[fact:F-map-ops-011]] [[code:config/settings.example@fb63e78#L1]]
+- The sample declares a FAKE_SECRET key whose value has the shape of an API key; it is a fixture placeholder and must never be copied into a real settings file or excerpted. [[fact:F-map-ops-012]] [[code:config/settings.example@fb63e78#L2]]
+- config/settings.example defines a DATABASE_URL key, but no code in src/ reads it (or any environment variable): the repo connects with a literal 'dbname=orders', so the example config is not wired to the application. [[fact:F-map-src-026]] [[code:config/settings.example@fb63e78#L1]]

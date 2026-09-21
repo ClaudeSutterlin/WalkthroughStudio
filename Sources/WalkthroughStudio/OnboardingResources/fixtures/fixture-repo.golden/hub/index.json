@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "repo": {
+    "url": null,
+    "headSHA": "fb63e78744ce026d810547afbb62c0a08ce2040a",
+    "defaultBranch": "main",
+    "localPath": "/tmp/claude-0/-home-user-WalkthroughStudio/39a042c9-1c2b-5bc2-9a06-d6510d9fa60f/scratchpad/fixture-a",
+    "name": "fixture-a"
+  },
+  "producer": {
+    "name": "claude-code-skill",
+    "version": "0.1",
+    "model": "claude-fable-5-1",
+    "startedAt": "2025-02-06T10:00:00+00:00",
+    "finishedAt": "2026-09-20T01:05:00+00:00",
+    "notes": "assembled by assemble_packet.py"
+  },
+  "summary": "This repository is a fifteen-file Python order service kept as a test fixture: two HTTP handler functions (create an order, get an order), a ten-line authorization module, a service that sums line items into a total, and a thirty-seven-line repository that reaches a single PostgreSQL database named orders through hand-written SQL. Twelve commits by two authors between 2025-01-04 and 2025-02-06 built it, every directory has a bus factor of one, and all seven commits touching src/ are by the same person. There is no web framework, no route binding, no configuration layer and no logging, so the service cannot actually be run from this checkout alone. What it does carry is unusually legible risk: reading an order needs no credential at all, order creation retries its INSERT without an idempotency key (duplicate orders already reached production and the fix lowered the retry count rather than closing the hole), every request leaks a database connection, migration 002 is written to drop users.address without copying the data, and the only test never imports any of this code, so CI is green by construction.",
+  "totalMinutes": 97,
+  "items": [
+    {
+      "id": "doc:architecture",
+      "kind": "doc",
+      "title": "Start here: architecture narrative",
+      "path": "docs/architecture.md",
+      "minutes": 4,
+      "order": 1
+    },
+    {
+      "id": "diagram:c4-context",
+      "kind": "diagram",
+      "title": "c4 context",
+      "path": "diagrams/c4-context.mmd",
+      "minutes": 2,
+      "order": 2
+    },
+    {
+      "id": "diagram:c4-container",
+      "kind": "diagram",
+      "title": "c4 container",
+      "path": "diagrams/c4-container.mmd",
+      "minutes": 2,
+      "order": 3
+    },
+    {
+      "id": "diagram:erd",
+      "kind": "diagram",
+      "title": "erd",
+      "path": "diagrams/erd.mmd",
+      "minutes": 2,
+      "order": 4
+    },
+    {
+      "id": "diagram:deployment",
+      "kind": "diagram",
+      "title": "deployment",
+      "path": "diagrams/deployment.mmd",
+      "minutes": 2,
+      "order": 5
+    },
+    {
+      "id": "trace:order-creation",
+      "kind": "trace",
+      "title": "Create an order (POST create-order \u2192 OrderService.create \u2192 OrdersRepo.insert)",
+      "path": "traces/order-creation.md",
+      "minutes": 5,
+      "order": 6
+    },
+    {
+      "id": "trace:order-read",
+      "kind": "trace",
+      "title": "Read an order by id (GET get-order \u2192 OrderService.get \u2192 OrdersRepo.fetch)",
+      "path": "traces/order-read.md",
+      "minutes": 5,
+      "order": 7
+    },
+    {
+      "id": "trace:production-deploy",
+      "kind": "trace",
+      "title": "Deploy code to an environment (deploy/deploy.sh <env>)",
+      "path": "traces/production-deploy.md",
+      "minutes": 5,
+      "order": 8
+    },
+    {
+      "id": "trace:schema-migration",
+      "kind": "trace",
+      "title": "Apply a schema migration by hand (db/migrations/ \u2192 psql \u2192 schema.sql)",
+      "path": "traces/schema-migration.md",
+      "minutes": 5,
+      "order": 9
+    },
+    {
+      "id": "doc:ownership",
+      "kind": "doc",
+      "title": "Ownership and bus factor",
+      "path": "docs/ownership.md",
+      "minutes": 3,
+      "order": 10
+    },
+    {
+      "id": "doc:adrs",
+      "kind": "doc",
+      "title": "Architecture decisions",
+      "path": "docs/adrs.md",
+      "minutes": 13,
+      "order": 11
+    },
+    {
+      "id": "doc:dependencies",
+      "kind": "doc",
+      "title": "Dependency register",
+      "path": "docs/dependencies.md",
+      "minutes": 2,
+      "order": 12
+    },
+    {
+      "id": "doc:tech-debt",
+      "kind": "doc",
+      "title": "Technical debt register",
+      "path": "docs/tech-debt.md",
+      "minutes": 16,
+      "order": 13
+    },
+    {
+      "id": "doc:test-truth",
+      "kind": "doc",
+      "title": "Test truth",
+      "path": "docs/test-truth.md",
+      "minutes": 3,
+      "order": 14
+    },
+    {
+      "id": "doc:data-inventory",
+      "kind": "doc",
+      "title": "Data inventory",
+      "path": "docs/data-inventory.md",
+      "minutes": 4,
+      "order": 15
+    },
+    {
+      "id": "doc:security-posture",
+      "kind": "doc",
+      "title": "Security posture",
+      "path": "docs/security-posture.md",
+      "minutes": 5,
+      "order": 16
+    },
+    {
+      "id": "doc:observability",
+      "kind": "doc",
+      "title": "Observability",
+      "path": "docs/observability.md",
+      "minutes": 1,
+      "order": 17
+    },
+    {
+      "id": "doc:incident-patterns",
+      "kind": "doc",
+      "title": "Incident patterns",
+      "path": "docs/incident-patterns.md",
+      "minutes": 1,
+      "order": 18
+    },
+    {
+      "id": "doc:glossary",
+      "kind": "doc",
+      "title": "Glossary",
+      "path": "docs/glossary.md",
+      "minutes": 5,
+      "order": 19
+    },
+    {
+      "id": "doc:landmines",
+      "kind": "doc",
+      "title": "Landmines",
+      "path": "docs/landmines.md",
+      "minutes": 10,
+      "order": 20
+    },
+    {
+      "id": "doc:operational-scorecard",
+      "kind": "doc",
+      "title": "Operational scorecard",
+      "path": "docs/operational-scorecard.md",
+      "minutes": 2,
+      "order": 21
+    }
+  ],
+  "coverage": {
+    "directories": [
+      {
+        "path": ".",
+        "files": 2,
+        "filesRead": 2,
+        "level": "traced",
+        "facts": 46,
+        "verified": 45,
+        "reason": null
+      },
+      {
+        "path": ".github/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "traced",
+        "facts": 20,
+        "verified": 20,
+        "reason": null
+      },
+      {
+        "path": "config/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "verified",
+        "facts": 10,
+        "verified": 10,
+        "reason": null
+      },
+      {
+        "path": "db/",
+        "files": 3,
+        "filesRead": 3,
+        "level": "traced",
+        "facts": 63,
+        "verified": 61,
+        "reason": null
+      },
+      {
+        "path": "deploy/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "traced",
+        "facts": 36,
+        "verified": 35,
+        "reason": null
+      },
+      {
+        "path": "src/",
+        "files": 4,
+        "filesRead": 4,
+        "level": "traced",
+        "facts": 118,
+        "verified": 113,
+        "reason": null
+      },
+      {
+        "path": "templates/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "verified",
+        "facts": 10,
+        "verified": 10,
+        "reason": null
+      },
+      {
+        "path": "tests/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "verified",
+        "facts": 22,
+        "verified": 22,
+        "reason": null
+      },
+      {
+        "path": "vendor/",
+        "files": 1,
+        "filesRead": 1,
+        "level": "verified",
+        "facts": 2,
+        "verified": 2,
+        "reason": null
+      }
+    ],
+    "paths": {
+      "candidates": 10,
+      "traced": 4,
+      "untraced": [
+        {
+          "id": "ci-smoke-test",
+          "reason": "Not a flow the business depends on: the workflow runs a hermetic arithmetic assert that imports no project module, protects no branch, produces no artifact and is never consumed by deploy.sh, so it gates nothing. Its facts (F-map-ci-*, F-lens-security-tests-010) are cited from the production-deploy and order-creation paths instead of traced separately."
+        },
+        {
+          "id": "order-confirmation-email",
+          "reason": "No entry point exists at HEAD: nothing renders or sends the template, no template engine or mail client is declared, and the context it needs (user.name) has no backing column. It is an unwired asset (F-map-ops-019, F-lens-deploy-ops-019, F-lens-landmines-glossary-006), so there is no code path to follow hop by hop."
+        },
+        {
+          "id": "list-orders-for-user",
+          "reason": "Unreachable from the HTTP surface: no handler or service calls list_for_user (F-map-src-032), so despite its N+1 hotfix history and missing index (F-map-db-008) there is no entry point to trace. Anyone exposing it must add require_user themselves (F-lens-landmines-glossary-011)."
+        },
+        {
+          "id": "user-identity",
+          "reason": "No such flow exists in the repository: nothing inserts into users, there is no authentication, and identity is a plain X-User header (F-map-src-013, F-lens-data-migrations-003). The only identity-related code, require_user, is traced as the authorization hop of order-creation."
+        },
+        {
+          "id": "grpc-client-stub",
+          "reason": "Generated code imported by nothing, with no .proto source, protoc step or protobuf runtime in the repository (F-lens-deploy-ops-020, F-lens-landmines-glossary-007). vendor/ is inventoried only and must not be mapped or traced."
+        },
+        {
+          "id": "database-bootstrap",
+          "reason": "A developer setup procedure rather than a business flow, and entirely unscripted: the README omits it, schema.sql plus the migrations folder conflict on 001, and no users seed exists so the first order fails on the FK (F-map-db-010, F-map-db-017, F-map-ops-026, F-lens-landmines-glossary-010). Its landmines are cited from the schema-migration and order-creation paths."
+        }
+      ]
+    },
+    "checks": [],
+    "counts": {
+      "facts": 213,
+      "verified": 206,
+      "refuted": 5,
+      "unknown": 2,
+      "traces": 4,
+      "unreadDirs": 0
+    }
+  }
+}

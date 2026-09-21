@@ -27,7 +27,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
-| M8 Projectors: Mermaid diagrams, registers, traces | reference implementation verified (Python); Swift port pending | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
+| M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift diagrams written, registers and hub pending | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
 | M10 Hub, cross-links, search, export, coverage tracker | hub built and driven in a browser; Swift wiring pending | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
 | M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
@@ -388,6 +388,50 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S4: 2026-09-21 — M8 Swift port begins, and an ordering error in the plan
+Milestone(s): M8
+Found first, before writing anything:
+- **The milestone order was wrong.** The app can validate and import a packet but
+  cannot produce a single deliverable from it: the projectors existed only in
+  Python. M4 (the player) would have had nothing to show. M8's Swift port blocks
+  M4, not the other way round, so M8 is being built first.
+- **A semantic divergence the parity fixture would have hidden.** Swift's
+  `usableFacts` filters to verified plus unknown, matching PACKET.md section 4;
+  the Python projector used "not refuted", which also admits `proposed` facts.
+  The fixture has no proposed facts, so a parity test would have passed by luck
+  and diverged on any packet whose producer skipped verification. The spec is
+  right, so the Python was fixed, and it now warns when proposed facts are held
+  back rather than dropping research silently. The golden projection is
+  byte-identical after the change, which is the evidence that the fixture did not
+  exercise this path.
+Built:
+- `Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.golden/`:
+  the Python projection checked in as the oracle for the Swift port (34 files;
+  derived HTML and copied source files excluded, one HTML sample kept to cover the
+  markdown converter).
+- `Onboarding/Projectors/ProjectionSupport.swift`: slugs, Mermaid ids and labels,
+  word-safe clipping, deterministic JSON. Function for function against the Python.
+- `Onboarding/Projectors/DiagramProjector.swift`: C4 context, C4 container, ERD,
+  deployment and the per-trace sequence diagram, including every fix the rendering
+  pass found (trace-derived edges by first appearance, no phantom subgraph nodes,
+  no backtick labels, no arrow chain over unrelated deploy findings).
+- `Onboarding/Projectors/ProjectionAPI.swift`: the few read-only accessors the
+  projectors need, kept out of PacketModels so the packet types stay a faithful
+  decoding of the contract and nothing else.
+Verified:
+- Balance and API checks only (no Swift toolchain here): braces and parens balance
+  ignoring string literals, and every model member the projector touches exists
+  with the name and type it assumes.
+- The Python change leaves the golden projection byte-identical.
+- not verified: none of the new Swift has been compiled or run.
+Next:
+1. RegisterProjector (14 registers plus trace documents), MarkdownLite (the
+   markdown-to-HTML converter with citation chips), HubProjector (hub/index.json,
+   index/anchors.json, the cited-source emitter).
+2. `projectorParityProbe`: run the Swift projectors over the fixture packet and
+   diff against fixture-repo.golden. A difference is a failure, not a surprise.
+3. Then M4, the player shell, which the projectors unblock.
 
 ### S3: 2026-09-21 — First compile and first run on the Mac: all eight probes pass
 Milestone(s): M1, M2, M3

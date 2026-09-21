@@ -130,12 +130,21 @@ class Packet:
             raise SystemExit(f"packet is missing {name}")
         return json.loads(p.read_text())
 
+    # PACKET.md section 4: "Content uses verified and unknown facts (unknown with
+    # hedged wording) and never refuted ones." A `proposed` fact has no verdict yet,
+    # so it has not earned a place in a deliverable either; `excludedProposed` counts
+    # them so a producer that skipped verification sees why its research went missing.
+    CONTENT_STATUSES = ("verified", "unknown")
+
     def usable(self, kind=None):
-        """Refuted facts never reach a deliverable."""
-        out = [f for f in self.facts if f.get("status") != "refuted"]
+        out = [f for f in self.facts if f.get("status") in self.CONTENT_STATUSES]
         if kind:
             out = [f for f in out if f.get("kind") == kind]
         return out
+
+    @property
+    def excluded_proposed(self):
+        return [f for f in self.facts if f.get("status") == "proposed"]
 
     def anchors_of(self, fact):
         return [e["anchor"] for e in fact.get("evidence", []) if e.get("anchor")]
@@ -862,8 +871,13 @@ def main():
     print(f"  registers {len(docs)}, traces {len(trace_docs)}")
     print(f"  hub items {len(hub['items'])}, {hub['totalMinutes']} minutes; backlinked anchors {len(backlinks)}")
     refuted = [f["id"] for f in pk.facts if f["status"] == "refuted"]
-    leaked = [r for r in refuted if any(r in t for t in list(docs.values()) + list(trace_docs.values()))]
+    prose = list(docs.values()) + list(trace_docs.values())
+    leaked = [r for r in refuted if any(r in t for t in prose)]
+    proposed = pk.excluded_proposed
     print(f"  refuted facts {len(refuted)}, leaked into a deliverable: {len(leaked)}")
+    if proposed:
+        print(f"  WARNING: {len(proposed)} fact(s) are still 'proposed' (never verified) and were "
+              f"excluded from every deliverable; run the verifier units")
     return 1 if leaked else 0
 
 

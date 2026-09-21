@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant deploy_sh as deploy.sh
+  participant orders_repo_py as orders_repo.py
+  participant schema_sql as schema.sql
+  Note over deploy_sh: The script runs under set -e and takes its single input from...
+  Note over deploy_sh: scp -r src 'deploy@${env}.example.com:/srv/orders/' uploads the...
+  Note over deploy_sh: ssh 'deploy@${env}.example.com' 'sudo systemctl restart orders'...
+  deploy_sh->>orders_repo_py: What comes back up is the freshly copied code: each OrdersRepo opens...
+  orders_repo_py->>schema_sql: The restarted process meets a database the deploy never touched —...
+  Note over deploy_sh: MISSING authorization
+  Note over deploy_sh: MISSING validation
+  Note over deploy_sh: MISSING failureHandling
+  Note over deploy_sh: MISSING idempotency
+  Note over deploy_sh: MISSING timeoutsRetries
+  Note over deploy_sh: MISSING logging

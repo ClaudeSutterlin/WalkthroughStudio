@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "diagramId": "deployment",
+  "nodes": {
+    "h1": {
+      "anchor": "code:deploy/deploy.sh@fb63e78#L1-L4",
+      "owner": null,
+      "factIds": []
+    },
+    "h2": {
+      "anchor": "code:deploy/deploy.sh@fb63e78#L5-L5",
+      "owner": null,
+      "factIds": []
+    },
+    "h3": {
+      "anchor": "code:deploy/deploy.sh@fb63e78#L6-L6",
+      "owner": null,
+      "factIds": []
+    },
+    "h4": {
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L7-L18",
+      "owner": null,
+      "factIds": []
+    },
+    "h5": {
+      "anchor": "code:db/schema.sql@fb63e78#L13-L16",
+      "owner": null,
+      "factIds": []
+    },
+    "ci_F_map_ci_003": {
+      "anchor": "code:.github/workflows/ci.yml@fb63e78#L6-L8",
+      "owner": null,
+      "factIds": [
+        "F-map-ci-003"
+      ]
+    }
+  },
+  "edges": {
+    "h1->h2": {
+      "protocol": "then",
+      "contract": "code:deploy/deploy.sh@fb63e78#L5-L5",
+      "factIds": []
+    },
+    "h2->h3": {
+      "protocol": "then",
+      "contract": "code:deploy/deploy.sh@fb63e78#L6-L6",
+      "factIds": []
+    },
+    "h3->h4": {
+      "protocol": "then",
+      "contract": "code:src/repo/orders_repo.py@fb63e78#L7-L18",
+      "factIds": []
+    },
+    "h4->h5": {
+      "protocol": "then",
+      "contract": "code:db/schema.sql@fb63e78#L13-L16",
+      "factIds": []
+    },
+    "ci_F_map_ci_003->h1": {
+      "protocol": "no link",
+      "contract": "code:.github/workflows/ci.yml@fb63e78#L6-L8",
+      "factIds": [
+        "F-map-ci-003"
+      ]
+    }
+  }
+}

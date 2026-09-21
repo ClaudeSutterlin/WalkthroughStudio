@@ -1,0 +1,14 @@
+graph LR
+  h1["deploy.sh<br/>The script runs under set -e and takes its single input from..."]
+  h2["deploy.sh<br/>scp -r src 'deploy@${env}.example.com:/srv/orders/' uploads..."]
+  h1 --> h2
+  h3["deploy.sh<br/>ssh 'deploy@${env}.example.com' 'sudo systemctl restart..."]
+  h2 --> h3
+  h4["orders_repo.py<br/>What comes back up is the freshly copied code: each OrdersRepo..."]
+  h3 --> h4
+  h5["schema.sql<br/>The restarted process meets a database the deploy never touched..."]
+  h4 --> h5
+  ci_F_map_ci_003["CI<br/>CI does not deploy: the workflow never invokes..."]
+  ci_F_map_ci_003 -.->|"does not deploy"| h1
+  classDef gap stroke:#DA4F45,stroke-width:3px,stroke-dasharray:4 3;
+  class ci_F_map_ci_003 gap;

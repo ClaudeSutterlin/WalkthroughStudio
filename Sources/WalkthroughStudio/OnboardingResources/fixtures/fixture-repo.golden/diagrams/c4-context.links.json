@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "diagramId": "c4-context",
+  "nodes": {
+    "system": {
+      "anchor": "code:./@fb63e78",
+      "owner": null,
+      "factIds": [
+        "F-map-ci-001",
+        "F-map-ci-008",
+        "F-map-db-001",
+        "F-map-ops-001",
+        "F-map-ops-017",
+        "F-map-ops-023",
+        "F-map-src-010",
+        "F-map-src-017"
+      ]
+    },
+    "ext_OrdersRepo_init": {
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L4-L9",
+      "owner": null,
+      "factIds": [
+        "F-map-src-025"
+      ]
+    },
+    "ext_psycopg2_connect_OrdersRepo_init": {
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L8-L9",
+      "owner": null,
+      "factIds": [
+        "F-lens-deploy-ops-014"
+      ]
+    },
+    "ext_OrdersRepo_insert_non_retried_database_error": {
+      "anchor": "code:src/repo/orders_repo.py@fb63e78#L14-L16",
+      "owner": null,
+      "factIds": [
+        "F-lens-deploy-ops-017"
+      ]
+    },
+    "ext_ssh_scp_to_deploy_env_example_com": {
+      "anchor": "code:deploy/deploy.sh@fb63e78#L5-L6",
+      "owner": null,
+      "factIds": [
+        "F-lens-deploy-ops-018"
+      ]
+    },
+    "ext_outbound_email_templates_email_tmpl": {
+      "anchor": "code:templates/email.tmpl@fb63e78#L1-L3",
+      "owner": null,
+      "factIds": [
+        "F-lens-deploy-ops-019"
+      ]
+    }
+  },
+  "edges": {
+    "system->ext_OrdersRepo_init": {
+      "protocol": "calls",
+      "contract": "code:src/repo/orders_repo.py@fb63e78#L4-L9",
+      "factIds": [
+        "F-map-src-025"
+      ]
+    },
+    "system->ext_psycopg2_connect_OrdersRepo_init": {
+      "protocol": "calls",
+      "contract": "code:src/repo/orders_repo.py@fb63e78#L8-L9",
+      "factIds": [
+        "F-lens-deploy-ops-014"
+      ]
+    },
+    "system->ext_OrdersRepo_insert_non_retried_database_error": {
+      "protocol": "calls",
+      "contract": "code:src/repo/orders_repo.py@fb63e78#L14-L16",
+      "factIds": [
+        "F-lens-deploy-ops-017"
+      ]
+    },
+    "system->ext_ssh_scp_to_deploy_env_example_com": {
+      "protocol": "calls",
+      "contract": "code:deploy/deploy.sh@fb63e78#L5-L6",
+      "factIds": [
+        "F-lens-deploy-ops-018"
+      ]
+    },
+    "system->ext_outbound_email_templates_email_tmpl": {
+      "protocol": "calls",
+      "contract": "code:templates/email.tmpl@fb63e78#L1-L3",
+      "factIds": [
+        "F-lens-deploy-ops-019"
+      ]
+    }
+  }
+}

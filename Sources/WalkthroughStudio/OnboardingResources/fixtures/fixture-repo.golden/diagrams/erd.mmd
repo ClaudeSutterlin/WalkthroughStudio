@@ -1,0 +1,21 @@
+erDiagram
+  USERS {
+    unknown id ""
+    TEXT email "PII"
+    TEXT address "PII"
+  }
+  ORDERS {
+    unknown id ""
+    unknown user_id ""
+    NUMERIC total "(10,2)"
+    TIMESTAMP created_at ""
+  }
+  ADDRESSES {
+    unknown id ""
+    unknown user_id ""
+    unknown line1 ""
+    unknown city ""
+    unknown country ""
+  }
+  USERS ||--o{ ORDERS : has
+  USERS ||--o{ ADDRESSES : has
