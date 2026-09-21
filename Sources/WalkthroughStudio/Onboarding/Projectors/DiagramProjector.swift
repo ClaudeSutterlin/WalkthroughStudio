@@ -158,7 +158,9 @@ enum DiagramProjector {
         func nodeLine(_ path: String, indent: String) -> String {
             let nid = ProjectionSupport.mermaidID("d_" + path)
             let own = owners[path] ?? owners[ProjectionSupport.topDir(path)]
-            var bits = [ProjectionSupport.mermaidLabel(path)]
+            // "." is the repository root. As a box in a container diagram it reads as a
+            // mystery; spelled out it reads as what it is.
+            var bits = [ProjectionSupport.mermaidLabel(path == "." ? "repository root" : path)]
             if let files = containers[path]?.files { bits.append("\(files) files") }
             if let author = own?.authors.first {
                 bits.append("\(ProjectionSupport.mermaidLabel(author.name)) \(Int((author.share * 100).rounded()))%")

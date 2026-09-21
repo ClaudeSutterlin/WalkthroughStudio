@@ -234,7 +234,9 @@ def diagram_c4_container(pk):
     def node_line(path, indent="  "):
         nid = mermaid_id("d_" + path)
         own = owners.get(path) or owners.get(top_dir(path))
-        bits = [mermaid_label(path)]
+        # "." is the repository root. As a box in a container diagram it reads as a
+        # mystery; spelled out it reads as what it is.
+        bits = [mermaid_label("repository root" if path == "." else path)]
         meta = containers.get(path, {})
         if meta.get("files"):
             bits.append(f"{meta['files']} files")

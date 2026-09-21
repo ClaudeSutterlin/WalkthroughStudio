@@ -77,6 +77,8 @@ extension SelfTest {
             ("coderefsLookupProbe", { probeCtx in try await Self.coderefsLookupProbe(probeCtx) }),
             ("linkRouterProbe", { probeCtx in try await Self.linkRouterProbe(probeCtx) }),
             ("backlinkIndexProbe", { probeCtx in try await Self.backlinkIndexProbe(probeCtx) }),
+            ("onboardSheetProbe", { probeCtx in try await Self.onboardSheetProbe(probeCtx) }),
+            ("playerStageProbe", { probeCtx in try await Self.playerStageProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

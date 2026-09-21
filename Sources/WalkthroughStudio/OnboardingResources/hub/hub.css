@@ -104,3 +104,12 @@ main li { margin: 5px 0; }
 .result:hover { background: var(--soft); }
 .result .where { color: var(--muted); font-size: 11px; }
 .empty { color: var(--muted); font-size: 12.5px; }
+
+/* Embedded in the app (D20): the hub is the centre pane and nothing else. The
+   navigator, the search, the coverage strip and "where this is covered" are all native
+   there — a second right-hand rail inside the stage would sit beside the companion
+   panel and ask the reader to look in two places for the same kind of answer. The
+   standalone export never sets this class and is unchanged. */
+body.embedded nav, body.embedded aside { display: none; }
+body.embedded { grid-template-columns: minmax(0, 1fr); }
+body.embedded .stage-head { padding-left: 4px; }

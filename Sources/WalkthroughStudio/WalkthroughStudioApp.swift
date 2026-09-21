@@ -11,6 +11,13 @@ struct WalkthroughStudioApp: App {
                 .frame(minWidth: 1100, minHeight: 720)
         }
         .windowResizability(.contentMinSize)
+        .commands { OnboardingCommands() }
+
+        // Onboard to a Codebase (D3): its own window, not a tab in the studio.
+        Window(OnboardingWindow.title, id: OnboardingWindow.id) {
+            OnboardingRootView()
+        }
+        .windowResizability(.contentMinSize)
 
         Settings {
             SettingsView()

@@ -171,6 +171,15 @@
   /* ------------------------------------------------------------------ route */
   async function route(anchor, push = true) {
     const a = parseAnchor(anchor);
+    // A video is the app's to play, not the hub's to render. Standalone, the export
+    // has no player yet and says so rather than opening a blank stage.
+    if (a.kind === "video") {
+      if (embedded()) { notify("open", { anchor }); return; }
+      $("stage").innerHTML = `<p class="empty">This export does not include the player. ` +
+        `Open <code>${esc(anchor)}</code> in Walkthrough Studio.</p>`;
+      setCrumb(`video ${esc(a.id || "")}`);
+      return;
+    }
     if (push && state.current) state.history.push(state.current);
     state.current = anchor;
     $("back").hidden = state.history.length === 0;
@@ -193,6 +202,7 @@
     state.seen.add(anchor.split("#")[0]);
     markOrder();
     if (a.kind !== "code") showContextFor(null);
+    notify("navigated", { anchor, title: $("crumb").textContent, canGoBack: state.history.length > 0 });
   }
 
   async function showFact(id) {
@@ -297,6 +307,29 @@
       `<div class="empty">Nothing matches.</div>`;
   }
 
+  /* ------------------------------------------------------------ app bridge */
+  /* Embedded in the app (D20) the hub renders only the stage: the window, the
+     navigator, the player and the companion are native, and the three surfaces the
+     static export needs anyway — documents, diagrams and the code view — are rendered
+     here rather than a second time in AppKit. The same file serves both, so there is
+     one renderer and one anchor router, not two that drift. */
+  const embedded = () => Boolean(window.walkthroughEmbedded);
+  const notify = (kind, payload) => {
+    if (!embedded()) return;
+    try {
+      window.webkit?.messageHandlers?.walkthrough?.postMessage({ kind, ...payload });
+    } catch (_) { /* not hosted: the export is just a web page */ }
+  };
+
+  // What the app calls in. Kept small on purpose: everything else the app needs it
+  // already has from the package's own files.
+  window.walkthroughHub = {
+    route: (anchor) => route(anchor),
+    back: () => { const prev = state.history.pop(); if (prev) route(prev, false); },
+    current: () => state.current,
+    ready: () => Boolean(state.hub),
+  };
+
   /* ------------------------------------------------------------------- boot */
   document.addEventListener("click", (ev) => {
     const el = ev.target.closest("[data-anchor]");
@@ -316,12 +349,14 @@
   });
 
   (async () => {
+    if (embedded()) document.body.classList.add("embedded");
     state.hub = await j("hub/index.json");
     state.backlinks = await j("index/anchors.json").catch(() => ({}));
     state.codeIndex = await j("code/index.json").catch(() => ({ paths: [], sha: "" }));
     $("repo").textContent = `${state.hub.repo.name || state.hub.repo.url || "repository"} @ ${state.hub.repo.headSHA.slice(0, 7)}`;
     renderOrder();
     renderCoverage();
+    notify("loaded", { items: state.hub.items.length, totalMinutes: state.hub.totalMinutes });
     if (state.hub.items.length) route(state.hub.items[0].id, false);
   })();
 })();

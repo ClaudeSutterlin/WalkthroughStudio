@@ -199,6 +199,8 @@ enum SettingsKeys {
     static let keepOriginalAudio = "keepOriginalAudio"     // default false
     static let lastVideoExportDir = "lastVideoExportDir"   // remembered export folder
     static let didCompleteSetup = "didCompleteSetup"       // first-run setup sheet shown
+    static let onboardingRecents = "onboardingRecents"     // onboarding packages opened before, newest first
+    static let onboardingEditorCommand = "onboardingEditorCommand" // blank = `open`; e.g. "code --goto {path}:{line}"
 }
 
 enum Defaults {

@@ -23,7 +23,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M1 Fixture repo, selftest scaffold, stills writer | verified on the Mac | fixtureRepoProbe, stillsWriterProbe | S3 |
 | M2 Package format, anchors, git, Research Packet contract | verified on the Mac | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S3 |
 | M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
-| M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | |
+| M4 Player shell on the fixture package | written, not yet compiled: package layer, three panes, hub in a web view | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | S6 |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
@@ -388,6 +388,73 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S6: 2026-09-21 — M4: the player shell, and two grammars that were quietly one
+Milestone(s): M4
+Built:
+- **The package layer** (committed separately): `VideoDocs` (transcript, chapters,
+  code-ref map, `lookup(t)` as a binary search), `Narrator` (`Narrating` plus an
+  offline `ToneNarrator`), `TranscriptBuilder` (one walk, all three timing files),
+  `Captions`, `LinkRouter`, `BacklinkIndex`, and `FixturePackage`, which turns the
+  checked-in packet plus a handwritten script into a complete playable package with no
+  network and no model.
+- **The window**: a `Window` scene and a File-menu entry (D3), `OnboardingViewModel`,
+  `OnboardingRootView` (three panes, notices, status bar, J K L / `[` `]` / C /
+  Escape), `HubNavigatorView`, `StageView`, `VideoPane` and `MiniPlayer`,
+  `PlaybackClock`, `CompanionPanel`, `OnboardSheet` and `OnboardSheetValidation`,
+  `WalkthroughSchemeHandler` and `HubWebView`.
+- **D20 made real**: the centre pane is the package's own `hub.html` in a `WKWebView`,
+  served over `walkthrough://package/` — a custom scheme rather than `loadFileURL`
+  because the hub reads everything with `fetch()` and WebKit refuses a cross-origin
+  `file://` fetch. The handler is also the sandbox: it serves nothing outside the
+  package root. `hub.js` gained an embed mode: the navigator, search and coverage
+  cards go native, `window.walkthroughHub.route()` lets the app drive, and anchors the
+  app owns (`video:`) are posted back rather than rendered.
+- Six probes: `fixturePackageProbe`, `coderefsLookupProbe`, `linkRouterProbe`,
+  `backlinkIndexProbe`, `onboardSheetProbe`, `playerStageProbe` — sixteen in total now.
+  The last two share one offscreen-snapshot helper, the consolidated version of the
+  four copies CLAUDE.md lists in SelfTest.swift.
+Verified (no Swift toolchain here):
+- The hub was **driven in headless Chromium**, standalone and embedded. Standalone:
+  navigator visible, four sidebar cards, a `video:` anchor explains the export has no
+  player. Embedded: navigator and sidebar hidden, the stage full width, documents,
+  diagrams, traces and code all render, and the bridge emitted exactly one `loaded`,
+  five `navigated` and one `open` carrying `video:architecture#t=12.5` to the app. No
+  page errors.
+- The timing math, transcribed to Python: every section 6 invariant the probe asserts
+  holds over the fixture script (10 segments tiling 0 to 37.80s, 5 intervals covering
+  the same span), and `lookup(t)` is right at every boundary, middle and overrun.
+- All 283 anchors `linkRouterProbe` audits resolve, plus all 22 navigator ids.
+- **I looked at the rendered diagrams**, which is how the last defect was found.
+Broke / learned:
+- **Two grammars were sharing one parser.** `Anchor.parse` requires a fragment for
+  `doc:`, `diagram:` and `trace:` — correct for a packet's evidence anchors, and
+  `anchorRoundTripProbe` asserts it. But `hub/index.json` and `manifest.deliverables`
+  name deliverables the other way, `doc:tech-debt` with no fragment, so *every*
+  navigator row would have failed to resolve and the window would have opened onto a
+  notice. Rather than loosen `Anchor` and lose the packet check, `LinkRouter` now
+  recognizes the bare deliverable form and opens it at the top. An evidence anchor and
+  a deliverable id look alike and are not the same thing; the router is where that is
+  now written down.
+- **The hub index has no videos in it**, because it is projected from a packet and a
+  packet contains no videos. The navigator merges the manifest's video deliverables in
+  front of the projected order rather than rewriting the projected file — one producer
+  per file, and `projectorParityProbe` keeps holding that file to the reference.
+- The embedded hub kept its own right-hand rail, which in the app would have sat beside
+  the native companion — two places to look for the same kind of answer. Hiding it sent
+  "where is this covered?" to the companion panel, which is also what finally gave
+  `BacklinkIndex` a consumer in the app rather than only in a probe.
+- A container diagram had a box labelled `.`. Obvious in the picture, invisible in the
+  source: it is the repository root, and it now says so. The golden's `c4-container.mmd`
+  moved by that one line.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then the onboarding selftest (sixteen probes) and the
+   original `--selftest`. Then **open the window** (⇧⌘O) and look at it.
+2. M5: narration, the scene renderer, and real code stills instead of solid colours.
+3. M6 and M7: the LLM runtime and the playback chat agent, which the companion panel
+   is already shaped to hold.
 
 ### S5: 2026-09-21 — M8 complete: the Swift projectors, and fuzzing found two real divergences
 Milestone(s): M8

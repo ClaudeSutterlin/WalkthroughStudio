@@ -60,13 +60,46 @@ struct LinkRouter {
 
     // MARK: - Resolution
 
+    /// Resolve an anchor, or a bare deliverable reference.
+    ///
+    /// Two grammars arrive here and only one is the packet's. An *evidence* anchor must
+    /// carry its fragment — `doc:tech-debt#ranked-by-severity` names a claim's home, and
+    /// `PacketValidator` rejects one without a section, because a citation that points
+    /// at a whole document has not really cited anything. A *deliverable id* is the
+    /// other thing: `doc:tech-debt` is what `hub/index.json` and `manifest.deliverables`
+    /// call the document itself, and clicking it in the navigator means "open this",
+    /// not "open a section of this". Rather than loosen `Anchor` and lose the packet
+    /// check, the bare form is recognized here and opened at the top.
     func resolve(_ raw: String) -> Result<Destination, Failure> {
         do {
             return resolve(try Anchor.parse(raw))
         } catch {
+            if let bare = LinkRouter.bareDeliverable(raw) {
+                return resolve(bare).mapError {
+                    Failure(anchor: raw, kind: $0.kind, reason: $0.reason)
+                }
+            }
             let kind = raw.split(separator: ":", maxSplits: 1).first.map(String.init) ?? "?"
             return .failure(Failure(anchor: raw, kind: kind,
                                     reason: "not a valid anchor: \(error.localizedDescription)"))
+        }
+    }
+
+    /// `doc:tech-debt`, `diagram:erd`, `trace:order-creation`, `video:architecture` —
+    /// a deliverable named with no fragment, as the hub index and the manifest name it.
+    /// The empty slug, empty node, hop 0 and nil time each mean "the whole thing", which
+    /// is what `resolve(_:)` already does with them.
+    static func bareDeliverable(_ raw: String) -> Anchor? {
+        guard let colon = raw.firstIndex(of: ":") else { return nil }
+        let kind = String(raw[raw.startIndex..<colon])
+        let id = String(raw[raw.index(after: colon)...])
+        guard !id.isEmpty, !id.contains("#"), !id.contains(" ") else { return nil }
+        switch kind {
+        case "doc": return .doc(id: id, slug: "")
+        case "diagram": return .diagram(id: id, node: "")
+        case "trace": return .trace(id: id, hop: 0)
+        case "video": return .video(id: id, seconds: nil, chapter: nil)
+        default: return nil
         }
     }
 
