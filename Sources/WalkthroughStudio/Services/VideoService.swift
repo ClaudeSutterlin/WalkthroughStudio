@@ -248,7 +248,9 @@ enum VideoService {
         return out
     }
 
-    private static func splitSentences(_ text: String) -> [String] {
+    /// Sentence split on `. ! ?`, shared with `TranscriptBuilder` (M4) so captions and
+    /// transcript segments are cut the same way. Internal, not private, for that reason.
+    static func splitSentences(_ text: String) -> [String] {
         var sentences: [String] = []
         var current = ""
         for char in text {

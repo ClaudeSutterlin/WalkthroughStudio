@@ -73,6 +73,10 @@ extension SelfTest {
             ("fixturePacketProbe", { probeCtx in try await Self.fixturePacketProbe(probeCtx) }),
             ("markdownLiteProbe", { probeCtx in try await Self.markdownLiteProbe(probeCtx) }),
             ("projectorParityProbe", { probeCtx in try await Self.projectorParityProbe(probeCtx) }),
+            ("fixturePackageProbe", { probeCtx in try await Self.fixturePackageProbe(probeCtx) }),
+            ("coderefsLookupProbe", { probeCtx in try await Self.coderefsLookupProbe(probeCtx) }),
+            ("linkRouterProbe", { probeCtx in try await Self.linkRouterProbe(probeCtx) }),
+            ("backlinkIndexProbe", { probeCtx in try await Self.backlinkIndexProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

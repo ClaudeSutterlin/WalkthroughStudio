@@ -113,19 +113,83 @@ enum HubProjector {
             }
         }
         for register in registers {
-            for anchor in MarkdownLite.citedAnchors(in: register.markdown, kindPrefix: "code:") {
-                record(anchor, ["kind": "doc", "ref": "doc:\(register.id)", "label": register.id])
+            for citation in HubProjector.citations(in: register.markdown) {
+                record(citation.anchor, ["kind": "doc",
+                                         "ref": "doc:\(register.id)#\(citation.slug)",
+                                         "label": register.id])
             }
         }
         for trace in traceDocuments {
-            for anchor in MarkdownLite.citedAnchors(in: trace.markdown, kindPrefix: "code:") {
-                record(anchor, ["kind": "trace", "ref": "trace:\(trace.pathID)", "label": trace.pathID])
+            for citation in HubProjector.citations(in: trace.markdown) {
+                // A hop is the precise answer ("this file is hop 4 of order creation"); a
+                // citation elsewhere in the document falls back to its section, which the
+                // player resolves against traces/<id>.html just as it does a register.
+                let ref = citation.hop.map { "trace:\(trace.pathID)#hop\($0)" }
+                    ?? "doc:\(trace.pathID)#\(citation.slug)"
+                record(citation.anchor, ["kind": "trace", "ref": ref, "label": trace.pathID])
             }
         }
 
         var out: [String: Any] = [:]
         for anchor in order { out[anchor] = index[anchor]! }
         return out
+    }
+
+    /// An unlabelled `code:` citation, the section it sits in and — inside a trace's hop
+    /// list — which hop.
+    struct Citation {
+        let anchor: String
+        let slug: String
+        let hop: Int?
+    }
+
+    /// Every ref the backlink index emits has to be a *routable* anchor: `doc:`,
+    /// `diagram:` and `trace:` all require a fragment, so a bare `doc:tech-debt` is not
+    /// something the player can open. Pointing at the section that does the citing is
+    /// also what a reader wants — landing on the top of a twelve-section register and
+    /// searching for the file again is the thing a backlink is supposed to save you.
+    ///
+    /// A document with no headings has nothing to point at, so it contributes nothing
+    /// rather than a link that dangles.
+    static func citations(in markdown: String) -> [Citation] {
+        var lines = markdown.components(separatedBy: "\n")
+        if let first = lines.first, first.trimmingCharacters(in: .whitespaces) == "---" {
+            let end = (1..<lines.count).first {
+                lines[$0].trimmingCharacters(in: .whitespaces) == "---"
+            } ?? 0
+            lines = Array(lines[(end + 1)...])
+        }
+        func slug(ofHeading line: String) -> String {
+            let text = String(line.drop(while: { $0 == "#" }))
+            return ProjectionSupport.slugify(MarkdownLite.splitHeadingChips(text).0)
+        }
+        let stripped = lines.map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let firstHeading = stripped.first(where: { $0.hasPrefix("#") }) else { return [] }
+
+        var currentSlug = slug(ofHeading: firstHeading)
+        var currentHop: Int? = nil
+        var out: [Citation] = []
+        for line in stripped {
+            if line.hasPrefix("#") {
+                currentSlug = slug(ofHeading: line)
+                currentHop = nil
+            } else {
+                currentHop = HubProjector.hopNumber(of: line)
+            }
+            for anchor in MarkdownLite.citedAnchors(in: line, kindPrefix: "code:") {
+                out.append(Citation(anchor: anchor, slug: currentSlug, hop: currentHop))
+            }
+        }
+        return out
+    }
+
+    /// `4. OrdersRepo.insert retries ...` -> 4. Matches `^(\d+)\. `.
+    static func hopNumber(of line: String) -> Int? {
+        let digits = line.prefix(while: { $0.isNumber })
+        guard !digits.isEmpty else { return nil }
+        let rest = line.dropFirst(digits.count)
+        guard rest.hasPrefix(". ") else { return nil }
+        return Int(digits)
     }
 
     // MARK: - pass-through blocks

@@ -657,6 +657,43 @@ def build_hub(pk, docs, diagrams, trace_docs):
     }
 
 
+CITED_CODE = re.compile(r"\[\[(code:[^\]|]+)\]\]")
+HOP_LINE = re.compile(r"^(\d+)\. ")
+
+
+def document_citations(text):
+    """(anchor, slug, hop) for every unlabelled code: citation, with the section it sits
+    in and, inside a trace's hop list, which hop.
+
+    Every ref this feeds has to be a *routable* anchor: `doc:` and `diagram:` and
+    `trace:` all require a fragment, so a bare `doc:tech-debt` is not something the
+    player can open. Pointing at the section that does the citing is also what a reader
+    wants — landing on the top of a twelve-section register and searching for the file
+    again is the thing a backlink is supposed to save you.
+    """
+    lines = text.split("\n")
+    if lines and lines[0].strip() == "---":                     # skip front matter
+        end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), 0)
+        lines = lines[end + 1:]
+    headings = [slugify(HEADING_CHIP.sub("", ln.strip().lstrip("#")).strip())
+                for ln in lines if ln.strip().startswith("#")]
+    if not headings:
+        return []                                               # nothing to point at
+    slug, hop = headings[0], None
+    out = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            slug = slugify(HEADING_CHIP.sub("", stripped.lstrip("#")).strip())
+            hop = None
+        else:
+            m = HOP_LINE.match(stripped)
+            hop = int(m.group(1)) if m else None
+        for c in CITED_CODE.finditer(line):
+            out.append((c.group(1), slug, hop))
+    return out
+
+
 def build_backlinks(pk, docs, diagram_links, trace_docs):
     """anchor -> every deliverable that cites it, so the code view can say where a file is covered."""
     index = defaultdict(list)
@@ -665,11 +702,15 @@ def build_backlinks(pk, docs, diagram_links, trace_docs):
             if n.get("anchor"):
                 index[n["anchor"]].append({"kind": "diagram", "ref": f"diagram:{did}#{nid}", "label": did})
     for doc_id, text in docs.items():
-        for m in re.finditer(r"\[\[(code:[^\]|]+)\]\]", text):
-            index[m.group(1)].append({"kind": "doc", "ref": f"doc:{doc_id}", "label": doc_id})
+        for anchor, slug, _ in document_citations(text):
+            index[anchor].append({"kind": "doc", "ref": f"doc:{doc_id}#{slug}", "label": doc_id})
     for pid, text in trace_docs.items():
-        for m in re.finditer(r"\[\[(code:[^\]|]+)\]\]", text):
-            index[m.group(1)].append({"kind": "trace", "ref": f"trace:{pid}", "label": pid})
+        for anchor, slug, hop in document_citations(text):
+            # A hop is the precise answer ("this file is hop 4 of order creation"); a
+            # citation elsewhere in the document falls back to its section, which the
+            # player resolves against traces/<id>.html just as it does a register.
+            ref = f"trace:{pid}#hop{hop}" if hop else f"doc:{pid}#{slug}"
+            index[anchor].append({"kind": "trace", "ref": ref, "label": pid})
     # de-duplicate while keeping order
     out = {}
     for anchor, refs in index.items():
