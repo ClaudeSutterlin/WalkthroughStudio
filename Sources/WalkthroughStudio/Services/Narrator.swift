@@ -80,3 +80,112 @@ struct ToneNarrator: Narrating {
         return NarrationClip(duration: Double(count) / Double(ToneNarrator.sampleRate), words: nil)
     }
 }
+
+/// The real narrator: ElevenLabs, asking for the character alignment the timing files
+/// want and degrading to an estimate when the account's plan does not offer it.
+///
+/// `timingSource` in the transcript records which one a package got, so a caption that
+/// drifts can be explained rather than guessed at.
+struct ElevenLabsNarrator: Narrating {
+    var client: ElevenLabsClient
+    var voiceID: String
+    var modelID: String
+    /// Called when alignment was unavailable, so the pipeline can post a notice instead
+    /// of failing (the house rule for a degraded stage).
+    var onDegraded: (@Sendable (String) -> Void)?
+
+    init(client: ElevenLabsClient, voiceID: String, modelID: String,
+         onDegraded: (@Sendable (String) -> Void)? = nil) {
+        self.client = client
+        self.voiceID = voiceID
+        self.modelID = modelID
+        self.onDegraded = onDegraded
+    }
+
+    func synthesize(_ text: String, to url: URL) async throws -> NarrationClip {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        if let alignment = try await client.synthesizeWithAlignment(
+            text: text, voiceID: voiceID, modelID: modelID) {
+            try alignment.wav.write(to: url)
+            let duration = ElevenLabsNarrator.wavDuration(alignment.wav)
+            guard alignment.hasTimings else {
+                onDegraded?("the narration API returned no word timings for this line")
+                return NarrationClip(duration: duration, words: nil)
+            }
+            let words = ElevenLabsNarrator.words(fromCharacters: alignment.characters,
+                                                 starts: alignment.starts, ends: alignment.ends)
+            return NarrationClip(duration: duration, words: words.isEmpty ? nil : words)
+        }
+        // No timestamps on this plan: synthesize normally and let the sentence estimate
+        // carry the timing.
+        let wav = try await client.synthesizeWAV(text: text, voiceID: voiceID, modelID: modelID)
+        try wav.write(to: url)
+        onDegraded?("this plan has no word-timestamps endpoint; caption times are estimated")
+        return NarrationClip(duration: ElevenLabsNarrator.wavDuration(wav), words: nil)
+    }
+
+    /// Fold per-character times into words on whitespace boundaries.
+    ///
+    /// Pure, so a probe can check it without a network: the provider returns one entry
+    /// per character including the spaces, and a word's time is its first character's
+    /// start to its last character's end.
+    static func words(fromCharacters characters: [String], starts: [Double],
+                      ends: [Double]) -> [WordTiming] {
+        let count = min(characters.count, min(starts.count, ends.count))
+        var out: [WordTiming] = []
+        var buffer = ""
+        var start = 0.0
+        var end = 0.0
+
+        func flush() {
+            guard !buffer.isEmpty else { return }
+            out.append(WordTiming(w: buffer, s: start, e: max(end, start)))
+            buffer = ""
+        }
+
+        for index in 0..<count {
+            let piece = characters[index]
+            if piece.isEmpty || piece.allSatisfy({ $0.isWhitespace }) {
+                flush()
+                continue
+            }
+            if buffer.isEmpty { start = starts[index] }
+            buffer += piece
+            end = ends[index]
+        }
+        flush()
+        return out
+    }
+
+    /// Length of a PCM WAV from its own header, rather than from what was asked for:
+    /// the timeline is laid out from what the file actually contains.
+    static func wavDuration(_ wav: Data) -> Double {
+        guard wav.count > 44 else { return 0 }
+        func uint32(at offset: Int) -> UInt32 {
+            var value: UInt32 = 0
+            for i in 0..<4 { value |= UInt32(wav[wav.startIndex + offset + i]) << (8 * UInt32(i)) }
+            return value
+        }
+        func uint16(at offset: Int) -> UInt16 {
+            UInt16(wav[wav.startIndex + offset]) | (UInt16(wav[wav.startIndex + offset + 1]) << 8)
+        }
+        // Walk the chunks rather than assuming a 44-byte header: a WAV with a LIST
+        // chunk before `data` would otherwise measure long by however big that is.
+        var offset = 12
+        let sampleRate = Int(uint32(at: 24))
+        let channels = Int(uint16(at: 22))
+        let bits = Int(uint16(at: 34))
+        while offset + 8 <= wav.count {
+            let id = String(decoding: wav[(wav.startIndex + offset)..<(wav.startIndex + offset + 4)],
+                            as: UTF8.self)
+            let size = Int(uint32(at: offset + 4))
+            if id == "data" {
+                let bytesPerFrame = max(1, channels * bits / 8)
+                return sampleRate > 0 ? Double(size / bytesPerFrame) / Double(sampleRate) : 0
+            }
+            offset += 8 + size + (size % 2)
+        }
+        return 0
+    }
+}

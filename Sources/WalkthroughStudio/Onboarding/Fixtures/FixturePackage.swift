@@ -28,6 +28,9 @@ enum FixturePackage {
         var coderefs: CodeRefMap
         var projection: PackageProjector.Result
         var codeFiles: Int
+        /// Shots that degraded rather than failed — an unrenderable diagram, a missing
+        /// source file. Empty for a healthy fixture build, and the probe asserts that.
+        var notices: [String] = []
     }
 
     /// Imports the packet, projects every deliverable, renders the video and writes the
@@ -47,16 +50,18 @@ enum FixturePackage {
         LinkRouter.invalidateCache(for: store.root)
 
         let script = FixturePackage.script(sha: packet.sha7)
-        try store.writeJSON(script, to: "videos/\(videoID)/\(VideoScript.fileName)")
-
-        let video = try await renderVideo(script: script, narrator: narrator, into: store)
+        // The assembler writes script.json itself, after validating it against the
+        // package — a script that names something the package lacks never gets saved
+        // as if it were buildable.
+        let video = try await renderVideo(script: script, narrator: narrator, repo: repo,
+                                          into: store, git: git)
 
         try updateManifest(in: store, script: script, transcript: video.transcript,
                            projection: projection)
 
         return Built(store: store, script: script, transcript: video.transcript,
                      coderefs: video.coderefs, projection: projection,
-                     codeFiles: code.written.count)
+                     codeFiles: code.written.count, notices: video.notices)
     }
 
     // MARK: - The script
@@ -147,103 +152,17 @@ enum FixturePackage {
 
     // MARK: - Rendering
 
-    struct RenderedVideo {
-        var transcript: TranscriptDoc
-        var coderefs: CodeRefMap
-        var duration: Double
-    }
-
-    /// Narrate every shot, lay them end to end, write the stills track, mux the audio in
-    /// and write the three timing files beside the mp4.
-    static func renderVideo(script: VideoScript, narrator: Narrating,
-                            into store: PackageStore) async throws -> RenderedVideo {
-        let folder = "videos/\(script.id)"
-        let audioDir = store.url("\(folder)/audio")
-        try FileManager.default.createDirectory(at: audioDir, withIntermediateDirectories: true)
-
-        var clips: [String: NarrationClip] = [:]
-        var narrationURLs: [String: URL] = [:]
-        for (_, shot) in script.shots {
-            let url = audioDir.appendingPathComponent("\(shot.id).wav")
-            clips[shot.id] = try await narrator.synthesize(shot.narration, to: url)
-            narrationURLs[shot.id] = url
-        }
-
-        let timeline = TranscriptBuilder.timeline(for: script, clips: clips)
-        let output = try TranscriptBuilder.build(script: script, timeline: timeline)
-
-        // Stills: one frame per shot, held for the shot's whole slice. The colours are
-        // distinct per scene type so a probe can pixel-check which shot a frame belongs
-        // to; M5's SceneRenderer replaces this with the real templates.
-        var frames: [(image: CGImage, hold: Double)] = []
-        for (entry, pair) in zip(timeline, script.shots) {
-            frames.append((StillsVideoWriter.solidFrame(color: colour(forSceneType: pair.shot.sceneType),
-                                                        size: frameSize),
-                           entry.duration))
-        }
-        let stills = store.url("\(folder)/stills.mp4")
-        try await StillsVideoWriter.write(frames: frames, size: frameSize, to: stills)
-
-        // The muxer needs contiguous audio segments; the timeline already tiles, and
-        // every shot has a clip, so there is no gap to fill.
-        let segments = timeline.map { entry in
-            VideoService.ExportSegment(sourceStart: entry.start, duration: entry.duration,
-                                       narrationURL: narrationURLs[entry.shotID])
-        }
-        let videoURL = store.url("\(folder)/video.mp4")
-        try await VideoService.assembleNarratedVideo(
-            videoURL: stills, segments: segments, keepOriginalAudio: false, outputURL: videoURL)
-
-        // The mp4 is the authority on duration: the timing files must agree with what a
-        // player will actually scrub, not with what the builder intended.
-        let measured = try await AVURLAsset(url: videoURL).load(.duration).seconds
-        var transcript = output.transcript
-        var coderefs = output.coderefs
-        if measured.isFinite, measured > 0, abs(measured - transcript.duration) > 0.01 {
-            transcript = retimed(transcript, to: measured)
-            coderefs = retimed(coderefs, to: measured)
-        }
-
-        try store.writeJSON(transcript, to: "\(folder)/\(TranscriptDoc.fileName)")
-        try store.writeJSON(coderefs, to: "\(folder)/\(CodeRefMap.fileName)")
-        try store.writeJSON(transcript.chapters, to: "\(folder)/chapters.json")
-        try store.writeAtomically(VideoDocsCaptions.srt(transcript), to: "\(folder)/captions.srt")
-        try store.writeAtomically(VideoDocsCaptions.vtt(transcript), to: "\(folder)/captions.vtt")
-        try store.writeAtomically(VideoDocsCaptions.chaptersVTT(transcript), to: "\(folder)/chapters.vtt")
-
-        return RenderedVideo(transcript: transcript, coderefs: coderefs, duration: transcript.duration)
-    }
-
-    /// `StillsVideoWriter` appends a trailing hold so the asset is never shorter than
-    /// the sum of the shots, which makes the mp4 a little longer than the timeline.
-    /// Rather than let the last caption end before the video does — the desync CLAUDE.md
-    /// lists as a known limitation of the walkthrough path — the final segment and the
-    /// final interval are stretched to the measured end.
-    static func retimed(_ transcript: TranscriptDoc, to duration: Double) -> TranscriptDoc {
-        var out = transcript
-        out.duration = duration
-        if !out.segments.isEmpty { out.segments[out.segments.count - 1].end = duration }
-        if !out.chapters.isEmpty { out.chapters[out.chapters.count - 1].end = duration }
-        return out
-    }
-
-    static func retimed(_ coderefs: CodeRefMap, to duration: Double) -> CodeRefMap {
-        var out = coderefs
-        if !out.intervals.isEmpty { out.intervals[out.intervals.count - 1].end = duration }
-        return out
-    }
-
-    /// Distinct per scene type, from the brand palette, so a probe can tell from one
-    /// pixel which kind of shot a frame is.
-    static func colour(forSceneType type: String) -> (r: CGFloat, g: CGFloat, b: CGFloat) {
-        switch type {
-        case "title":    return (0.855, 0.310, 0.271)   // coral   #DA4F45
-        case "code":     return (0.102, 0.086, 0.071)   // charcoal #1A1612
-        case "diagram":  return (1.000, 0.984, 0.961)   // cream   #FFFBF5
-        case "terminal": return (0.000, 0.000, 0.000)
-        case "table":    return (1.000, 0.690, 0.533)   // peach   #FFB088
-        default:         return (0.600, 0.600, 0.600)
-        }
+    /// Everything about turning a script into a video lives in `VideoAssembler`; this
+    /// only says which script, at what size. When the fixture and the real path render
+    /// differently, the fixture stops being evidence.
+    static func renderVideo(script: VideoScript, narrator: Narrating, repo: URL?,
+                            into store: PackageStore,
+                            git: GitRunner = GitRunner()) async throws -> VideoAssembler.Built {
+        var options = VideoAssembler.Options()
+        options.size = frameSize
+        options.narratorName = "tone"
+        return try await VideoAssembler.build(script: script, into: store, repo: repo,
+                                              narrator: narrator, options: options, git: git)
     }
 
     // MARK: - Manifest

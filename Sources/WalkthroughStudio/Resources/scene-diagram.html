@@ -29,12 +29,27 @@
   .canvas {
     flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
   }
-  .canvas svg { max-width: 100%; max-height: 100%; height: auto; }
+  /* Mermaid writes `style="max-width: NNNpx"` on the svg itself, which beats a
+     stylesheet rule — without !important the diagram renders at its intrinsic size in
+     the corner of a 1080p frame instead of filling it. `preserveAspectRatio` is
+     Mermaid's own default, so it letterboxes rather than stretching. */
+  .canvas svg {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
   /* Focused nodes: the diagram is already on screen, so the shot's job is to say which
-     boxes the narrator is talking about right now. */
-  .canvas .focus rect, .canvas .focus polygon, .canvas .focus circle, .canvas .focus path {
-    stroke: {{FOCUS_COLOR}} !important; stroke-width: 3px !important;
-    filter: drop-shadow(0 0 calc({{HEIGHT}}px * 0.012) rgba(218,79,69,0.45));
+     boxes the narrator is talking about right now.
+
+     Direct children only, and no `filter`. Both matter: a descendant selector reaches
+     into the label, whose glyphs are paths, and a drop-shadow on an SVG shape renders
+     the node as a solid black silhouette in WebKit — which is what this rule used to
+     do, invisibly in the CSS and unmistakably in the frame. */
+  .canvas .focus > rect, .canvas .focus > polygon,
+  .canvas .focus > circle, .canvas .focus > ellipse, .canvas .focus > path {
+    stroke: {{FOCUS_COLOR}} !important;
+    stroke-width: 4px !important;
+    fill: var(--soft) !important;
   }
   .canvas .dim { opacity: 0.38; }
   .legend {

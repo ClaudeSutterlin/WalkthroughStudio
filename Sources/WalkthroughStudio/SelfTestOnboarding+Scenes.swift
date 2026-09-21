@@ -425,3 +425,181 @@ extension SelfTest {
         return rows
     }
 }
+
+extension SelfTest {
+
+    // MARK: - audioCacheProbe
+
+    /// Rebuilding a twelve-minute walk to fix one sentence must re-synthesize one
+    /// sentence. The cache keys on everything that could change the audio, so this
+    /// probe changes each of those things in turn and checks exactly what moves.
+    static func audioCacheProbe(_ ctx: OnboardingProbeContext) async throws {
+        let root = ctx.outDir.appendingPathComponent("audio-cache.onboarding", isDirectory: true)
+        try? FileManager.default.removeItem(at: root)
+        let store = try PackageStore(root: root)
+        let cache = AudioCache(store: store, videoID: "probe")
+        let narrator = CountingNarrator()
+
+        var script = VideoScript(id: "probe", title: "Probe", summary: "", sha: "abc1234", scenes: [
+            VideoScript.Scene(id: "s01", title: "One", shots: [
+                VideoScript.Shot(id: "s01a", sceneType: "card", narration: "The first line."),
+                VideoScript.Shot(id: "s01b", sceneType: "card", narration: "The second line."),
+            ]),
+            VideoScript.Scene(id: "s02", title: "Two", shots: [
+                VideoScript.Shot(id: "s02a", sceneType: "card", narration: "The third line."),
+            ]),
+        ])
+
+        func synthesizeAll() async throws -> (reused: Int, fresh: Int) {
+            var reused = 0, fresh = 0
+            for (_, shot) in script.shots {
+                let result = try await cache.clip(for: shot, voice: "v1", model: "m1",
+                                                  narrator: narrator, narratorName: "tone")
+                if result.reused { reused += 1 } else { fresh += 1 }
+            }
+            return (reused, fresh)
+        }
+
+        // 1. A cold cache synthesizes everything.
+        var round = try await synthesizeAll()
+        guard round.fresh == 3, round.reused == 0, narrator.count == 3 else {
+            throw StudioError("audioCacheProbe: a cold cache made \(round.fresh) fresh clip(s) "
+                              + "with \(narrator.count) synthesis call(s); expected 3 and 3")
+        }
+
+        // 2. An unchanged script synthesizes nothing.
+        round = try await synthesizeAll()
+        guard round.reused == 3, narrator.count == 3 else {
+            throw StudioError("audioCacheProbe: an unchanged script re-synthesized "
+                              + "\(narrator.count - 3) clip(s)")
+        }
+
+        // 3. Editing one line re-synthesizes one clip — the promise the cache exists for.
+        script.scenes[0].shots[1].narration = "The second line, rewritten."
+        round = try await synthesizeAll()
+        guard round.fresh == 1, narrator.count == 4 else {
+            throw StudioError("audioCacheProbe: editing one line made \(round.fresh) fresh clip(s) "
+                              + "(\(narrator.count - 3) synthesis calls)")
+        }
+
+        // 4. Changing the voice, the model or the narrator re-synthesizes all of them:
+        //    the old audio is still on disk and still plays, and it is the wrong voice.
+        for (voice, model, name) in [("v2", "m1", "tone"), ("v1", "m2", "tone"), ("v1", "m1", "eleven")] {
+            let before = narrator.count
+            for (_, shot) in script.shots {
+                _ = try await cache.clip(for: shot, voice: voice, model: model,
+                                         narrator: narrator, narratorName: name)
+            }
+            guard narrator.count - before == 3 else {
+                throw StudioError("audioCacheProbe: changing to (\(voice), \(model), \(name)) "
+                                  + "re-synthesized \(narrator.count - before) of 3 clips")
+            }
+        }
+        // Back to the original settings: those clips are gone, because the last pass
+        // overwrote each shot's file. The cache is per shot, not per voice.
+        _ = try await synthesizeAll()
+
+        // 5. Staleness: an edit the cache has not caught up with is reported by shot.
+        script.scenes[1].shots[0].narration = "The third line, rewritten."
+        let stale = cache.stale(in: script, voice: "v1", model: "m1", narratorName: "tone")
+        guard stale == ["s02a"] else {
+            throw StudioError("audioCacheProbe: stale shots are \(stale), expected [s02a]")
+        }
+
+        // 6. A shot the script no longer has takes its audio with it.
+        let removed = script.scenes[0].shots.removeLast().id
+        let pruned = try cache.prune(keeping: Set(script.shots.map { $0.shot.id }))
+        guard pruned == [removed], !store.exists("videos/probe/audio/\(removed).wav") else {
+            throw StudioError("audioCacheProbe: pruning removed \(pruned) and left "
+                              + "\(removed).wav \(store.exists("videos/probe/audio/\(removed).wav") ? "behind" : "gone")")
+        }
+
+        // 7. A reused clip keeps the word alignment it was made with, or a rebuild
+        //    would quietly downgrade provider timings to an estimate.
+        let aligned = AlignedNarrator()
+        let shot = VideoScript.Shot(id: "s03a", sceneType: "card", narration: "Two words.")
+        let first = try await cache.clip(for: shot, voice: "v1", model: "m1",
+                                         narrator: aligned, narratorName: "eleven")
+        let second = try await cache.clip(for: shot, voice: "v1", model: "m1",
+                                          narrator: aligned, narratorName: "eleven")
+        guard second.reused, second.clip.words?.count == first.clip.words?.count,
+              second.clip.words?.isEmpty == false else {
+            throw StudioError("audioCacheProbe: a reused clip lost its word alignment")
+        }
+
+        print("selftest: audioCacheProbe OK (cold build 3, unchanged 0, one edit 1; voice, model and "
+              + "narrator each invalidate; prune and staleness report by shot; alignment survives reuse)")
+    }
+
+    // MARK: - elevenAlignmentProbe
+
+    /// Folding the provider's per-character times into words, without a network.
+    static func elevenAlignmentProbe(_ ctx: OnboardingProbeContext) async throws {
+        let text = "Hi there, world!"
+        let characters = text.map { String($0) }
+        let starts = (0..<characters.count).map { Double($0) * 0.1 }
+        let ends = (0..<characters.count).map { Double($0) * 0.1 + 0.1 }
+        let words = ElevenLabsNarrator.words(fromCharacters: characters, starts: starts, ends: ends)
+
+        guard words.map({ $0.w }) == ["Hi", "there,", "world!"] else {
+            throw StudioError("elevenAlignmentProbe: folded to \(words.map { $0.w })")
+        }
+        guard words[0].s == 0, abs(words[0].e - 0.2) < 1e-9 else {
+            throw StudioError(String(format: "elevenAlignmentProbe: the first word runs %.3f-%.3f",
+                                     words[0].s, words[0].e))
+        }
+        for (a, b) in zip(words, words.dropFirst()) where a.e > b.s {
+            throw StudioError("elevenAlignmentProbe: \(a.w) ends after \(b.w) starts")
+        }
+        // Ragged arrays are the provider's to send and ours not to crash on.
+        let ragged = ElevenLabsNarrator.words(fromCharacters: characters, starts: Array(starts.prefix(4)),
+                                              ends: ends)
+        guard ragged.count == 1, ragged[0].w == "Hi" else {
+            throw StudioError("elevenAlignmentProbe: a short times array produced \(ragged.map { $0.w })")
+        }
+
+        // The WAV header reader the narrator measures clips with.
+        let wav = ElevenLabsClient.wavData(fromPCM: Data(count: 44100 * 2), sampleRate: 44100,
+                                           channels: 1, bitsPerSample: 16)
+        let duration = ElevenLabsNarrator.wavDuration(wav)
+        guard abs(duration - 1.0) < 0.001 else {
+            throw StudioError(String(format: "elevenAlignmentProbe: a one-second WAV measured %.4fs",
+                                     duration))
+        }
+
+        print("selftest: elevenAlignmentProbe OK (characters fold into 3 words, ragged input is "
+              + "survived, a one-second WAV measures 1.000s)")
+    }
+}
+
+/// Counts synthesis calls, so a probe can say exactly how many happened.
+final class CountingNarrator: Narrating, @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls = 0
+
+    var count: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return calls
+    }
+
+    func synthesize(_ text: String, to url: URL) async throws -> NarrationClip {
+        lock.lock()
+        calls += 1
+        lock.unlock()
+        return try await ToneNarrator().synthesize(text, to: url)
+    }
+}
+
+/// A narrator that returns word timings, for checking they survive a cache hit.
+struct AlignedNarrator: Narrating {
+    func synthesize(_ text: String, to url: URL) async throws -> NarrationClip {
+        let clip = try await ToneNarrator().synthesize(text, to: url)
+        let pieces = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let each = pieces.isEmpty ? 0 : clip.duration / Double(pieces.count)
+        let words = pieces.enumerated().map {
+            WordTiming(w: $1, s: Double($0) * each, e: Double($0 + 1) * each)
+        }
+        return NarrationClip(duration: clip.duration, words: words)
+    }
+}

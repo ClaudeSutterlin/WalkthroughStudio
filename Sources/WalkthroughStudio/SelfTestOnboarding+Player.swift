@@ -71,11 +71,20 @@ extension SelfTest {
                                      + "starts at %.2fs — a post-gap clip was dropped", audioEnd, lastShotStart))
         }
 
-        // 3. Section 6's invariants. These are why the companion card and the captions
+        // 3. Every shot rendered the kind it says it is. The assembler degrades a shot
+        //    it cannot gather to a plain card rather than failing the build, which is
+        //    right in the field and wrong here: the fixture is the evidence that the
+        //    real path works, so a single degraded shot is a failure.
+        guard built.notices.isEmpty else {
+            throw StudioError("fixturePackageProbe: \(built.notices.count) shot(s) degraded:\n      "
+                              + built.notices.prefix(4).joined(separator: "\n      "))
+        }
+
+        // 4. Section 6's invariants. These are why the companion card and the captions
         //    can never disagree about what was on screen.
         try SelfTest.assertTimingInvariants(transcript: transcript, coderefs: built.coderefs)
 
-        // 4. Cue counts equal segment counts, by construction rather than by luck.
+        // 5. Cue counts equal segment counts, by construction rather than by luck.
         let srt = try store.readString("\(folder)/captions.srt")
         let cues = srt.components(separatedBy: " --> ").count - 1
         guard cues == transcript.segments.count else {
@@ -83,7 +92,7 @@ extension SelfTest {
                               + "\(transcript.segments.count) segment(s)")
         }
 
-        // 5. The manifest describes what was built.
+        // 6. The manifest describes what was built.
         let manifest = try store.readManifest()
         guard manifest.headSHA == FixtureRepoFacts.headSHA else {
             throw StudioError("fixturePackageProbe: manifest pins \(manifest.headSHA), "

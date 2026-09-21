@@ -24,7 +24,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M2 Package format, anchors, git, Research Packet contract | verified on the Mac | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S3 |
 | M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | written, not yet compiled: package layer, three panes, hub in a web view | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | S6 |
-| M5 Narration, scene renderer, transcript, code-ref map | scene renderer and six templates written and rendered; narration and audio cache pending | syntaxTokenizerProbe, codeSceneProbe, sceneKindsProbe, scriptValidatorProbe (transcript/code-ref invariants already asserted by fixturePackageProbe; videoBuildProbe and audioCacheProbe pending) | S7 |
+| M5 Narration, scene renderer, transcript, code-ref map | complete, not yet compiled: scenes, tokenizer, narrator, audio cache, Mermaid renderer, assembler | syntaxTokenizerProbe, codeSceneProbe, sceneKindsProbe, scriptValidatorProbe, audioCacheProbe, elevenAlignmentProbe (the transcript and code-ref invariants are asserted by fixturePackageProbe, which now builds through the real assembler) | S8 |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
 | M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
@@ -388,6 +388,58 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S8: 2026-09-21 — M5 finished: real narration, cached audio, and the assembler
+Milestone(s): M5
+Built:
+- `ElevenLabsNarrator` and `/with-timestamps` on the client: the provider's per-character
+  alignment folded into words, falling back to the sentence estimate when the account's
+  plan has no timestamps endpoint. `timingSource` records which one a package got, so a
+  drifting caption can be explained rather than guessed at.
+- `AudioCache` — a content hash per shot over the text, the voice, the model and the
+  narrator's name. Editing one sentence re-synthesizes one sentence; switching narrators
+  re-synthesizes everything, because otherwise yesterday's voice plays under today's
+  script. It is also the staleness record the walkthrough side never had.
+- `MermaidRenderer` — the bundled Mermaid in an offscreen web view, with the same
+  `initialize` call the hub makes, so a diagram is identical in a video and in a browser.
+- `VideoAssembler` — validate, narrate, render, mux, retime, write. One place owns the
+  order of those steps, because the order is where the bugs are. `FixturePackage` now
+  goes through it, so the fixture video is real rendered scenes rather than the solid
+  colours it shipped with this morning; when the fixture and the real path render
+  differently, the fixture stops being evidence.
+- `audioCacheProbe` and `elevenAlignmentProbe`; `fixturePackageProbe` now also fails if
+  any shot degraded. Twenty-two probes.
+Verified:
+- **Every fixture diagram was rendered through the real Mermaid page in headless
+  Chromium** — four diagrams, four trace sequences, and one deliberately hostile source
+  carrying a backtick, a dollar and a backslash, since the source goes into a JS template
+  literal. All nine produced SVG.
+- The focus rewriting was run against the rendered SVGs: 28 of 28 nodes across all four
+  diagram types match, 3 groups focused in the container diagram, none wrongly, 57 groups
+  preserved, byte delta exactly the injected class.
+Broke / learned:
+- **Focused diagram nodes rendered as solid black boxes with their labels gone.** Two
+  causes in one rule: a descendant selector reached into the label, whose glyphs are
+  paths, and `filter: drop-shadow` on an SVG shape paints a black silhouette in WebKit.
+  Direct-child selectors and no filter. The CSS looked entirely reasonable; the frame
+  did not.
+- **Mermaid writes `style="max-width: NNNpx"` on the svg itself**, which beats a
+  stylesheet rule — the diagram rendered at its intrinsic size in the corner of a 1080p
+  frame. It needs `!important`.
+- Group ids differ per diagram type (`flowchart-<node>-3`, `entity-<NODE>-<uuid>`,
+  `root-2`), so focusing by one prefix would have silently worked for flowcharts and
+  silently failed for ERDs and sequences. Matching is by hyphen-delimited token, which
+  is safe because our own node ids never contain a hyphen.
+- `id="` as a search string also matches `markerId="` and `data-id="`. The leading space
+  matters.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, the twenty-two-probe onboarding selftest, the original
+   `--selftest`, and **look at the scene PNGs the probes dump**, plus the fixture video
+   itself — it now has rendered code, a diagram and a terminal in it.
+2. M6: the LLM runtime (tool loop, SSE, retries, spend, resume).
+3. M7: the playback chat agent, which the companion panel is already shaped to hold.
 
 ### S7: 2026-09-21 — M5: the scenes, drawn and looked at
 Milestone(s): M5

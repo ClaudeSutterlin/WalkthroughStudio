@@ -112,6 +112,65 @@ struct ElevenLabsClient {
         throw lastError ?? StudioError("ElevenLabs synthesis failed for every output format.")
     }
 
+    /// The same synthesis, asking for the character alignment the timing files want.
+    ///
+    /// `/with-timestamps` returns the audio base64-encoded beside
+    /// `alignment.characters` and per-character start and end seconds. When the
+    /// endpoint or the format is not available on the account's tier, this returns nil
+    /// rather than throwing: a video with estimated caption times is worth far more
+    /// than no video, and `timingSource` records which one the package got.
+    func synthesizeWithAlignment(text: String, voiceID: String,
+                                 modelID: String) async throws -> Alignment? {
+        var candidates = Self.formatCandidates
+        if let known = Self.workingFormat {
+            candidates = [known] + candidates.filter { $0 != known }
+        }
+        var lastError: Error?
+        for format in candidates {
+            do {
+                var req = request(path: "/v1/text-to-speech/\(voiceID)/with-timestamps",
+                                  query: ["output_format": format])
+                req.httpMethod = "POST"
+                req.setValue("application/json", forHTTPHeaderField: "content-type")
+                req.httpBody = try JSONSerialization.data(withJSONObject: [
+                    "text": text, "model_id": modelID,
+                ])
+                let (data, response) = try await URLSession.shared.data(for: req)
+                try check(data, response)
+                guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let base64 = object["audio_base64"] as? String,
+                      let audio = Data(base64Encoded: base64) else {
+                    return nil
+                }
+                Self.workingFormat = format
+                let wav = try Self.toWAV(audio, format: format)
+                guard let alignment = object["alignment"] as? [String: Any],
+                      let characters = alignment["characters"] as? [String],
+                      let starts = alignment["character_start_times_seconds"] as? [Double],
+                      let ends = alignment["character_end_times_seconds"] as? [Double] else {
+                    return Alignment(wav: wav, characters: [], starts: [], ends: [])
+                }
+                return Alignment(wav: wav, characters: characters, starts: starts, ends: ends)
+            } catch let error as StudioError where Self.isTierError(error) {
+                lastError = error
+                continue
+            } catch let error as StudioError where error.message.contains("404") {
+                return nil          // the account's plan has no timestamps endpoint
+            }
+        }
+        _ = lastError
+        return nil
+    }
+
+    struct Alignment {
+        var wav: Data
+        var characters: [String]
+        var starts: [Double]
+        var ends: [Double]
+
+        var hasTimings: Bool { !characters.isEmpty && characters.count == starts.count }
+    }
+
     private static func isTierError(_ error: StudioError) -> Bool {
         let message = error.message.lowercased()
         return message.contains("only available on") ||
