@@ -132,19 +132,20 @@ builds every deliverable from it. Before touching it read, in order:
 `docs/onboarding/ARCHITECTURE.md` (the contract and the milestone order), then
 `docs/onboarding/USER-STORIES.md`.
 
-Verify loop for this feature (no Swift needed for the first three):
+Verify loop for this feature. The first command needs no Swift and no network: it
+builds the fixture repository, validates the checked-in packet against it, projects
+every deliverable and serves the hub.
 
 ```sh
-scripts/check-skill-sync.sh                                   # skill copies have not drifted
-scripts/make-fixture-repo.sh /tmp/fixture-repo                # deterministic, head fb63e787
-python3 scripts/validate-packet.py Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet --repo /tmp/fixture-repo
-python3 .claude/skills/onboarding-research/scripts/project_packet.py \
-  --packet Sources/WalkthroughStudio/OnboardingResources/fixtures/fixture-repo.packet \
-  --out /tmp/pkg --repo /tmp/fixture-repo                     # diagrams, registers, traces, hub
-node scripts/render-mermaid.mjs /tmp/pkg/diagrams \
-  Sources/WalkthroughStudio/OnboardingResources/hub/vendor/mermaid.min.js /tmp/pkg/diagrams-rendered
-swift build && ./.build/debug/WalkthroughStudio --selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out
+scripts/build-onboarding-demo.sh          # then open http://127.0.0.1:8731/hub.html
+scripts/check-skill-sync.sh               # the skill's copies have not drifted
+swift build
+./.build/debug/WalkthroughStudio --selftest-onboarding /tmp/onboarding-demo/fixture-repo /tmp/onboarding-out
+./.build/debug/WalkthroughStudio --selftest /tmp/test-walkthrough.mov /tmp/out   # must still pass
 ```
+
+`scripts/render-mermaid.mjs` renders diagrams to PNG headlessly when Playwright is
+installed; the hub shows the same diagrams in any browser, so it is optional.
 
 **Look at the rendered diagrams and the hub.** Every diagram defect found so far
 (arrows pointing backwards, a deployment chain asserting a sequence the evidence

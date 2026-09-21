@@ -1,14 +1,29 @@
 // Render .mmd files to SVG+PNG with the bundled mermaid build in headless chromium.
 // This is the offline path the app uses (BrandedRenderer + WKWebView); rendering here
 // proves the projector emits Mermaid that the pinned build actually accepts.
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+// Playwright is optional and not a project dependency: resolve it from wherever it
+// is installed (local, global, or PLAYWRIGHT_MODULE) and say so plainly if absent.
+const playwrightPath = process.env.PLAYWRIGHT_MODULE || 'playwright';
+let chromium;
+try {
+  ({ chromium } = await import(playwrightPath));
+} catch (e) {
+  console.error('This script needs Playwright, which is not a dependency of the app.');
+  console.error('  npm i -g playwright && npx playwright install chromium');
+  console.error('Or skip it: the hub renders the same diagrams in any browser.');
+  process.exit(2);
+}
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const [,, dir, vendor, outDir] = process.argv;
 const mermaid = readFileSync(vendor, 'utf8');
 const files = readdirSync(dir).filter(f => f.endsWith('.mmd')).sort();
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+// No executablePath: let Playwright use the browser it installed. CHROME_PATH
+// overrides it for environments that ship their own chromium.
+const launchOptions = { args: ['--no-sandbox'] };
+if (process.env.CHROME_PATH) launchOptions.executablePath = process.env.CHROME_PATH;
+const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
 page.on('pageerror', e => console.log('PAGE ERROR', e.message.slice(0, 200)));
 let failures = 0;
