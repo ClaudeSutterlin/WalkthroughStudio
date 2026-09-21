@@ -30,14 +30,7 @@ final class OnboardingViewModel: ObservableObject {
 
     // MARK: Stage
 
-    enum Stage: Equatable {
-        /// The hub web view is showing a document, a diagram, a trace or a file.
-        case hub
-        /// The player has the stage.
-        case video(String)
-    }
-
-    @Published var stage: Stage = .hub
+    @Published var stage: PlayerStage = .hub
     /// The anchor the hub should open next. The web view watches this and calls
     /// `walkthroughHub.route`; it is a request, not a record of where the hub is.
     @Published var pendingAnchor: String?
@@ -63,42 +56,7 @@ final class OnboardingViewModel: ObservableObject {
 
     // MARK: Review
 
-    @Published private(set) var bookmarks: [Bookmark] = []
-
-    struct Bookmark: Codable, Equatable, Identifiable {
-        var id: String = UUID().uuidString
-        var videoID: String
-        var t: Double
-        var note: String
-        var anchor: String?
-
-        private enum CodingKeys: String, CodingKey { case id, videoID, t, note, anchor }
-
-        init(videoID: String, t: Double, note: String, anchor: String? = nil) {
-            self.videoID = videoID
-            self.t = t
-            self.note = note
-            self.anchor = anchor
-        }
-
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
-            videoID = try c.decodeIfPresent(String.self, forKey: .videoID) ?? ""
-            t = try c.decodeIfPresent(Double.self, forKey: .t) ?? 0
-            note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
-            anchor = try c.decodeIfPresent(String.self, forKey: .anchor)
-        }
-
-        func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(id, forKey: .id)
-            try c.encode(videoID, forKey: .videoID)
-            try c.encode(t, forKey: .t)
-            try c.encode(note, forKey: .note)
-            try c.encodeIfPresent(anchor, forKey: .anchor)
-        }
-    }
+    @Published private(set) var bookmarks: [OnboardingBookmark] = []
 
     // MARK: Status
 
@@ -131,7 +89,7 @@ final class OnboardingViewModel: ObservableObject {
             self.manifest = store.hasManifest ? try store.readManifest() : OnboardingManifest()
             self.backlinks = try BacklinkIndex.load(from: store)
             self.packageName = root.deletingPathExtension().lastPathComponent
-            self.bookmarks = (try? store.readJSON([Bookmark].self, from: "review/bookmarks.json")) ?? []
+            self.bookmarks = (try? store.readJSON([OnboardingBookmark].self, from: "review/bookmarks.json")) ?? []
             self.items = OnboardingViewModel.readingOrder(hub: hub, manifest: manifest)
             LinkRouter.invalidateCache(for: store.root)
             OnboardingViewModel.remember(root)
@@ -160,13 +118,13 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     /// Package folders opened before, newest first — the recents list of ON-1.8.
-    static func recentPackages() -> [URL] {
+    nonisolated static func recentPackages() -> [URL] {
         (UserDefaults.standard.array(forKey: SettingsKeys.onboardingRecents) as? [String] ?? [])
             .map { URL(fileURLWithPath: $0) }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
-    static func remember(_ root: URL) {
+    nonisolated static func remember(_ root: URL) {
         var paths = (UserDefaults.standard.array(forKey: SettingsKeys.onboardingRecents) as? [String] ?? [])
         paths.removeAll { $0 == root.path }
         paths.insert(root.path, at: 0)
@@ -331,12 +289,12 @@ final class OnboardingViewModel: ObservableObject {
 
     func addBookmark(note text: String = "") {
         guard let id = currentVideoID else { return }
-        bookmarks.append(Bookmark(videoID: id, t: clock.t, note: text,
-                                  anchor: clock.interval?.primaryAnchor))
+        bookmarks.append(OnboardingBookmark(videoID: id, t: clock.t, note: text,
+                                            anchor: clock.interval?.primaryAnchor))
         persistBookmarks()
     }
 
-    func removeBookmark(_ bookmark: Bookmark) {
+    func removeBookmark(_ bookmark: OnboardingBookmark) {
         bookmarks.removeAll { $0.id == bookmark.id }
         persistBookmarks()
     }
@@ -361,5 +319,54 @@ final class OnboardingViewModel: ObservableObject {
 
     func dismiss(_ notice: OnboardingNotice) {
         notices.removeAll { $0.id == notice.id }
+    }
+}
+
+/// Which pane owns the centre of the onboarding window.
+///
+/// Declared outside `OnboardingViewModel`: a type nested in a `@MainActor` type inherits
+/// that isolation, and an isolated `==` cannot satisfy `Equatable`'s nonisolated
+/// requirement.
+enum PlayerStage: Equatable {
+    /// The hub web view is showing a document, a diagram, a trace or a file.
+    case hub
+    /// The player has the stage.
+    case video(String)
+}
+
+/// A moment worth coming back to, with the anchor that was on screen (ON-9.5). Outside
+/// the view model for the same reason as `PlayerStage`: it is `Codable`.
+struct OnboardingBookmark: Codable, Equatable, Identifiable {
+    var id: String = UUID().uuidString
+    var videoID: String
+    var t: Double
+    var note: String
+    var anchor: String?
+
+    private enum CodingKeys: String, CodingKey { case id, videoID, t, note, anchor }
+
+    init(videoID: String, t: Double, note: String, anchor: String? = nil) {
+        self.videoID = videoID
+        self.t = t
+        self.note = note
+        self.anchor = anchor
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        videoID = try c.decodeIfPresent(String.self, forKey: .videoID) ?? ""
+        t = try c.decodeIfPresent(Double.self, forKey: .t) ?? 0
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        anchor = try c.decodeIfPresent(String.self, forKey: .anchor)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(videoID, forKey: .videoID)
+        try c.encode(t, forKey: .t)
+        try c.encode(note, forKey: .note)
+        try c.encodeIfPresent(anchor, forKey: .anchor)
     }
 }
