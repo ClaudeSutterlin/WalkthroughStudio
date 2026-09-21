@@ -14,6 +14,9 @@ enum DiagramProjector {
     struct Diagram {
         let id: String
         let mermaid: String
+        /// Node ids in the order the builder emitted them. `HubProjector` walks the
+        /// backlink index in this order so the result is the same on every run.
+        let nodeOrder: [String]
         let links: [String: Any]     // the .links.json sidecar
     }
 
@@ -62,7 +65,7 @@ enum DiagramProjector {
     static func c4Context(_ packet: ResearchPacket) -> Diagram {
         let name = packet.manifest.repo.name ?? "system"
         var lines = ["graph LR", "  system[\"\(ProjectionSupport.mermaidLabel(name))\"]"]
-        var nodes: [String: Any] = [:]
+        var nodes = OrderedJSONObject()
         var edges: [String: Any] = [:]
         nodes["system"] = [
             "anchor": "code:./@\(packet.sha7)",
@@ -88,14 +91,15 @@ enum DiagramProjector {
         return Diagram(
             id: "c4-context",
             mermaid: lines.joined(separator: "\n") + "\n",
-            links: ["version": 1, "diagramId": "c4-context", "nodes": nodes, "edges": edges])
+            nodeOrder: nodes.keys,
+            links: ["version": 1, "diagramId": "c4-context", "nodes": nodes.object, "edges": edges])
     }
 
     // MARK: - C4 container
 
     static func c4Container(_ packet: ResearchPacket) -> Diagram {
         var lines = ["graph TD"]
-        var nodes: [String: Any] = [:]
+        var nodes = OrderedJSONObject()
         var linkEdges: [String: Any] = [:]
         var owners: [String: PacketHistory.Ownership] = [:]
         for o in packet.history.ownership { owners[o.dir] = o }
@@ -216,14 +220,15 @@ enum DiagramProjector {
         return Diagram(
             id: "c4-container",
             mermaid: lines.joined(separator: "\n") + "\n",
-            links: ["version": 1, "diagramId": "c4-container", "nodes": nodes, "edges": linkEdges])
+            nodeOrder: nodes.keys,
+            links: ["version": 1, "diagramId": "c4-container", "nodes": nodes.object, "edges": linkEdges])
     }
 
     // MARK: - ERD
 
     static func erd(_ packet: ResearchPacket) -> Diagram {
         var lines = ["erDiagram"]
-        var nodes: [String: Any] = [:]
+        var nodes = OrderedJSONObject()
         var edges: [String: Any] = [:]
         let entities = packet.usableFacts(kind: "dataEntity").filter {
             !($0.attributes["columns"]?.arrayValue?.isEmpty ?? true)
@@ -291,7 +296,8 @@ enum DiagramProjector {
         return Diagram(
             id: "erd",
             mermaid: lines.joined(separator: "\n") + "\n",
-            links: ["version": 1, "diagramId": "erd", "nodes": nodes, "edges": edges])
+            nodeOrder: nodes.keys,
+            links: ["version": 1, "diagramId": "erd", "nodes": nodes.object, "edges": edges])
     }
 
     // MARK: - deployment
@@ -302,7 +308,7 @@ enum DiagramProjector {
     /// the evidence does not support.
     static func deployment(_ packet: ResearchPacket) -> Diagram {
         var lines = ["graph LR"]
-        var nodes: [String: Any] = [:]
+        var nodes = OrderedJSONObject()
         var edges: [String: Any] = [:]
         let deployTrace = packet.traces.keys.sorted().compactMap { packet.traces[$0] }.first {
             $0.pathId.contains("deploy") || $0.title.lowercased().contains("deploy")
@@ -355,7 +361,8 @@ enum DiagramProjector {
         return Diagram(
             id: "deployment",
             mermaid: lines.joined(separator: "\n") + "\n",
-            links: ["version": 1, "diagramId": "deployment", "nodes": nodes, "edges": edges])
+            nodeOrder: nodes.keys,
+            links: ["version": 1, "diagramId": "deployment", "nodes": nodes.object, "edges": edges])
     }
 
     // MARK: - per-trace sequence diagram

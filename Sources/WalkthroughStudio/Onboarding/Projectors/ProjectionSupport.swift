@@ -95,8 +95,11 @@ enum ProjectionSupport {
         max(1, pyRound(Double(words) / Double(wordsPerMinute)))
     }
 
+    /// Python's `str.split()` with no argument: runs of any whitespace, empties dropped.
+    /// Minutes in every front matter come from this, so a narrower definition would make
+    /// the two projectors disagree on reading time.
     static func wordCount(_ text: String) -> Int {
-        text.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).count
+        text.split(whereSeparator: { $0.isWhitespace }).count
     }
 
     /// Deterministic JSON: sorted keys and pretty printing, so a diff against the golden
@@ -108,4 +111,40 @@ enum ProjectionSupport {
         data.append(0x0A)   // trailing newline, as json.dump + "\n" writes
         return data
     }
+}
+
+/// A JSON object that remembers the order keys were first inserted.
+///
+/// Python dictionaries preserve insertion order, and `build_backlinks` walks
+/// `links["nodes"]` in that order to build each anchor's backlink list — a JSON *array*,
+/// where order is meaningful. A Swift `[String: Any]` would hand the same nodes back in
+/// a different order on every run, so two nodes of one diagram sharing an anchor would
+/// produce a list that diffs against the golden projection at random.
+struct OrderedJSONObject {
+    private(set) var keys: [String] = []
+    private var values: [String: Any] = [:]
+
+    init() {}
+
+    subscript(key: String) -> Any? {
+        get { values[key] }
+        set {
+            if let newValue {
+                if values[key] == nil { keys.append(key) }
+                values[key] = newValue
+            } else {
+                values[key] = nil
+                keys.removeAll { $0 == key }
+            }
+        }
+    }
+
+    var isEmpty: Bool { keys.isEmpty }
+
+    /// The plain dictionary, for JSONSerialization. Key order is not meaningful in a
+    /// JSON object, so nothing is lost here — only `keys` carries the order.
+    var object: [String: Any] { values }
+
+    /// Key/value pairs in insertion order.
+    var ordered: [(key: String, value: Any)] { keys.map { ($0, values[$0]!) } }
 }

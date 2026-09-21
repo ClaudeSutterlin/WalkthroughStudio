@@ -1,0 +1,2314 @@
+{
+  "version": 1,
+  "note": "Adversarial inputs for MarkdownLite, with the expected output computed by .claude/skills/onboarding-research/scripts/project_packet.py. The golden projection only covers friendly prose; these are the shapes that broke the converter. Regenerate with scripts/make-markdown-cases.py after an intentional change, and say in the build log why the output moved.",
+  "labels": [
+    {
+      "anchor": "code:12.code:]]doc:##| a | b | ## h {code: x@abcdef1",
+      "label": "12.code:]]doc:##| a | b | ## h {code: x"
+    },
+    {
+      "anchor": "code:notes/c#-samples/x.cs@abcdef1",
+      "label": "x.cs"
+    },
+    {
+      "anchor": "code:notes/c#-samples/x.cs@abcdef1#L4-L9",
+      "label": "x.cs L4-9"
+    },
+    {
+      "anchor": "code:src/.@abcdef1",
+      "label": "src"
+    },
+    {
+      "anchor": "code:a/..@abcdef1",
+      "label": ".."
+    },
+    {
+      "anchor": "code:./@fb63e78",
+      "label": "./"
+    },
+    {
+      "anchor": "code:src/@fb63e78",
+      "label": "src"
+    },
+    {
+      "anchor": "code:src/api/orders_handler.py@fb63e78#L12-L18",
+      "label": "orders_handler.py L12-18"
+    },
+    {
+      "anchor": "code:src/api/orders_handler.py@fb63e78#L12-L12",
+      "label": "orders_handler.py L12"
+    },
+    {
+      "anchor": "code:src/api/orders_handler.py@fb63e78#L12",
+      "label": "orders_handler.py L12"
+    },
+    {
+      "anchor": "code:a@b@abcdef1",
+      "label": "a@b"
+    },
+    {
+      "anchor": "code:a@abcdef1#Lfoo",
+      "label": "code a@abcdef1"
+    },
+    {
+      "anchor": "code:a@ABCDEF1",
+      "label": "code a@ABCDEF1"
+    },
+    {
+      "anchor": "code:a@abcdef",
+      "label": "code a@abcdef"
+    },
+    {
+      "anchor": "video:ONB-intro#t=90",
+      "label": "video ONB-intro"
+    },
+    {
+      "anchor": "doc:tech-debt#ranked",
+      "label": "doc tech-debt"
+    },
+    {
+      "anchor": "fact:F-001",
+      "label": "fact F-001"
+    },
+    {
+      "anchor": "trace:order-creation",
+      "label": "trace order-creation"
+    },
+    {
+      "anchor": "commit:fb63e78",
+      "label": "commit fb63e78"
+    },
+    {
+      "anchor": "url:https://example.test/x#frag",
+      "label": "url https://example.test/x"
+    },
+    {
+      "anchor": "nocolonhere",
+      "label": "nocolonhere "
+    },
+    {
+      "anchor": "* [*-]]** ",
+      "label": "* [*-]]**  "
+    },
+    {
+      "anchor": "@[**\\[code:x.py b#L3-L9---",
+      "label": "@[**\\[code x.py b"
+    },
+    {
+      "anchor": "doc:\\12.#L3x.py---}",
+      "label": "doc \\12."
+    },
+    {
+      "anchor": "/.doc:",
+      "label": "/.doc "
+    },
+    {
+      "anchor": "\" ",
+      "label": "\"  "
+    },
+    {
+      "anchor": "#L3-L9x.pysrc/|\t./..-`}@abcdef1@code:]]",
+      "label": "#L3-L9x.pysrc/|\t./..-`}@abcdef1@code ]]"
+    },
+    {
+      "anchor": "  ",
+      "label": "   "
+    },
+    {
+      "anchor": "video:{",
+      "label": "video {"
+    },
+    {
+      "anchor": "..*/..```\\ {code:}*.@]]aa}12.",
+      "label": "..*/..```\\ {code }*.@]]aa}12."
+    },
+    {
+      "anchor": "-]]}.{**-@abcdef1",
+      "label": "-]]}.{**-@abcdef1 "
+    },
+    {
+      "anchor": "src/&]]\"#b.<asrc/..#**",
+      "label": "src/&]]\"#b.<asrc/..#** "
+    },
+    {
+      "anchor": "#L3@\"12.",
+      "label": "#L3@\"12. "
+    },
+    {
+      "anchor": "x.py#L3&..[\t|video:src/code:|}#L3-L9\\#L3-L9\\",
+      "label": "x.py#L3&..[\t|video src/code:|}"
+    },
+    {
+      "anchor": "..[&`video:----",
+      "label": "..[&`video ----"
+    },
+    {
+      "anchor": "src/```@|src/`{`}#L3-L9",
+      "label": "src/```@|src/`{`}#L3-L9 "
+    },
+    {
+      "anchor": "\t\"````]]\\//.",
+      "label": "\t\"````]]\\//. "
+    },
+    {
+      "anchor": "}a>b]]`[video: \"x.pyvideo:/..]]",
+      "label": "}a>b]]`[video  \"x.pyvideo:/..]]"
+    },
+    {
+      "anchor": "|code::]]doc:#L3-L9",
+      "label": "|code :]]doc:"
+    },
+    {
+      "anchor": "x.py-code:",
+      "label": "x.py-code "
+    },
+    {
+      "anchor": "---[**src/\\{{code:/.12.:<>@abcdef1",
+      "label": "---[**src/\\{{code /.12.:<>@abcdef1"
+    },
+    {
+      "anchor": "---@abcdef1{---*[a|a/#|---/..video:",
+      "label": "---@abcdef1{---*[a|a/#|---/..video "
+    },
+    {
+      "anchor": "\"-:*.a",
+      "label": "\"- *.a"
+    },
+    {
+      "anchor": "@]]code:@/.src/12.{code:12.#L3-L9",
+      "label": "@]]code @/.src/12.{code:12."
+    },
+    {
+      "anchor": "\\",
+      "label": "\\ "
+    },
+    {
+      "anchor": "/.\"code:src/{{code:[",
+      "label": "/.\"code src/{{code:["
+    },
+    {
+      "anchor": "x.pyb.<```[[[",
+      "label": "x.pyb.<```[[[ "
+    },
+    {
+      "anchor": "x.py/..src//...x.py|#L3. <{code:#L3-L9|}",
+      "label": "x.py/..src//...x.py|#L3. <{code "
+    },
+    {
+      "anchor": "\t..[[#..[x.py}>#*b]`",
+      "label": "\t..[[#..[x.py}>#*b]` "
+    },
+    {
+      "anchor": "{code:`&&|#L3-L9",
+      "label": "{code `&&|"
+    },
+    {
+      "anchor": "{code:---{code:\t#|**[[{code:{*@abcdef1]]/\\|",
+      "label": "{code ---{code:\t"
+    },
+    {
+      "anchor": "`\"doc:*<---12. x.py12.",
+      "label": "`\"doc *<---12. x.py12."
+    },
+    {
+      "anchor": "<.doc:.{>>#L3-L9|*12.:",
+      "label": "<.doc .{>>"
+    },
+    {
+      "anchor": ">\"b|@abcdef1*{&",
+      "label": ">\"b|@abcdef1*{& "
+    },
+    {
+      "anchor": "]]```-:src/* [[12.#L3|doc:<|",
+      "label": "]]```- src/* [[12."
+    },
+    {
+      "anchor": "-12./..}|\tb12.```12.\\",
+      "label": "-12./..}|\tb12.```12.\\ "
+    },
+    {
+      "anchor": "]```#src/<b{code:code:```&code:  *",
+      "label": "]```#src/<b{code code:```&code:  *"
+    },
+    {
+      "anchor": "b#L3-L9|",
+      "label": "b#L3-L9| "
+    },
+    {
+      "anchor": "]]#L3```[src/@\"&....",
+      "label": "]]#L3```[src/@\"&.... "
+    },
+    {
+      "anchor": "\t[|{code:{code:src/\\{code:{#@abcdef1-.b/../.",
+      "label": "\t[|{code {code:src/\\{code:{"
+    },
+    {
+      "anchor": "code:||\\doc:@abcdef1-|{@\\/.```{code:#L3-L9#L3",
+      "label": "code ||\\doc:@abcdef1-|{@\\/.```{co"
+    },
+    {
+      "anchor": " ]12.src/./....:video:12.",
+      "label": " ]12.src/./.... video:12."
+    },
+    {
+      "anchor": "@-*]#L3-L9]]x.py&video:[..doc:/",
+      "label": "@-*]#L3-L9]]x.py&video [..doc:/"
+    },
+    {
+      "anchor": "<video:doc:..#L3-L9{a>x.py",
+      "label": "<video doc:.."
+    },
+    {
+      "anchor": "]b@abcdef1*&|]]---/..[@abcdef1>```|{code:",
+      "label": "]b@abcdef1*&|]]---/..[@abcdef1>```|{code "
+    },
+    {
+      "anchor": "#L3----src/",
+      "label": "#L3----src/ "
+    },
+    {
+      "anchor": "]>---:{/",
+      "label": "]>--- {/"
+    },
+    {
+      "anchor": "..&src/#L3|``````*12.{code:12.`/@",
+      "label": "..&src/#L3|``````*12.{code 12.`/@"
+    },
+    {
+      "anchor": "}{|[code:{code:/]]\\>",
+      "label": "}{|[code {code:/]]\\>"
+    },
+    {
+      "anchor": "]#",
+      "label": "]# "
+    },
+    {
+      "anchor": "<\tb@```{<]*#L3-L9a&..:x.py@",
+      "label": "<\tb@```{<]*#L3-L9a&.. x.py@"
+    },
+    {
+      "anchor": "[[#[#L3-L9code:&*src//.",
+      "label": "[[#[#L3-L9code &*src//."
+    },
+    {
+      "anchor": "]#L3---video:@abcdef1`src/a-{code:@abcdef1*]]",
+      "label": "]#L3---video @abcdef1`src/a-{code:@abcdef"
+    },
+    {
+      "anchor": "\"",
+      "label": "\" "
+    },
+    {
+      "anchor": " {code:#L3-L9{code:\t```---|}ax.py#",
+      "label": " {code "
+    },
+    {
+      "anchor": "]]/.|b[<{/..\t{code:doc:&`>|",
+      "label": "]]/.|b[<{/..\t{code doc:&`>|"
+    },
+    {
+      "anchor": "`#&------doc:\"\ta[[\"*]]@```{code:",
+      "label": "`#&------doc \"\ta[[\"*]]@```{code:"
+    },
+    {
+      "anchor": ":/.}|src/a#L3@}#L3-L9]]-x.py```<",
+      "label": " /.}|src/a"
+    },
+    {
+      "anchor": ":doc:.---/*",
+      "label": " doc:.---/*"
+    },
+    {
+      "anchor": "x.py|}#L3{code:]]*.\\]`@abcdef1{code:&```doc:",
+      "label": "x.py|}#L3{code ]]*.\\]`@abcdef1{code:&```doc"
+    },
+    {
+      "anchor": "**<src/x.py*\"#/#```",
+      "label": "**<src/x.py*\"#/#``` "
+    },
+    {
+      "anchor": "doc:[[# ..```..\"/.{/..&|",
+      "label": "doc [["
+    },
+    {
+      "anchor": "```.---#L3-L9{code:#L3{code:\"->`]avideo:/..]]",
+      "label": "```.---#L3-L9{code "
+    },
+    {
+      "anchor": "`/..code::",
+      "label": "`/..code :"
+    },
+    {
+      "anchor": "#L3src/",
+      "label": "#L3src/ "
+    },
+    {
+      "anchor": "src/[[{src/[}12.12.{code:]#L3-L9video:",
+      "label": "src/[[{src/[}12.12.{code ]"
+    },
+    {
+      "anchor": "#L3",
+      "label": "#L3 "
+    },
+    {
+      "anchor": "`{>>*{code:/.\"video:b-\\/]]",
+      "label": "`{>>*{code /.\"video:b-\\/]]"
+    },
+    {
+      "anchor": " @@&[",
+      "label": " @@&[ "
+    },
+    {
+      "anchor": "@abcdef1[[.video:-",
+      "label": "@abcdef1[[.video -"
+    },
+    {
+      "anchor": "#b[]]@#L3<:video:x.py]\t12.\\",
+      "label": "#b[]]@#L3< video:x.py]\t12.\\"
+    },
+    {
+      "anchor": "\t..doc:\tsrc/```-",
+      "label": "\t..doc \tsrc/```-"
+    },
+    {
+      "anchor": "**b/|{code:@]/.@abcdef1",
+      "label": "**b/|{code @]/.@abcdef1"
+    },
+    {
+      "anchor": "\t#L3-L9@abcdef1\"#@.*code:..-.>..\tvideo:",
+      "label": "\t#L3-L9@abcdef1\"#@.*code ..-.>..\tvideo:"
+    },
+    {
+      "anchor": "src/12.```video:<}src/&/]]@{",
+      "label": "src/12.```video <}src/&/]]@{"
+    },
+    {
+      "anchor": "@abcdef1doc:.<-&",
+      "label": "@abcdef1doc .<-&"
+    },
+    {
+      "anchor": "\".",
+      "label": "\". "
+    },
+    {
+      "anchor": "{**>\\bvideo:b#L3#video:|\t{code:",
+      "label": "{**>\\bvideo b"
+    },
+    {
+      "anchor": "src/\t\"|b",
+      "label": "src/\t\"|b "
+    },
+    {
+      "anchor": "<12.{code:",
+      "label": "<12.{code "
+    },
+    {
+      "anchor": "@abcdef1a]]&x.py```*:a|..\"#./```",
+      "label": "@abcdef1a]]&x.py```* a|..\""
+    },
+    {
+      "anchor": ".@<>video:code:",
+      "label": ".@<>video code:"
+    },
+    {
+      "anchor": "@abcdef1` ---/../.src/[[#L3-L9",
+      "label": "@abcdef1` ---/../.src/[[#L3-L9 "
+    },
+    {
+      "anchor": "`{code:@abcdef1[[<#**>\\]]/.",
+      "label": "`{code @abcdef1[[<"
+    },
+    {
+      "anchor": "}>src/#L3-L9",
+      "label": "}>src/#L3-L9 "
+    },
+    {
+      "anchor": "./..` ",
+      "label": "./..`  "
+    },
+    {
+      "anchor": "<-#L3-L9]```>```12. ",
+      "label": "<-#L3-L9]```>```12.  "
+    },
+    {
+      "anchor": "@abcdef1}*{code:]|video:code:/.",
+      "label": "@abcdef1}*{code ]|video:code:/."
+    },
+    {
+      "anchor": "src/<b---@src/a]]video: ",
+      "label": "src/<b---@src/a]]video  "
+    },
+    {
+      "anchor": "/\t\t..@",
+      "label": "/\t\t..@ "
+    },
+    {
+      "anchor": "#L3-L912.|\t<src/}a:#L3 video:",
+      "label": "#L3-L912.|\t<src/}a "
+    },
+    {
+      "anchor": "#b",
+      "label": "#b "
+    },
+    {
+      "anchor": "/\"\\",
+      "label": "/\"\\ "
+    },
+    {
+      "anchor": "\"`#{@abcdef1|:]-/..#L3-L9\t{code:[[@",
+      "label": "\"`#{@abcdef1| ]-/.."
+    },
+    {
+      "anchor": "code:]a[/../}[\\12...<#L3video:a",
+      "label": "code ]a[/../}[\\12...<"
+    },
+    {
+      "anchor": "/.{code:b\t---\"\\** [[#L3-L9`{code:b[{",
+      "label": "/.{code b\t---\"\\** [["
+    },
+    {
+      "anchor": "ba@/12.|x.py@",
+      "label": "ba@/12.|x.py@ "
+    },
+    {
+      "anchor": "|<{/..#/.. #",
+      "label": "|<{/..#/.. # "
+    },
+    {
+      "anchor": "b@*-[[",
+      "label": "b@*-[[ "
+    },
+    {
+      "anchor": "@abcdef1```.",
+      "label": "@abcdef1```. "
+    },
+    {
+      "anchor": "src/{code:[>>a*video:{code:",
+      "label": "src/{code [>>a*video:{code:"
+    },
+    {
+      "anchor": "..\"doc:\\>/.|@",
+      "label": "..\"doc \\>/.|@"
+    },
+    {
+      "anchor": "x.py//.",
+      "label": "x.py//. "
+    },
+    {
+      "anchor": "12.\t[[/code:#",
+      "label": "12.\t[[/code "
+    },
+    {
+      "anchor": "doc: |\t&#L3-L9video:**{code:..\"",
+      "label": "doc  |\t&"
+    },
+    {
+      "anchor": "\\---|video:\"code:&src/\"a/.[. >---",
+      "label": "\\---|video \"code:&src/\"a/.[. >---"
+    },
+    {
+      "anchor": "..#[[@>}@abcdef1|\\{code:",
+      "label": "..#[[@>}@abcdef1|\\{code "
+    },
+    {
+      "anchor": "|/..}",
+      "label": "|/..} "
+    },
+    {
+      "anchor": "#L3-L9```a\"#L3-L9**code::* -]]",
+      "label": "#L3-L9```a\"#L3-L9**code :* -]]"
+    },
+    {
+      "anchor": "{b{x.py}",
+      "label": "{b{x.py} "
+    },
+    {
+      "anchor": "#L3@---`/`#[#L3-L9@doc:{code:```@abcdef1",
+      "label": "#L3@---`/`#[#L3-L9@doc {code:```@abcdef1"
+    },
+    {
+      "anchor": "@abcdef1:12..{}**code:#L3/../..{code:x.py",
+      "label": "@abcdef1 12..{}**code:"
+    },
+    {
+      "anchor": "```",
+      "label": "``` "
+    },
+    {
+      "anchor": " #L3><---x.py#]\\\t|#L3|",
+      "label": " #L3><---x.py#]\\\t|#L3| "
+    },
+    {
+      "anchor": "#L3-L9./..[[",
+      "label": "#L3-L9./..[[ "
+    },
+    {
+      "anchor": "code:src/12.\t",
+      "label": "code src/12.\t"
+    },
+    {
+      "anchor": "** a\"",
+      "label": "** a\" "
+    },
+    {
+      "anchor": "\\/.code:```code::src//.",
+      "label": "\\/.code ```code::src//."
+    },
+    {
+      "anchor": "]]<<code:src/{code:a",
+      "label": "]]<<code src/{code:a"
+    },
+    {
+      "anchor": "x.py|]:b[[a}\\",
+      "label": "x.py|] b[[a}\\"
+    },
+    {
+      "anchor": "#L3&src/a",
+      "label": "#L3&src/a "
+    },
+    {
+      "anchor": "code:{/.|`\\>` |..]]",
+      "label": "code {/.|`\\>` |..]]"
+    },
+    {
+      "anchor": "code:.|\t#@@---[[</.|..",
+      "label": "code .|\t"
+    },
+    {
+      "anchor": "code:..doc:*`code:|-#L3-L9@\t&..>",
+      "label": "code ..doc:*`code:|-"
+    },
+    {
+      "anchor": "code:b[[a#&",
+      "label": "code b[[a"
+    },
+    {
+      "anchor": "code:12.]code:`src/",
+      "label": "code 12.]code:`src/"
+    },
+    {
+      "anchor": "code:#L3>/..video:**..src/b#L3-L9<..x.py|",
+      "label": "code "
+    },
+    {
+      "anchor": "code:>\t*[[[>``````**&#L3-L9x.py#L3#L3",
+      "label": "code >\t*[[[>``````**&"
+    },
+    {
+      "anchor": "code: >:]#/..\"\\#12...@abcdef1src/-",
+      "label": "code  >:]"
+    },
+    {
+      "anchor": "code:12.#L3-L9b---{**..",
+      "label": "code 12."
+    },
+    {
+      "anchor": "code:doc:{code:x.pydoc:<video:src/```b```*\ta---}:",
+      "label": "code doc:{code:x.pydoc:<video:src"
+    },
+    {
+      "anchor": "code:code:{",
+      "label": "code code:{"
+    },
+    {
+      "anchor": "code:/..",
+      "label": "code /.."
+    },
+    {
+      "anchor": "code:|@abcdef1@abcdef1|/..",
+      "label": "code |@abcdef1@abcdef1|/.."
+    },
+    {
+      "anchor": "code: #-.|12.\\12...{code:\\",
+      "label": "code  "
+    },
+    {
+      "anchor": "code:\"/.[[:",
+      "label": "code \"/.[[:"
+    },
+    {
+      "anchor": "code:.}[x.py//.{code:*`#..[#L3-L9|@",
+      "label": "code .}[x.py//.{code:*`"
+    },
+    {
+      "anchor": "code:|:doc:/a*/.",
+      "label": "code |:doc:/a*/."
+    },
+    {
+      "anchor": "code:[code:@src/",
+      "label": "code [code:@src/"
+    },
+    {
+      "anchor": "code:doc:doc:\"a\t#L3-L9<\"src/]].doc:[[/...",
+      "label": "code doc:doc:\"a\t"
+    },
+    {
+      "anchor": "code:#L3-L9***[#L3]code:**{code:/.video:&|#L3:]]",
+      "label": "code "
+    },
+    {
+      "anchor": "code:]b",
+      "label": "code ]b"
+    },
+    {
+      "anchor": "code:]|\\video:code:",
+      "label": "code ]|\\video:code:"
+    },
+    {
+      "anchor": "code:\t /.src/<src/|/..-{code:a```",
+      "label": "code \t /.src/<src/|/..-{code:a```"
+    },
+    {
+      "anchor": "code:]]|**doc:",
+      "label": "code ]]|**doc:"
+    },
+    {
+      "anchor": "code::[",
+      "label": "code :["
+    },
+    {
+      "anchor": "code:#L3-L9#`",
+      "label": "code "
+    },
+    {
+      "anchor": "code:[#L3]b\\@video:./.** |>code:code:",
+      "label": "code ["
+    },
+    {
+      "anchor": "code:/./#L3\\",
+      "label": "code /./"
+    },
+    {
+      "anchor": "code:\t{code:x.py>\t`",
+      "label": "code \t{code:x.py>\t`"
+    },
+    {
+      "anchor": "code:```{[[[*",
+      "label": "code ```{[[[*"
+    },
+    {
+      "anchor": "code:#}src/ **@abcdef1|[[",
+      "label": "code "
+    },
+    {
+      "anchor": "code:{code:*[[{>-#L3-L912.@abcdef1*#L3doc:#\tcode:",
+      "label": "code {code:*[[{>-"
+    },
+    {
+      "anchor": "code:[doc:```",
+      "label": "code [doc:```"
+    },
+    {
+      "anchor": "code:}#L3-L9#@abcdef1&*/b>---src/[[:*",
+      "label": "code }"
+    },
+    {
+      "anchor": "code:*\"12. [[@#",
+      "label": "code *\"12. [[@"
+    },
+    {
+      "anchor": "code:[[@abcdef1||",
+      "label": "code [[@abcdef1||"
+    },
+    {
+      "anchor": "code:```{code:]..*|{**#{code: b12.[`{",
+      "label": "code ```{code:]..*|{**"
+    },
+    {
+      "anchor": "code::code:`{@code:] x.py{code:",
+      "label": "code :code:`{@code:] x.py{code:"
+    },
+    {
+      "anchor": "code:\\]]b]]b",
+      "label": "code \\]]b]]b"
+    },
+    {
+      "anchor": "code:<12.",
+      "label": "code <12."
+    },
+    {
+      "anchor": "code:\"",
+      "label": "code \""
+    },
+    {
+      "anchor": "code:x.py-|]|",
+      "label": "code x.py-|]|"
+    },
+    {
+      "anchor": "code:] @abcdef1a&\\|[code:**{code:#@",
+      "label": "code ] @abcdef1a&\\|[code:**{code:"
+    },
+    {
+      "anchor": "code:>x.py",
+      "label": "code >x.py"
+    },
+    {
+      "anchor": "code:\\\"src/[ b\\`",
+      "label": "code \\\"src/[ b\\`"
+    },
+    {
+      "anchor": "code:#L3@abcdef1]][[{code:{---{code:`[",
+      "label": "code "
+    },
+    {
+      "anchor": "code:doc:*|---&\t",
+      "label": "code doc:*|---&\t"
+    },
+    {
+      "anchor": "code:code:#<<src/-[[a&&/ab",
+      "label": "code code:"
+    },
+    {
+      "anchor": "code:]]",
+      "label": "code ]]"
+    },
+    {
+      "anchor": "code:src/@abcdef1/.code:`code:video:b`\t#L3]][[/.",
+      "label": "code src/@abcdef1/.code:`code:vid"
+    },
+    {
+      "anchor": "code: &..-|> @>]#L3-L9:.. @abcdef1",
+      "label": " &..-|> @>]#L3-L9:.. "
+    },
+    {
+      "anchor": "code:doc: *[src/@abcdef1**}[{{code:#---b",
+      "label": "code doc: *[src/@abcdef1**}[{{cod"
+    },
+    {
+      "anchor": "code:12.x.pysrc/doc:src/```",
+      "label": "code 12.x.pysrc/doc:src/```"
+    },
+    {
+      "anchor": "code:<..",
+      "label": "code <.."
+    },
+    {
+      "anchor": "code:{..x.py/./.`video:b@{code:```video:&",
+      "label": "code {..x.py/./.`video:b@{code:``"
+    },
+    {
+      "anchor": "code:#src/\".#L3src/|x.py#L3",
+      "label": "code "
+    },
+    {
+      "anchor": "code:`",
+      "label": "code `"
+    },
+    {
+      "anchor": "code:]]<>\"|..>..|b{12.\\doc:",
+      "label": "code ]]<>\"|..>..|b{12.\\doc:"
+    },
+    {
+      "anchor": "code:]]---: \t|[x.pydoc:|]]doc:",
+      "label": "code ]]---: \t|[x.pydoc:|]]doc:"
+    },
+    {
+      "anchor": "code:\tb<b\\:",
+      "label": "code \tb<b\\:"
+    },
+    {
+      "anchor": "code:**`]]* #L3",
+      "label": "code **`]]* "
+    },
+    {
+      "anchor": "code:video:@abcdef1:**---/..",
+      "label": "code video:@abcdef1:**---/.."
+    },
+    {
+      "anchor": "code:|{code:#L3||x.pydoc:&src/doc:@abcdef1[",
+      "label": "code |{code:"
+    },
+    {
+      "anchor": "code:src/",
+      "label": "code src/"
+    },
+    {
+      "anchor": "code:video:#L3doc:{/.",
+      "label": "code video:"
+    },
+    {
+      "anchor": "code:doc:12.<\\<{]@doc:src/@[/.",
+      "label": "code doc:12.<\\<{]@doc:src/@[/."
+    },
+    {
+      "anchor": "code:<video:b.[##L3-L9\\\\---#L3@",
+      "label": "code <video:b.["
+    },
+    {
+      "anchor": "code:|",
+      "label": "code |"
+    },
+    {
+      "anchor": "code:b..src/}x.py ..---#L3-L9[[]]*}#L3-L9",
+      "label": "code b..src/}x.py ..---"
+    },
+    {
+      "anchor": "code:code:@abcdef1:}:#L3-L9}\t]][[x.py",
+      "label": "code code:@abcdef1:}:"
+    },
+    {
+      "anchor": "code:{code:b{",
+      "label": "code {code:b{"
+    },
+    {
+      "anchor": "code:.b\\@abcdef1[[@",
+      "label": "code .b\\@abcdef1[[@"
+    },
+    {
+      "anchor": "code:]]****<`{[&@",
+      "label": "code ]]****<`{[&@"
+    },
+    {
+      "anchor": "code::#L3-L9|#**\t",
+      "label": "code :"
+    },
+    {
+      "anchor": "code:a#ab@abcdef1[[",
+      "label": "code a"
+    },
+    {
+      "anchor": "code:src/ 12.[[---&[b@abcdef1",
+      "label": " 12.[[---&[b"
+    },
+    {
+      "anchor": "code:12.video:<",
+      "label": "code 12.video:<"
+    },
+    {
+      "anchor": "code:a\t```:@\t",
+      "label": "code a\t```:@\t"
+    },
+    {
+      "anchor": "code:*.",
+      "label": "code *."
+    },
+    {
+      "anchor": "code:{code:|}**<:<| ]]**{code:\tx.py`",
+      "label": "code {code:|}**<:<| ]]**{code:\tx."
+    },
+    {
+      "anchor": "code:video:",
+      "label": "code video:"
+    },
+    {
+      "anchor": "code:]",
+      "label": "code ]"
+    },
+    {
+      "anchor": "code:]---}video:",
+      "label": "code ]---}video:"
+    },
+    {
+      "anchor": "code:.[:",
+      "label": "code .[:"
+    },
+    {
+      "anchor": "code:[[{@-&[[x.py\t`",
+      "label": "code [[{@-&[[x.py\t`"
+    },
+    {
+      "anchor": "code:/[[:",
+      "label": "code /[[:"
+    },
+    {
+      "anchor": "code:src/]&*x.pyx.py[[/&`[:",
+      "label": "code src/]&*x.pyx.py[[/&`[:"
+    },
+    {
+      "anchor": "code:{code:#L3-L9<|code:>code:x.py***]]src/",
+      "label": "code {code:"
+    },
+    {
+      "anchor": "code:&<",
+      "label": "code &<"
+    },
+    {
+      "anchor": "code:x.py/",
+      "label": "code x.py/"
+    },
+    {
+      "anchor": "code:|```}b:`]#L3@abcdef1#L3-L9",
+      "label": "|```}b:`]#L3 L3-9"
+    },
+    {
+      "anchor": "code:#L3-L9{code:{``````/[/....---<",
+      "label": "code "
+    },
+    {
+      "anchor": "code:{` @abcdef1x.py]]",
+      "label": "code {` @abcdef1x.py]]"
+    },
+    {
+      "anchor": "code:/...:/\tb ------@abcdef1#L3-L9#L3-L9@abcdef1video:src/video:",
+      "label": "code /...:/\tb ------@abcdef1"
+    },
+    {
+      "anchor": "code:[{code:src/#",
+      "label": "code [{code:src/"
+    },
+    {
+      "anchor": "code:>\\@abcdef1b**-{@#L3video:..@-@..",
+      "label": "code >\\@abcdef1b**-{@"
+    },
+    {
+      "anchor": "code:`code:\"#L3]# ..",
+      "label": "code `code:\""
+    },
+    {
+      "anchor": "code:code:",
+      "label": "code code:"
+    },
+    {
+      "anchor": "code::]12.#L3/.&src/[[",
+      "label": "code :]12."
+    },
+    {
+      "anchor": "code:doc:&``` ---#L3[-.---/doc:#a`",
+      "label": "code doc:&``` ---"
+    },
+    {
+      "anchor": "code:\tbcode:\\\"]```12.@abcdef1]]..<\"|/./",
+      "label": "code \tbcode:\\\"]```12.@abcdef1]].."
+    },
+    {
+      "anchor": "code:@---/.@abcdef1[[```<@{/.12./.---}.\"",
+      "label": "code @---/.@abcdef1[[```<@{/.12./"
+    },
+    {
+      "anchor": "code:}[:doc:",
+      "label": "code }[:doc:"
+    },
+    {
+      "anchor": "code:x.py\\<#L3aacode:|",
+      "label": "code x.py\\<"
+    },
+    {
+      "anchor": "code:----video: :\t:|video:/|[[a>---",
+      "label": "code ----video: :\t:|video:/|[[a>-"
+    },
+    {
+      "anchor": "code:>/.\"&&",
+      "label": "code >/.\"&&"
+    },
+    {
+      "anchor": "code:|` @[[/..[[*@abcdef1*/..{code:}{`",
+      "label": "code |` @[[/..[[*@abcdef1*/..{cod"
+    },
+    {
+      "anchor": "code:b}",
+      "label": "code b}"
+    },
+    {
+      "anchor": "code:/|..>{x.py** b-||src/",
+      "label": "code /|..>{x.py** b-||src/"
+    },
+    {
+      "anchor": "code:video:[[--->x.py..{**video: {code:[",
+      "label": "code video:[[--->x.py..{**video: "
+    },
+    {
+      "anchor": "code:.}<",
+      "label": "code .}<"
+    },
+    {
+      "anchor": "code:{code:]]\"doc::/..#]]{src/---]]}",
+      "label": "code {code:]]\"doc::/.."
+    },
+    {
+      "anchor": "code:x.py<.#/..code:x.py{code:a```\\",
+      "label": "code x.py<."
+    },
+    {
+      "anchor": "code:|\t:asrc/** src/",
+      "label": "code |\t:asrc/** src/"
+    },
+    {
+      "anchor": "code:/**#</..>>````src/]]:doc:",
+      "label": "code /**"
+    },
+    {
+      "anchor": "code:12.<src/",
+      "label": "code 12.<src/"
+    },
+    {
+      "anchor": "code:```>:..video:\"#L3-L9|a{code:]]]]/..`]",
+      "label": "code ```>:..video:\""
+    },
+    {
+      "anchor": "code:12.--->-./```.[[@x.py#",
+      "label": "code 12.--->-./```.[[@x.py"
+    },
+    {
+      "anchor": "code:@abcdef1code:#\t[[#aa>/>",
+      "label": "code @abcdef1code:"
+    },
+    {
+      "anchor": "code:src/@abcdef1``````---`#/{code:##{code:```\"..\t",
+      "label": "code src/@abcdef1``````---`"
+    }
+  ],
+  "inline": [
+    {
+      "text": "**bold** and `code`",
+      "html": "<strong>bold</strong> and <code>code</code>"
+    },
+    {
+      "text": "**a**b**",
+      "html": "<strong>a</strong>b**"
+    },
+    {
+      "text": "***",
+      "html": "***"
+    },
+    {
+      "text": "``",
+      "html": "``"
+    },
+    {
+      "text": "`a`b`c`",
+      "html": "<code>a</code>b<code>c</code>"
+    },
+    {
+      "text": "[[code:a@abcdef1]]",
+      "html": "<a class=\"chip\" href=\"#\" data-anchor=\"code:a@abcdef1\" title=\"code:a@abcdef1\">a</a>"
+    },
+    {
+      "text": "[[code:a@abcdef1|the handler]]",
+      "html": "<a class=\"chip\" href=\"#\" data-anchor=\"code:a@abcdef1\" title=\"code:a@abcdef1\">the handler</a>"
+    },
+    {
+      "text": "[[code:a@abcdef1|]]",
+      "html": "[[code:a@abcdef1|]]"
+    },
+    {
+      "text": "[[[a]]",
+      "html": "<a class=\"chip\" href=\"#\" data-anchor=\"[a\" title=\"[a\">[a </a>"
+    },
+    {
+      "text": "[[a]x]]",
+      "html": "[[a]x]]"
+    },
+    {
+      "text": "[[|x]]",
+      "html": "[[|x]]"
+    },
+    {
+      "text": "[[a|b|c]]",
+      "html": "<a class=\"chip\" href=\"#\" data-anchor=\"a\" title=\"a\">b|c</a>"
+    },
+    {
+      "text": "a < b && c > d",
+      "html": "a &lt; b &amp;&amp; c &gt; d"
+    },
+    {
+      "text": "quote \" here",
+      "html": "quote &quot; here"
+    },
+    {
+      "text": "**[[code:a@abcdef1]]**",
+      "html": "<strong><a class=\"chip\" href=\"#\" data-anchor=\"code:a@abcdef1\" title=\"code:a@abcdef1\">a</a></strong>"
+    },
+    {
+      "text": "`[[code:a@abcdef1]]`",
+      "html": "<code><a class=\"chip\" href=\"#\" data-anchor=\"code:a@abcdef1\" title=\"code:a@abcdef1\">a</a></code>"
+    },
+    {
+      "text": "[[code:c#x/y@abcdef1#L2-L7]]",
+      "html": "<a class=\"chip\" href=\"#\" data-anchor=\"code:c#x/y@abcdef1#L2-L7\" title=\"code:c#x/y@abcdef1#L2-L7\">y L2-7</a>"
+    },
+    {
+      "text": "|*\"**|**>}..",
+      "html": "|*&quot;<strong>|</strong>&gt;}.."
+    },
+    {
+      "text": "12.\":b**:#L3",
+      "html": "12.&quot;:b**:#L3"
+    },
+    {
+      "text": "<*\t/>\"]]]][[:/.{code:```code:src/-",
+      "html": "&lt;*\t/&gt;&quot;]]]][[:/.{code:```code:src/-"
+    },
+    {
+      "text": "<12.{code:",
+      "html": "&lt;12.{code:"
+    },
+    {
+      "text": "**]/.12.>[[video:",
+      "html": "**]/.12.&gt;[[video:"
+    },
+    {
+      "text": "\\src/x.py```",
+      "html": "\\src/x.py```"
+    },
+    {
+      "text": "****>]",
+      "html": "****&gt;]"
+    },
+    {
+      "text": "/12.:-doc:src/x.py}.",
+      "html": "/12.:-doc:src/x.py}."
+    },
+    {
+      "text": "#L3[[##L3b|**|video:12.}>```/[[",
+      "html": "#L3[[##L3b|**|video:12.}&gt;```/[["
+    },
+    {
+      "text": "a-/..{code:```[@abcdef1video:---*..doc:video:doc:#L3-L9doc:doc:video:",
+      "html": "a-/..{code:```[@abcdef1video:---*..doc:video:doc:#L3-L9doc:doc:video:"
+    },
+    {
+      "text": ". |[..{code:",
+      "html": ". |[..{code:"
+    },
+    {
+      "text": "* @#L3-L9a@@",
+      "html": "* @#L3-L9a@@"
+    },
+    {
+      "text": "```>`{{code:#L3**\tvideo:code:/:src/#&*\t",
+      "html": "``<code>&gt;</code>{{code:#L3**\tvideo:code:/:src/#&amp;*\t"
+    },
+    {
+      "text": "--->a>]]\"---video:",
+      "html": "---&gt;a&gt;]]&quot;---video:"
+    },
+    {
+      "text": "[[src/<#L3}@abcdef1<>",
+      "html": "[[src/&lt;#L3}@abcdef1&lt;&gt;"
+    },
+    {
+      "text": "]]{",
+      "html": "]]{"
+    },
+    {
+      "text": "|{&-a |@abcdef1```\\|#L3& @abcdef1[video:]***",
+      "html": "|{&amp;-a |@abcdef1```\\|#L3&amp; @abcdef1[video:]***"
+    },
+    {
+      "text": "#/...a]]>code:&[```a---",
+      "html": "#/...a]]&gt;code:&amp;[```a---"
+    },
+    {
+      "text": "*`@",
+      "html": "*`@"
+    },
+    {
+      "text": "#video:]]*code:",
+      "html": "#video:]]*code:"
+    },
+    {
+      "text": "/..code:[/.[[[<video:&/.{code:",
+      "html": "/..code:[/.[[[&lt;video:&amp;/.{code:"
+    },
+    {
+      "text": "|@x.py a|acode:#L3-L9/..",
+      "html": "|@x.py a|acode:#L3-L9/.."
+    },
+    {
+      "text": "..|---\\]#L3-L9#L3-L9src/|src/.src/src/",
+      "html": "..|---\\]#L3-L9#L3-L9src/|src/.src/src/"
+    },
+    {
+      "text": "|]]video:b&src/||#L3doc:",
+      "html": "|]]video:b&amp;src/||#L3doc:"
+    },
+    {
+      "text": "\t..}12./.-[#L3]]|\t",
+      "html": "\t..}12./.-[#L3]]|\t"
+    },
+    {
+      "text": ":@abcdef1[[x.py12.",
+      "html": ":@abcdef1[[x.py12."
+    },
+    {
+      "text": "x.py",
+      "html": "x.py"
+    },
+    {
+      "text": "/..src/a|@]&src/@abcdef1\"doc:|/..-[[]",
+      "html": "/..src/a|@]&amp;src/@abcdef1&quot;doc:|/..-[[]"
+    },
+    {
+      "text": "|**|*a>#L3-L9->",
+      "html": "|**|*a&gt;#L3-L9-&gt;"
+    },
+    {
+      "text": "video:doc:.*..\t/video:\\/..",
+      "html": "video:doc:.*..\t/video:\\/.."
+    },
+    {
+      "text": "video:-*---#L3doc:\\[@abcdef1doc:/.```]]>",
+      "html": "video:-*---#L3doc:\\[@abcdef1doc:/.```]]&gt;"
+    },
+    {
+      "text": ">x.py[avideo:|**\t{.{\\#code:---",
+      "html": "&gt;x.py[avideo:|**\t{.{\\#code:---"
+    },
+    {
+      "text": "#L3-L9`#L3-L9code:/.[[@|#L3#L3```{#@>",
+      "html": "#L3-L9<code>#L3-L9code:/.[[@|#L3#L3</code>``{#@&gt;"
+    },
+    {
+      "text": "}code:src//.<{#b]]#[[`//..>/|",
+      "html": "}code:src//.&lt;{#b]]#[[`//..&gt;/|"
+    },
+    {
+      "text": "}.\"#L3-L9{#L3doc:\t{video:<..```video:@abcdef1/code:/..#L3|",
+      "html": "}.&quot;#L3-L9{#L3doc:\t{video:&lt;..```video:@abcdef1/code:/..#L3|"
+    },
+    {
+      "text": "video:\\]video:video:",
+      "html": "video:\\]video:video:"
+    },
+    {
+      "text": "[`{: <|\"]}\t}{code:[[",
+      "html": "[`{: &lt;|&quot;]}\t}{code:[["
+    },
+    {
+      "text": "]] [[",
+      "html": "]] [["
+    },
+    {
+      "text": "@abcdef1b",
+      "html": "@abcdef1b"
+    },
+    {
+      "text": "a{@`:",
+      "html": "a{@`:"
+    },
+    {
+      "text": "doc:]]#b< 12.---*code:&@\t\t..[",
+      "html": "doc:]]#b&lt; 12.---*code:&amp;@\t\t..["
+    },
+    {
+      "text": "..b}..",
+      "html": "..b}.."
+    },
+    {
+      "text": "/..]]a .```<#L3-L9doc:|@abcdef1",
+      "html": "/..]]a .```&lt;#L3-L9doc:|@abcdef1"
+    },
+    {
+      "text": "|[12.#a\\]]#L3-L9[[}`{code:#L3b\ta",
+      "html": "|[12.#a\\]]#L3-L9[[}`{code:#L3b\ta"
+    },
+    {
+      "text": "&`---@ }..]>\tx.py#L3",
+      "html": "&amp;`---@ }..]&gt;\tx.py#L3"
+    },
+    {
+      "text": "/.>]|\t---]{&<**x.py|12.x.py&",
+      "html": "/.&gt;]|\t---]{&amp;&lt;**x.py|12.x.py&amp;"
+    },
+    {
+      "text": "---@abcdef1#---<#L3-L9#L3-L9\"|video:}<#L3-#code:",
+      "html": "---@abcdef1#---&lt;#L3-L9#L3-L9&quot;|video:}&lt;#L3-#code:"
+    },
+    {
+      "text": "}{>```/.*]/..@video:",
+      "html": "}{&gt;```/.*]/..@video:"
+    },
+    {
+      "text": "12.|---<\\b#L3 a",
+      "html": "12.|---&lt;\\b#L3 a"
+    },
+    {
+      "text": "doc:video::doc:{code:[",
+      "html": "doc:video::doc:{code:["
+    },
+    {
+      "text": "[@abcdef1doc:#L3```[>]]*{code:`/..",
+      "html": "[@abcdef1doc:#L3``<code>[&gt;]]*{code:</code>/.."
+    },
+    {
+      "text": ">",
+      "html": "&gt;"
+    },
+    {
+      "text": "..:@",
+      "html": "..:@"
+    },
+    {
+      "text": "\t[[>---",
+      "html": "\t[[&gt;---"
+    },
+    {
+      "text": "---}``` ",
+      "html": "---}``` "
+    },
+    {
+      "text": "12.[[```<{code:/./..[:src/video:video:[a<|12.doc:video:",
+      "html": "12.[[```&lt;{code:/./..[:src/video:video:[a&lt;|12.doc:video:"
+    },
+    {
+      "text": "doc:]]/",
+      "html": "doc:]]/"
+    },
+    {
+      "text": "|#L3-L9# bx.py.@/]].code:]]#L3-L9\t",
+      "html": "|#L3-L9# bx.py.@/]].code:]]#L3-L9\t"
+    },
+    {
+      "text": "|src/@@#L3\\@b\t|video:|:{",
+      "html": "|src/@@#L3\\@b\t|video:|:{"
+    },
+    {
+      "text": " src/&.",
+      "html": " src/&amp;."
+    },
+    {
+      "text": "\tcode:```b..\"a`{code:",
+      "html": "\tcode:``<code>b..&quot;a</code>{code:"
+    },
+    {
+      "text": "@abcdef1",
+      "html": "@abcdef1"
+    },
+    {
+      "text": "/.12.video:..|\"\t<```code://{",
+      "html": "/.12.video:..|&quot;\t&lt;```code://{"
+    },
+    {
+      "text": "src/|]</.*.x.py#|",
+      "html": "src/|]&lt;/.*.x.py#|"
+    },
+    {
+      "text": "}..[.doc:</.*&\"x.pyb",
+      "html": "}..[.doc:&lt;/.*&amp;&quot;x.pyb"
+    },
+    {
+      "text": " *12.code:@abcdef1-{]12.\\",
+      "html": " *12.code:@abcdef1-{]12.\\"
+    },
+    {
+      "text": "/..:.] src/@*..\\#}b12.\"[src/||",
+      "html": "/..:.] src/@*..\\#}b12.&quot;[src/||"
+    },
+    {
+      "text": "//.x.py",
+      "html": "//.x.py"
+    },
+    {
+      "text": "[[doc:``-.. ||src/\t-|#",
+      "html": "[[doc:``-.. ||src/\t-|#"
+    },
+    {
+      "text": "absrc/ ",
+      "html": "absrc/ "
+    },
+    {
+      "text": "|**/12.#L3-L9@#:.```]}#L3doc:/..:#L3-L9]]",
+      "html": "|**/12.#L3-L9@#:.```]}#L3doc:/..:#L3-L9]]"
+    },
+    {
+      "text": "**/@abcdef1",
+      "html": "**/@abcdef1"
+    },
+    {
+      "text": "/..x.py`.\\|code:{code:@---{]]code:.. ",
+      "html": "/..x.py`.\\|code:{code:@---{]]code:.. "
+    },
+    {
+      "text": "****```video:>] ",
+      "html": "****```video:&gt;] "
+    },
+    {
+      "text": "]]\\code:---*bbcode:/#*/...]@:|b@",
+      "html": "]]\\code:---*bbcode:/#*/...]@:|b@"
+    },
+    {
+      "text": "<---[[.|code:#L3/..@src/&video:/..{code:[@abcdef1b",
+      "html": "&lt;---[[.|code:#L3/..@src/&amp;video:/..{code:[@abcdef1b"
+    },
+    {
+      "text": "}#L3{code:---@abcdef1:<\"]|",
+      "html": "}#L3{code:---@abcdef1:&lt;&quot;]|"
+    },
+    {
+      "text": "..doc:doc: <#L3-L9b{..[[{code:@#L3{code:",
+      "html": "..doc:doc: &lt;#L3-L9b{..[[{code:@#L3{code:"
+    },
+    {
+      "text": "/. ---..",
+      "html": "/. ---.."
+    },
+    {
+      "text": "#",
+      "html": "#"
+    },
+    {
+      "text": "{{code:doc:]<[[|]]/src/>src/doc:`video:avideo:",
+      "html": "{{code:doc:]&lt;[[|]]/src/&gt;src/doc:`video:avideo:"
+    },
+    {
+      "text": "doc:\"**@abcdef1\\ ]}**x.pyvideo::/../.code:\"*",
+      "html": "doc:&quot;<strong>@abcdef1\\ ]}</strong>x.pyvideo::/../.code:&quot;*"
+    },
+    {
+      "text": "video:a#L3video:a12.12./...@]]bb}",
+      "html": "video:a#L3video:a12.12./...@]]bb}"
+    },
+    {
+      "text": "`\t`:#L3-L9/.[#-*doc:/...code:12.---]code:",
+      "html": "<code>\t</code>:#L3-L9/.[#-*doc:/...code:12.---]code:"
+    },
+    {
+      "text": "/..src/doc:/..{code:[}<src/**].&code:",
+      "html": "/..src/doc:/..{code:[}&lt;src/**].&amp;code:"
+    },
+    {
+      "text": "-bb&{code:]]-",
+      "html": "-bb&amp;{code:]]-"
+    },
+    {
+      "text": "@video:b12.@abcdef1|*doc:\\",
+      "html": "@video:b12.@abcdef1|*doc:\\"
+    },
+    {
+      "text": "}]]---`",
+      "html": "}]]---`"
+    },
+    {
+      "text": "@abcdef1#L3```---[src/src/12.x.py",
+      "html": "@abcdef1#L3```---[src/src/12.x.py"
+    },
+    {
+      "text": "doc:**}\\|*{code:video:#L3-L912..*\t@abcdef1video:{ab",
+      "html": "doc:**}\\|*{code:video:#L3-L912..*\t@abcdef1video:{ab"
+    },
+    {
+      "text": "x.py`bbsrc/..@abcdef1[[-]]video:].",
+      "html": "x.py`bbsrc/..@abcdef1<a class=\"chip\" href=\"#\" data-anchor=\"-\" title=\"-\">- </a>video:]."
+    },
+    {
+      "text": "b\t..video:@---b\t{{&]]]]/.-",
+      "html": "b\t..video:@---b\t{{&amp;]]]]/.-"
+    },
+    {
+      "text": "code:ax.py]>[[.*12.@abcdef1video:a",
+      "html": "code:ax.py]&gt;[[.*12.@abcdef1video:a"
+    },
+    {
+      "text": "]]/{code:[*.@abcdef1|bx.py../",
+      "html": "]]/{code:[*.@abcdef1|bx.py../"
+    },
+    {
+      "text": "[[&12.----/.#L3",
+      "html": "[[&amp;12.----/.#L3"
+    },
+    {
+      "text": "\\}12.|\"bx.py..asrc//.*x.pyx.py",
+      "html": "\\}12.|&quot;bx.py..asrc//.*x.pyx.py"
+    },
+    {
+      "text": "\"\\.b12.]]..<---@abcdef1",
+      "html": "&quot;\\.b12.]]..&lt;---@abcdef1"
+    },
+    {
+      "text": "@abcdef1[#",
+      "html": "@abcdef1[#"
+    },
+    {
+      "text": "}}",
+      "html": "}}"
+    },
+    {
+      "text": "#L3/....<@/.",
+      "html": "#L3/....&lt;@/."
+    },
+    {
+      "text": "\"&|\t@{code: ]]doc:12.*/src/doc:@",
+      "html": "&quot;&amp;|\t@{code: ]]doc:12.*/src/doc:@"
+    },
+    {
+      "text": "[doc:doc:/..---",
+      "html": "[doc:doc:/..---"
+    },
+    {
+      "text": "\tsrc/ \t@/..\t\"`-\t---\t```\"..",
+      "html": "\tsrc/ \t@/..\t&quot;<code>-\t---\t</code>``&quot;.."
+    },
+    {
+      "text": "/..\t\tx.py|/.>]code:|",
+      "html": "/..\t\tx.py|/.&gt;]code:|"
+    },
+    {
+      "text": "{code::",
+      "html": "{code::"
+    },
+    {
+      "text": "||\t|@#a*#:&12.{]]",
+      "html": "||\t|@#a*#:&amp;12.{]]"
+    },
+    {
+      "text": "@abcdef1/../.x.py@&",
+      "html": "@abcdef1/../.x.py@&amp;"
+    },
+    {
+      "text": "..#L3|\\/..] [[x.py/\tcode:@../]]#```doc:",
+      "html": "..#L3|\\/..] <a class=\"chip\" href=\"#\" data-anchor=\"x.py/\tcode:@../\" title=\"x.py/\tcode:@../\">x.py/\tcode @../</a>#```doc:"
+    },
+    {
+      "text": "**|\"/.*#L3-L9doc:\t}doc:---|{code:`<}x.py]]]",
+      "html": "**|&quot;/.*#L3-L9doc:\t}doc:---|{code:`&lt;}x.py]]]"
+    },
+    {
+      "text": "/..---src/12.:|&doc:**video:#|a<",
+      "html": "/..---src/12.:|&amp;doc:**video:#|a&lt;"
+    },
+    {
+      "text": "/#L3@&&#doc:/[[*|code:video::/.**12.{12.:",
+      "html": "/#L3@&amp;&amp;#doc:/[[*|code:video::/.**12.{12.:"
+    },
+    {
+      "text": ":{doc:@@abcdef1]|bx.py---|/.code:&.#L3-L9}\t|```",
+      "html": ":{doc:@@abcdef1]|bx.py---|/.code:&amp;.#L3-L9}\t|```"
+    },
+    {
+      "text": "x.py]]}]]---/.video:#L3-L9[[{\"[[/..",
+      "html": "x.py]]}]]---/.video:#L3-L9[[{&quot;[[/.."
+    },
+    {
+      "text": "@abcdef1/-|\"& video:*..#L3-L9].\\",
+      "html": "@abcdef1/-|&quot;&amp; video:*..#L3-L9].\\"
+    },
+    {
+      "text": "--..@abcdef1\"code:**doc:-#L3-L9\\12.{a{code:video:\\}.`",
+      "html": "--..@abcdef1&quot;code:**doc:-#L3-L9\\12.{a{code:video:\\}.`"
+    },
+    {
+      "text": "{\t|```x.py&.@#```\"..a@abcdef1/|}#L3",
+      "html": "{\t|``<code>x.py&amp;.@#</code>``&quot;..a@abcdef1/|}#L3"
+    },
+    {
+      "text": "&/.\\>//...>#L3-L9@abcdef1a[{code:",
+      "html": "&amp;/.\\&gt;//...&gt;#L3-L9@abcdef1a[{code:"
+    },
+    {
+      "text": "**{code:src/#[[#L3bdoc:\tb@\t doc:[\t#",
+      "html": "**{code:src/#[[#L3bdoc:\tb@\t doc:[\t#"
+    },
+    {
+      "text": "----/.****\\#/\tx.py&",
+      "html": "----/.****\\#/\tx.py&amp;"
+    },
+    {
+      "text": "video:]]/]|#L3\\12.\"}|a",
+      "html": "video:]]/]|#L3\\12.&quot;}|a"
+    },
+    {
+      "text": "src/&|<`**[--doc:",
+      "html": "src/&amp;|&lt;`**[--doc:"
+    },
+    {
+      "text": "video:{code: ",
+      "html": "video:{code: "
+    },
+    {
+      "text": "|\t..",
+      "html": "|\t.."
+    },
+    {
+      "text": "doc:@}}]`\t[[---&{code:&12.src/}/.*[/.\\",
+      "html": "doc:@}}]`\t[[---&amp;{code:&amp;12.src/}/.*[/.\\"
+    },
+    {
+      "text": "x.py*---doc:a]]/[[]]|doc:#L3-L9code:`doc:x.py/.a",
+      "html": "x.py*---doc:a]]/[[]]|doc:#L3-L9code:`doc:x.py/.a"
+    },
+    {
+      "text": "#L3-L9&```12.\t}\"@#L3-L9#&`:/..@abcdef1",
+      "html": "#L3-L9&amp;``<code>12.\t}&quot;@#L3-L9#&amp;</code>:/..@abcdef1"
+    },
+    {
+      "text": "\"12..-\"x.py.src/",
+      "html": "&quot;12..-&quot;x.py.src/"
+    },
+    {
+      "text": "**.#@{..b<\"|&@] video:",
+      "html": "**.#@{..b&lt;&quot;|&amp;@] video:"
+    },
+    {
+      "text": "[[##L3....\t[[|`*#L3-L9code:*",
+      "html": "[[##L3....\t[[|`*#L3-L9code:*"
+    },
+    {
+      "text": "doc:\\",
+      "html": "doc:\\"
+    },
+    {
+      "text": "]#L3-L9.<[[#```<```\\",
+      "html": "]#L3-L9.&lt;[[#``<code>&lt;</code>``\\"
+    },
+    {
+      "text": "]#L3@abcdef1**a>] #L3-L9|",
+      "html": "]#L3@abcdef1**a&gt;] #L3-L9|"
+    },
+    {
+      "text": " [{\t<x.py\t}{code:[[video:\t@.[[{code:",
+      "html": " [{\t&lt;x.py\t}{code:[[video:\t@.[[{code:"
+    },
+    {
+      "text": "#L3-L9",
+      "html": "#L3-L9"
+    },
+    {
+      "text": "/<b\"---**",
+      "html": "/&lt;b&quot;---**"
+    },
+    {
+      "text": "doc:|12.{code:video:<{code:[[*/..>code:[[{code:src/",
+      "html": "doc:|12.{code:video:&lt;{code:[[*/..&gt;code:[[{code:src/"
+    },
+    {
+      "text": "#L3/..>code:}/../..|\\",
+      "html": "#L3/..&gt;code:}/../..|\\"
+    },
+    {
+      "text": "[[\"/[b/..{]:#L3|video:@abcdef1|/..",
+      "html": "[[&quot;/[b/..{]:#L3|video:@abcdef1|/.."
+    },
+    {
+      "text": "--->]]#L3-L9[[\"@abcdef1#L3-L9/",
+      "html": "---&gt;]]#L3-L9[[&quot;@abcdef1#L3-L9/"
+    },
+    {
+      "text": "/code:",
+      "html": "/code:"
+    }
+  ],
+  "blocks": [
+    {
+      "markdown": "---\nid: x\ntitle: T\n---\n\n# Heading\n\nbody\n",
+      "html": "<h1 id=\"heading\">Heading<span class=\"heading-chips\"></span></h1>\n<p>body</p>"
+    },
+    {
+      "markdown": "---\nno closing fence\n\n# H\n",
+      "html": "<p>no closing fence</p>\n<h1 id=\"h\">H<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "## h {code: x@abcdef1}\n",
+      "html": "<h2 id=\"h\">h<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a></span></h2>"
+    },
+    {
+      "markdown": "## h {code:\t}\n",
+      "html": "<h2 id=\"h-code\">h {code:\t}<span class=\"heading-chips\"></span></h2>"
+    },
+    {
+      "markdown": "## h {code:   }\n",
+      "html": "<h2 id=\"h-code\">h {code:   }<span class=\"heading-chips\"></span></h2>"
+    },
+    {
+      "markdown": "## h {bogus: x}\n",
+      "html": "<h2 id=\"h-bogus-x\">h {bogus: x}<span class=\"heading-chips\"></span></h2>"
+    },
+    {
+      "markdown": "## h {code: x@abcdef1} {doc: tech-debt}\n",
+      "html": "<h2 id=\"h\">h<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a><a class=\"chip\" href=\"#\" data-anchor=\"doc:tech-debt\">doc tech-debt</a></span></h2>"
+    },
+    {
+      "markdown": "| Concern | Status |\n|---|---|\n| auth | **absent** |\n",
+      "html": "<table><thead><tr><th>Concern</th><th>Status</th></tr></thead><tbody><tr><td>auth</td><td><strong>absent</strong></td></tr></tbody></table>"
+    },
+    {
+      "markdown": "| a | b |\n| c | d |\n",
+      "html": "<table><tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "| one |\n|:-:|\n| two |\n",
+      "html": "<table><thead><tr><th>one</th></tr></thead><tbody><tr><td>two</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "- one\n- two\n\n1. first\n2. second\n",
+      "html": "<ul><li>one</li><li>two</li></ul>\n<ol><li>first</li><li>second</li></ol>"
+    },
+    {
+      "markdown": "-\n- x\n",
+      "html": "<p>-</p>\n<ul><li>x</li></ul>"
+    },
+    {
+      "markdown": "```\nraw <b> & stuff\n```\n",
+      "html": "<pre><code>raw &lt;b&gt; &amp; stuff</code></pre>"
+    },
+    {
+      "markdown": "```python\nx = 1\n",
+      "html": "<pre><code>x = 1\n</code></pre>"
+    },
+    {
+      "markdown": "para one\ncontinued\n\npara two\n",
+      "html": "<p>para one continued</p>\n<p>para two</p>"
+    },
+    {
+      "markdown": "# A\n## B\n### C\n#### D\n##### E\n###### F\n",
+      "html": "<h1 id=\"a\">A<span class=\"heading-chips\"></span></h1>\n<h2 id=\"b\">B<span class=\"heading-chips\"></span></h2>\n<h3 id=\"c\">C<span class=\"heading-chips\"></span></h3>\n<h4 id=\"d\">D<span class=\"heading-chips\"></span></h4>\n<h5 id=\"e\">E<span class=\"heading-chips\"></span></h5>\n<h6 id=\"f\">F<span class=\"heading-chips\"></span></h6>"
+    },
+    {
+      "markdown": "#\n",
+      "html": "<h1 id=\"section\"><span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "text with a | pipe mid-line\n",
+      "html": "<p>text with a | pipe mid-line</p>"
+    },
+    {
+      "markdown": "1. item\t.[[/---`<a**]]",
+      "html": "<ol><li>item\t.<a class=\"chip\" href=\"#\" data-anchor=\"/---`&amp;lt;a**\" title=\"/---`&amp;lt;a**\">/---`&amp;lt;a** </a></li></ol>"
+    },
+    {
+      "markdown": "..\">`-\\#L3-L9*/.video:}#L3",
+      "html": "<p>..&quot;&gt;`-\\#L3-L9*/.video:}#L3</p>"
+    },
+    {
+      "markdown": "[\\>:]&doc:",
+      "html": "<p>[\\&gt;:]&amp;doc:</p>"
+    },
+    {
+      "markdown": "]",
+      "html": "<p>]</p>"
+    },
+    {
+      "markdown": "b",
+      "html": "<p>b</p>"
+    },
+    {
+      "markdown": "doc:[<@abcdef1{code:",
+      "html": "<p>doc:[&lt;@abcdef1{code:</p>"
+    },
+    {
+      "markdown": "`[[`|---|---|[}<",
+      "html": "<p><code>[[</code>|---|---|[}&lt;</p>"
+    },
+    {
+      "markdown": "- item{:<",
+      "html": "<ul><li>item{:&lt;</li></ul>"
+    },
+    {
+      "markdown": "1. itema#{code:src/",
+      "html": "<ol><li>itema#{code:src/</li></ol>"
+    },
+    {
+      "markdown": "/video:@abcdef1\\@`**",
+      "html": "<p>/video:@abcdef1\\@`**</p>"
+    },
+    {
+      "markdown": "doc:]#",
+      "html": "<p>doc:]#</p>"
+    },
+    {
+      "markdown": "{code:\t}|\n\n#- itemcode:#L3/..",
+      "html": "<p>{code:\t}|</p>\n<h1 id=\"itemcode-l3\">- itemcode:#L3/..<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "[[#L3-L9*{code:\t}doc:/code:{code:\t}#",
+      "html": "<p>[[#L3-L9*{code:\t}doc:/code:{code:\t}#</p>"
+    },
+    {
+      "markdown": "{}{doc: a}]\\code:&x.py/./..#L3",
+      "html": "<p>{}{doc: a}]\\code:&amp;x.py/./..#L3</p>"
+    },
+    {
+      "markdown": "\t{doc: a}|src/",
+      "html": "<p>{doc: a}|src/</p>"
+    },
+    {
+      "markdown": "@\t#L3-L9/.src/{code:]]- itemvideo:&**@",
+      "html": "<p>@\t#L3-L9/.src/{code:]]- itemvideo:&amp;**@</p>"
+    },
+    {
+      "markdown": "| a | b |# h</.{code:\t}/..# h\".bvideo:#L3-L9",
+      "html": "<table><tbody><tr><td>a</td><td>b</td><td># h&lt;/.{code:\t}/..# h&quot;.bvideo:#L3-L9</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "`\t/.]\"}**video:#code://..",
+      "html": "<p>`\t/.]&quot;}**video:#code://..</p>"
+    },
+    {
+      "markdown": "#doc:&@\n ",
+      "html": "<h1 id=\"doc\">doc:&amp;@<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "```<b`",
+      "html": "<pre><code></code></pre>"
+    },
+    {
+      "markdown": "\n|@",
+      "html": "<table><tbody><tr><td>@</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "|",
+      "html": "<table><tbody><tr><td></td></tr></tbody></table>"
+    },
+    {
+      "markdown": "...\n",
+      "html": "<p>...</p>"
+    },
+    {
+      "markdown": "## h {code: x@abcdef1}{code:\t}```",
+      "html": "<h2 id=\"h-code\">h {code:\t}```<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a></span></h2>"
+    },
+    {
+      "markdown": "..- item \tsrc/- item",
+      "html": "<p>..- item \tsrc/- item</p>"
+    },
+    {
+      "markdown": "@abcdef1.\"\"\n}a\"",
+      "html": "<p>@abcdef1.&quot;&quot; }a&quot;</p>"
+    },
+    {
+      "markdown": "src/{&>a\tx.py",
+      "html": "<p>src/{&amp;&gt;a\tx.py</p>"
+    },
+    {
+      "markdown": "#L3-L9{code:",
+      "html": "<h1 id=\"l3-l9-code\">L3-L9{code:<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "#L3-L9{code:]]/| |---|---|*\n\n/.",
+      "html": "<h1 id=\"l3-l9-code\">L3-L9{code:]]/| |---|---|*<span class=\"heading-chips\"></span></h1>\n<p>/.</p>"
+    },
+    {
+      "markdown": "doc::{code:]**a@\"",
+      "html": "<p>doc::{code:]**a@&quot;</p>"
+    },
+    {
+      "markdown": "<{code:\t}..a|{doc: a}..\"",
+      "html": "<p>&lt;{code:\t}..a|{doc: a}..&quot;</p>"
+    },
+    {
+      "markdown": "-**```src/}\ndoc:#L3-L9#/..{code:",
+      "html": "<p>-**```src/} doc:#L3-L9#/..{code:</p>"
+    },
+    {
+      "markdown": "`>\\",
+      "html": "<p>`&gt;\\</p>"
+    },
+    {
+      "markdown": "src/src/## h {code: x@abcdef1}",
+      "html": "<p>src/src/## h {code: x@abcdef1}</p>"
+    },
+    {
+      "markdown": "`x.py#]]\\|# hdoc:",
+      "html": "<p>`x.py#]]\\|# hdoc:</p>"
+    },
+    {
+      "markdown": "&-|{code:\t}video:a`",
+      "html": "<p>&amp;-|{code:\t}video:a`</p>"
+    },
+    {
+      "markdown": "]code:#L3-L9",
+      "html": "<p>]code:#L3-L9</p>"
+    },
+    {
+      "markdown": "src/]{{-\"<\\/..",
+      "html": "<p>src/]{{-&quot;&lt;\\/..</p>"
+    },
+    {
+      "markdown": "**{code:\t}",
+      "html": "<p>**{code:\t}</p>"
+    },
+    {
+      "markdown": "#|12.*:code:{..",
+      "html": "<h1 id=\"12-code\">|12.*:code:{..<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "`{code:\t}a`# h.",
+      "html": "<p><code>{code:\t}a</code># h.</p>"
+    },
+    {
+      "markdown": "<\n\n&]",
+      "html": "<p>&lt;</p>\n<p>&amp;]</p>"
+    },
+    {
+      "markdown": "@abcdef1*{doc: a} /..b",
+      "html": "<p>@abcdef1*{doc: a} /..b</p>"
+    },
+    {
+      "markdown": "```@abcdef1",
+      "html": "<pre><code></code></pre>"
+    },
+    {
+      "markdown": "b/#L3src/{code:.@",
+      "html": "<p>b/#L3src/{code:.@</p>"
+    },
+    {
+      "markdown": "*doc:.",
+      "html": "<p>*doc:.</p>"
+    },
+    {
+      "markdown": "doc:{code:#@abcdef1code: # h{code:\t}b|#L3| a | b |",
+      "html": "<p>doc:{code:#@abcdef1code: # h{code:\t}b|#L3| a | b |</p>"
+    },
+    {
+      "markdown": "#L3-L9#*{code:@]{code:#L3-L9<]]",
+      "html": "<h1 id=\"l3-l9-code-code-l3-l9\">L3-L9#*{code:@]{code:#L3-L9&lt;]]<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "code:- item< &## h {code: x@abcdef1}code:/>[[",
+      "html": "<p>code:- item&lt; &amp;## h {code: x@abcdef1}code:/&gt;[[</p>"
+    },
+    {
+      "markdown": ":",
+      "html": "<p>:</p>"
+    },
+    {
+      "markdown": "*../#L3-L9.. ]][[:/..video:**",
+      "html": "<p>*../#L3-L9.. ]][[:/..video:**</p>"
+    },
+    {
+      "markdown": "\tb[[**x.py@",
+      "html": "<p>b[[**x.py@</p>"
+    },
+    {
+      "markdown": "|-{doc: a}{code:[code:\"{code:]//",
+      "html": "<table><tbody><tr><td>-{doc: a}{code:[code:&quot;{code:]//</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "**:/.{doc: a}b>/.*```",
+      "html": "<p>**:/.{doc: a}b&gt;/.*```</p>"
+    },
+    {
+      "markdown": "/.|---|---|{code:#L3-L9[```-```",
+      "html": "<p>/.|---|---|{code:#L3-L9[``<code>-</code>``</p>"
+    },
+    {
+      "markdown": "./..*doc:&..#x.py{code:\t}",
+      "html": "<p>./..*doc:&amp;..#x.py{code:\t}</p>"
+    },
+    {
+      "markdown": "|{-src/## h {code: x@abcdef1}*-{code:b]`<",
+      "html": "<table><tbody><tr><td>{-src/## h {code: x@abcdef1}*-{code:b]`&lt;</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "#/.",
+      "html": "<h1 id=\"section\">/.<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "# h",
+      "html": "<h1 id=\"h\">h<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "@abcdef1# h..*@abcdef1doc:",
+      "html": "<p>@abcdef1# h..*@abcdef1doc:</p>"
+    },
+    {
+      "markdown": "{\t]]/..\"]{code:\t}{code:\t\t",
+      "html": "<p>{\t]]/..&quot;]{code:\t}{code:</p>"
+    },
+    {
+      "markdown": "\n/../]]{doc: a}}}",
+      "html": "<p>/../]]{doc: a}}}</p>"
+    },
+    {
+      "markdown": "@{",
+      "html": "<p>@{</p>"
+    },
+    {
+      "markdown": " ",
+      "html": ""
+    },
+    {
+      "markdown": ".:-|`---1. itemcode:\\",
+      "html": "<p>.:-|`---1. itemcode:\\</p>"
+    },
+    {
+      "markdown": "> ```",
+      "html": "<p>&gt; ```</p>"
+    },
+    {
+      "markdown": "\na\\doc:b}#\t",
+      "html": "<p>a\\doc:b}#</p>"
+    },
+    {
+      "markdown": "***doc:/<",
+      "html": "<p>***doc:/&lt;</p>"
+    },
+    {
+      "markdown": "-#L3-L9}---#L3]]",
+      "html": "<p>-#L3-L9}---#L3]]</p>"
+    },
+    {
+      "markdown": "| a | b |a[[---doc:[#b",
+      "html": "<table><tbody><tr><td>a</td><td>b</td><td>a[[---doc:[#b</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "]#L3-L9 @abcdef1 b- item..@abcdef1x.py",
+      "html": "<p>]#L3-L9 @abcdef1 b- item..@abcdef1x.py</p>"
+    },
+    {
+      "markdown": "[:{code:",
+      "html": "<p>[:{code:</p>"
+    },
+    {
+      "markdown": "-//.`b\n\n",
+      "html": "<p>-//.`b</p>"
+    },
+    {
+      "markdown": "\n\nx.py]]- item|---|---|# h12.code:|",
+      "html": "<p>x.py]]- item|---|---|# h12.code:|</p>"
+    },
+    {
+      "markdown": "@abcdef1video:## h {code: x@abcdef1}```/..:1. item{doc: a}{",
+      "html": "<p>@abcdef1video:## h {code: x@abcdef1}```/..:1. item{doc: a}{</p>"
+    },
+    {
+      "markdown": "12.",
+      "html": "<p>12.</p>"
+    },
+    {
+      "markdown": ".\\",
+      "html": "<p>.\\</p>"
+    },
+    {
+      "markdown": "{doc: a}/.}",
+      "html": "<p>{doc: a}/.}</p>"
+    },
+    {
+      "markdown": "\"/## h {code: x@abcdef1}]]\n\n{code:\t}1. item",
+      "html": "<p>&quot;/## h {code: x@abcdef1}]]</p>\n<p>{code:\t}1. item</p>"
+    },
+    {
+      "markdown": "\"## h {code: x@abcdef1}",
+      "html": "<p>&quot;## h {code: x@abcdef1}</p>"
+    },
+    {
+      "markdown": "|---|---|#L3## h {code: x@abcdef1}| a | b |/## h {code: x@abcdef1}---{code:",
+      "html": "<table><tbody><tr><td>---</td><td>---</td><td>#L3## h {code: x@abcdef1}</td><td>a</td><td>b</td><td>/## h {code: x@abcdef1}---{code:</td></tr></tbody></table>"
+    },
+    {
+      "markdown": ">.|1. item<\t",
+      "html": "<p>&gt;.|1. item&lt;</p>"
+    },
+    {
+      "markdown": "---*12.{code:`- item\n-",
+      "html": "<p>---*12.{code:`- item -</p>"
+    },
+    {
+      "markdown": ">b## h {code: x@abcdef1}a- item@abcdef1",
+      "html": "<p>&gt;b## h {code: x@abcdef1}a- item@abcdef1</p>"
+    },
+    {
+      "markdown": "12.12.",
+      "html": "<p>12.12.</p>"
+    },
+    {
+      "markdown": "*",
+      "html": "<p>*</p>"
+    },
+    {
+      "markdown": "<\"/..",
+      "html": "<p>&lt;&quot;/..</p>"
+    },
+    {
+      "markdown": " @abcdef1src/|\t}| a | b |\n\n\\#L3 &",
+      "html": "<p>@abcdef1src/|\t}| a | b |</p>\n<p>\\#L3 &amp;</p>"
+    },
+    {
+      "markdown": "|x.py>..@# h#L3-L9<]",
+      "html": "<table><tbody><tr><td>x.py&gt;..@# h#L3-L9&lt;]</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "doc:@abcdef1 - item## h {code: x@abcdef1}#@abcdef1# h\t```code:@",
+      "html": "<p>doc:@abcdef1 - item## h {code: x@abcdef1}#@abcdef1# h\t```code:@</p>"
+    },
+    {
+      "markdown": "&]/.-",
+      "html": "<p>&amp;]/.-</p>"
+    },
+    {
+      "markdown": "```",
+      "html": "<pre><code></code></pre>"
+    },
+    {
+      "markdown": "|---|---|@*video:@abcdef1|a:",
+      "html": "<table><tbody><tr><td>---</td><td>---</td><td>@*video:@abcdef1</td><td>a:</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "-..x.py- item#L3|/.| a | b |",
+      "html": "<p>-..x.py- item#L3|/.| a | b |</p>"
+    },
+    {
+      "markdown": "x.py---video:../-/.<",
+      "html": "<p>x.py---video:../-/.&lt;</p>"
+    },
+    {
+      "markdown": "{video:*@{",
+      "html": "<p>{video:*@{</p>"
+    },
+    {
+      "markdown": "\\{",
+      "html": "<p>\\{</p>"
+    },
+    {
+      "markdown": "}\nsrc/\ndoc:|---|---|]*```}",
+      "html": "<p>} src/ doc:|---|---|]*```}</p>"
+    },
+    {
+      "markdown": "[#L3-L9@12..& *# hx.py/}",
+      "html": "<p>[#L3-L9@12..&amp; *# hx.py/}</p>"
+    },
+    {
+      "markdown": "*>\n#L3-L9..",
+      "html": "<p>*&gt;</p>\n<h1 id=\"l3-l9\">L3-L9..<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "-\n",
+      "html": "<p>-</p>"
+    },
+    {
+      "markdown": "## h {code: x@abcdef1}/..---]]|\n`# h- item\n\n[",
+      "html": "<h2 id=\"h\">h /..---]]|<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a></span></h2>\n<p>`# h- item</p>\n<p>[</p>"
+    },
+    {
+      "markdown": "---\"```|{code:a# h",
+      "html": "<p>---&quot;```|{code:a# h</p>"
+    },
+    {
+      "markdown": "- item\n\n#L3#doc:{code:||>/..```",
+      "html": "<ul><li>item</li></ul>\n<h1 id=\"l3-doc-code\">L3#doc:{code:||&gt;/..```<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "video:\n]]\n#L3-L9 }",
+      "html": "<p>video: ]]</p>\n<h1 id=\"l3-l9\">L3-L9 }<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "{doc: a}1. item# h{```",
+      "html": "<p>{doc: a}1. item# h{```</p>"
+    },
+    {
+      "markdown": "]]",
+      "html": "<p>]]</p>"
+    },
+    {
+      "markdown": "#L3-L9@*\n\n{code:{doc: a}<{doc: a}[[\n",
+      "html": "<h1 id=\"l3-l9\">L3-L9@*<span class=\"heading-chips\"></span></h1>\n<p>{code:{doc: a}&lt;{doc: a}[[</p>"
+    },
+    {
+      "markdown": "{code:#L3\\{doc: a}}\n\n{code:\t}",
+      "html": "<p>{code:#L3\\{doc: a}}</p>\n<p>{code:\t}</p>"
+    },
+    {
+      "markdown": "#L3-L9]]code:**# h```",
+      "html": "<h1 id=\"l3-l9-code-h\">L3-L9]]code:**# h```<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": ">doc:<*@",
+      "html": "<p>&gt;doc:&lt;*@</p>"
+    },
+    {
+      "markdown": "&",
+      "html": "<p>&amp;</p>"
+    },
+    {
+      "markdown": "..]**# h/.]]x.py#L3",
+      "html": "<p>..]**# h/.]]x.py#L3</p>"
+    },
+    {
+      "markdown": "\t \n\n\n\n[ x.py1. item*src/",
+      "html": "<p>[ x.py1. item*src/</p>"
+    },
+    {
+      "markdown": "\"```]]doc:|..&x.py#",
+      "html": "<p>&quot;```]]doc:|..&amp;x.py#</p>"
+    },
+    {
+      "markdown": "[[b\\/.#L3| a | b |\n]#L3b",
+      "html": "<p>[[b\\/.#L3| a | b | ]#L3b</p>"
+    },
+    {
+      "markdown": "**---<]]-\na/.*",
+      "html": "<p>**---&lt;]]- a/.*</p>"
+    },
+    {
+      "markdown": "{code:\t}{doc: a}bx.py**",
+      "html": "<p>{code:\t}{doc: a}bx.py**</p>"
+    },
+    {
+      "markdown": "<```@b\\//---{doc: a}]",
+      "html": "<p>&lt;```@b\\//---{doc: a}]</p>"
+    },
+    {
+      "markdown": "\"1. item}}/....code:",
+      "html": "<p>&quot;1. item}}/....code:</p>"
+    },
+    {
+      "markdown": "x.py- item/{doc: a}`/..][[b/.. #L3-L9",
+      "html": "<p>x.py- item/{doc: a}`/..][[b/.. #L3-L9</p>"
+    },
+    {
+      "markdown": "code:```",
+      "html": "<p>code:```</p>"
+    },
+    {
+      "markdown": "\n\n}12.code:#L3..{{doc: a}doc:",
+      "html": "<p>}12.code:#L3..{{doc: a}doc:</p>"
+    },
+    {
+      "markdown": "#L3-L9code:abcode:{doc: a}{&",
+      "html": "<h1 id=\"l3-l9code-abcode\">L3-L9code:abcode:{&amp;<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"doc:a\">doc a</a></span></h1>"
+    },
+    {
+      "markdown": "#x.py---{doc: a}12.a{code:\t}",
+      "html": "<h1 id=\"x-py-12-a-code\">x.py---12.a{code:\t}<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"doc:a\">doc a</a></span></h1>"
+    },
+    {
+      "markdown": "|## h<# h---# h12.",
+      "html": "<table><tbody><tr><td>## h&lt;# h---# h12.</td></tr></tbody></table>"
+    },
+    {
+      "markdown": "/.#{]].]]code:]]#<#",
+      "html": "<p>/.#{]].]]code:]]#&lt;#</p>"
+    },
+    {
+      "markdown": "\t\n\n",
+      "html": ""
+    },
+    {
+      "markdown": "doc:#L3| a | b || a | b |",
+      "html": "<p>doc:#L3| a | b || a | b |</p>"
+    },
+    {
+      "markdown": "# h[[## h {code: x@abcdef1}\n## h {code: x@abcdef1}@# h/..#L3x.py",
+      "html": "<h1 id=\"h-h\">h[[## h<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a></span></h1>\n<h2 id=\"h-h-l3x-py\">h @# h/..#L3x.py<span class=\"heading-chips\"><a class=\"chip\" href=\"#\" data-anchor=\"code:x@abcdef1\">x</a></span></h2>"
+    },
+    {
+      "markdown": "\":{doc: a}",
+      "html": "<p>&quot;:{doc: a}</p>"
+    },
+    {
+      "markdown": "#L3-L9@abcdef1---| a | b |.",
+      "html": "<h1 id=\"l3-l9-abcdef1-a-b\">L3-L9@abcdef1---| a | b |.<span class=\"heading-chips\"></span></h1>"
+    },
+    {
+      "markdown": "..code:**x.py#L3*",
+      "html": "<p>..code:**x.py#L3*</p>"
+    },
+    {
+      "markdown": "/..#L3*{doc: a}&\n----.\t/.src/",
+      "html": "<p>/..#L3*{doc: a}&amp; ----.\t/.src/</p>"
+    },
+    {
+      "markdown": "\"video:|@abcdef1@## h {code: x@abcdef1}[[{code:/.\t-",
+      "html": "<p>&quot;video:|@abcdef1@## h {code: x@abcdef1}[[{code:/.\t-</p>"
+    },
+    {
+      "markdown": "---]*",
+      "html": "<p>---]*</p>"
+    },
+    {
+      "markdown": "b| a | b |b/|x.py1. item..[}",
+      "html": "<p>b| a | b |b/|x.py1. item..[}</p>"
+    },
+    {
+      "markdown": "- item{src/{doc: a}code:----| a | b |]]@src/",
+      "html": "<ul><li>item{src/{doc: a}code:----| a | b |]]@src/</li></ul>"
+    },
+    {
+      "markdown": "}",
+      "html": "<p>}</p>"
+    },
+    {
+      "markdown": "{\n\n1. item`12.\\video:&",
+      "html": "<p>{</p>\n<ol><li>item`12.\\video:&amp;</li></ol>"
+    }
+  ]
+}

@@ -23,11 +23,11 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M1 Fixture repo, selftest scaffold, stills writer | verified on the Mac | fixtureRepoProbe, stillsWriterProbe | S3 |
 | M2 Package format, anchors, git, Research Packet contract | verified on the Mac | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S3 |
 | M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
-| M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
+| M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
-| M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift diagrams written, registers and hub pending | diagramLinksProbe, diagramRenderProbe, registerLinksProbe, landminesDocProbe, traceMermaidProbe, coverageCardProbe | |
+| M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
 | M10 Hub, cross-links, search, export, coverage tracker | hub built and driven in a browser; Swift wiring pending | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
 | M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
@@ -388,6 +388,74 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S5: 2026-09-21 — M8 complete: the Swift projectors, and fuzzing found two real divergences
+Milestone(s): M8
+Built:
+- `MarkdownLite.swift` — the markdown subset plus the `[[anchor]]` citation grammar:
+  `esc`, `anchorLabel`, `inlineHTML`, `toHTML`, and one `scanCitations` shared by the
+  chip renderer and the backlink index.
+- `HubProjector.swift` — `hub/index.json` (reading order, minutes, coverage summary)
+  and `index/anchors.json` (anchor -> every deliverable citing it). The hub
+  republishes `packet.json` and `coverage.json` sub-objects **verbatim** rather than
+  re-encoding the decoded models: a date the producer wrote as
+  `2025-02-06T10:00:00+00:00` should reach the reader that way, and a field a future
+  schema adds should travel even though this build knows nothing about it.
+- `PackageProjector.swift` — orchestrates the three projectors, writes every file,
+  and (given a checkout) emits the cited sources at the pinned commit so a package
+  shared as a folder needs no git.
+- `projectorParityProbe` — runs the Swift over the fixture packet and diffs against
+  `fixture-repo.golden`. Markdown and Mermaid byte for byte; JSON as values, because
+  object key order is not meaningful and the two languages order it differently.
+  Array order is meaningful and is compared.
+- `markdownLiteProbe` plus `markdown-lite-cases.json`, 576 adversarial cases whose
+  expectations the reference computed, regenerable with
+  `scripts/make-markdown-cases.py`. The golden projection only covers friendly prose;
+  every case in the corpus is a shape that once produced different output on the two
+  sides, and the regression list is append-only.
+- `OrderedJSONObject` and `Diagram.nodeOrder`: Python dicts keep insertion order and
+  `build_backlinks` walks the diagram nodes in it to build a JSON **array**. A Swift
+  `[String: Any]` would have reordered that at random.
+Verified (no Swift toolchain in this container, so: everything except compiling):
+- The checked-in golden projection is current: regenerating it from the reference
+  produces byte-identical files.
+- **The algorithms were transcribed back into Python and fuzzed against the
+  reference regexes.** 18 real documents, 326 real anchors, then 40,000 random
+  inline strings, 40,000 random markdown documents and 144,694 random anchors drawn
+  from a markdown-hostile alphabet. Final count: **0 divergences**.
+- The demo pipeline still builds and serves: fixture repo, packet validates with 0
+  errors, 4 diagrams, 14 registers, 4 traces, 21 hub items, 137 backlinked anchors,
+  15 code files, hub and a generated HTML page both served 200.
+- `scripts/check-skill-sync.sh` clean.
+- not verified: none of this Swift has been compiled or run.
+Broke / learned:
+- **The fuzz found two real bugs, both invisible in the fixture.** First, my anchor
+  parser took the last `#` in a `code:` anchor and gave up when what followed was
+  not a line span — so every chip for a path containing a hash (`c#-samples/x.cs`)
+  was mislabelled. The reference regex treats such a `#` as part of the path,
+  because `.+` is greedy and the line span is anchored to the end of the string.
+  Walking `@` from the right reproduces that backtracking exactly.
+- Second, `Path(...).name`: pathlib drops `.` components while parsing and keeps
+  `..`, so `src/.` is named `src`. My version returned the whole path.
+- **One divergence was the reference's bug, not mine.** `{code:   }` matched the
+  heading-chip regex, stripped to the empty string and emitted a chip pointing at
+  the anchor `code:`. Requiring one non-space character (`[^}\s][^}]*`) drops it
+  instead, which is what the Swift already did. Fixed in `project_packet.py`; the
+  golden is byte-identical after the change, so no real content relied on it.
+- Two implementations of one contract will drift; the only question is whether a
+  build says so or a reader discovers it. Transcribing the Swift back into Python
+  and fuzzing it against the reference is the cheapest way found so far to get the
+  answer before a Mac is in the room — it has now caught four real defects across
+  two sessions, none of which a reading review found.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then
+   `./.build/debug/WalkthroughStudio --selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out`
+   — ten probes now, `markdownLiteProbe` and `projectorParityProbe` last. Then the
+   original `--selftest`.
+2. M4: the player shell. It now has real deliverables to show.
+3. M5: narration, scene renderer, transcript and code-ref map.
 
 ### S4: 2026-09-21 — M8 Swift port begins, and an ordering error in the plan
 Milestone(s): M8

@@ -71,6 +71,8 @@ extension SelfTest {
             ("gitRunnerProbe", { probeCtx in try await Self.gitRunnerProbe(probeCtx) }),
             ("packetValidateProbe", { probeCtx in try await Self.packetValidateProbe(probeCtx) }),
             ("fixturePacketProbe", { probeCtx in try await Self.fixturePacketProbe(probeCtx) }),
+            ("markdownLiteProbe", { probeCtx in try await Self.markdownLiteProbe(probeCtx) }),
+            ("projectorParityProbe", { probeCtx in try await Self.projectorParityProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

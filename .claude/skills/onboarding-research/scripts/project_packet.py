@@ -685,7 +685,10 @@ def build_backlinks(pk, docs, diagram_links, trace_docs):
 INLINE_CODE = re.compile(r"`([^`]+)`")
 BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CITATION = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
-HEADING_CHIP = re.compile(r"\{(video|code|doc|diagram|trace):\s*([^}]+)\}")
+HEADING_CHIP = re.compile(r"\{(video|code|doc|diagram|trace):\s*([^}\s][^}]*)\}")
+# The value has to carry something: `{code:   }` used to match, strip to "" and emit a
+# chip pointing at the anchor "code:". Requiring one non-space character drops it
+# instead, which is also what the Swift MarkdownLite does.
 
 
 def esc(text):
