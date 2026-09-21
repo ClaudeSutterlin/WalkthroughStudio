@@ -20,9 +20,9 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | Milestone | Status | Probe | Last session |
 |---|---|---|---|
 | M0 Planning docs (user stories, architecture, build log) | verified | n/a (docs) | S2 |
-| M1 Fixture repo, selftest scaffold, stills writer | built (not compiled) | fixtureRepoProbe, stillsWriterProbe | S2 |
-| M2 Package format, anchors, git, Research Packet contract | built (not compiled) | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S2 |
-| M3 Claude Code producer skill and the fixture packet | verified, and the skill runs standalone from an isolated copy | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
+| M1 Fixture repo, selftest scaffold, stills writer | verified on the Mac | fixtureRepoProbe, stillsWriterProbe | S3 |
+| M2 Package format, anchors, git, Research Packet contract | verified on the Mac | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S3 |
+| M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | planned | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, markdownLiteProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe | |
 | M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
@@ -388,3 +388,47 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S3: 2026-09-21 — First compile and first run on the Mac: all eight probes pass
+Milestone(s): M1, M2, M3
+Built:
+- Nothing new. This session compiled and ran what S2 wrote blind.
+Verified (on the human's MacBook, Xcode 26.2 / macOS 26.2 SDK):
+- `swift build`: **Build complete (7.86s)** on the first attempt. 8,148 lines of
+  Swift written by three agents with no compiler available, reviewed only by
+  reading, compiled clean. The only warnings are pre-existing Swift 6
+  sendability notices in `Services/FrameCompositor.swift`, a file this branch
+  never touched.
+- `--selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out`: **SELFTEST PASS**,
+  8 of 8 probes, first run:
+  1. fixtureRepoProbe: HEAD fb63e78, 12 commits, Ada 8 / Grace 4, 15 files, tests PASS
+  2. stillsWriterProbe: 10.00s stills, 4 frames colour-checked; narrated 9.00s, audio reaches 6.50s
+  3. anchorRoundTripProbe: 19 anchors round-trip as string, URL and JSON; 14 malformed rejected
+  4. manifestRoundTripProbe: unknown keys ignored, missing optionals nil
+  5. packageStoreProbe: 13 dirs, atomic overwrite leaves no temp files, 2 sessions in both logs, keys redacted
+  6. gitRunnerProbe: archive == ls-tree (15 files), blame 1-3 Ada, 1 worktree (the user's clone untouched), acquire(.local) clean
+  7. packetValidateProbe: fixture packet 0 errors 0 warnings; the deliberately broken copy rejected with exactly 3 errors; import succeeded
+  8. fixturePacketProbe: all eight acceptance findings present, including idempotency absent in order-creation
+Broke / learned:
+- The three riskiest assumptions the writers flagged all held. `endSession(atSourceTime:)`
+  does extend the final sample: the stills movie measured 10.00s, not the 9.5s the
+  writer feared. `xcrun --find git` and the GIT_ASKPASS helper work under the
+  hardened runtime. `Bundle.module` finds the fixture packet, so the
+  `.copy("OnboardingResources")` resource rule is correct.
+- Worth watching, not yet a bug: the narrated output measured 9.00s against a
+  10.00s stills asset. That is `assembleNarratedVideo`'s documented silent clamp
+  (CLAUDE.md known limitations), not a new defect, and the probe's own assertion
+  (audio reaching past the last segment start) held. Revisit when M5 builds real
+  videos, where a clamp would desync captions.
+- Reading review caught nothing false here, but it also cannot prove runtime
+  behaviour. Writing probes that assert observed values, not just "it ran", is
+  what made this session a five-minute confirmation instead of a debugging day.
+Limits hit:
+- none.
+Next:
+1. Run the existing `--selftest` to confirm no regression in the original pipeline
+   (the timeline extraction and the terminate-guard change both touched it), and
+   look at the PNGs and MP4s it dumps.
+2. M4: the player shell, now unblocked because StillsVideoWriter and ToneNarrator
+   can build a real fixture video on the Mac.
+3. M5: narration, scene renderer, transcript and code-ref map.
