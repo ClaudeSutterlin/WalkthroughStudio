@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><style>
+  :root {
+    --cream: #FFFBF5; --warm: #FFF7EE; --soft: #FFF3E6;
+    --coral: #DA4F45; --accent: #DA4F45; --coral-glow: #FF6B5E; --peach: #FFB088; --golden: #F5A623;
+    --charcoal: #1A1612; --muted: #5C5549; --faded: #9B9286;
+    --line: #E3D5C3;
+    --code-bg: #1A1612; --code-fg: #F2E8DC; --code-dim: #8C8073;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #ccc; }
+  .scene {
+    position: relative; width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden;
+    background:
+      radial-gradient(1200px 900px at 85% -10%, rgba(255,176,136,0.24), transparent 60%),
+      radial-gradient(1000px 800px at -10% 20%, rgba(218,79,69,0.08), transparent 55%),
+      linear-gradient(180deg, var(--warm) 0%, var(--cream) 50%, var(--soft) 100%);
+    font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+    display: flex; flex-direction: column;
+    padding: calc({{HEIGHT}}px * 0.055) calc({{WIDTH}}px * 0.045);
+  }
+  .head { display: flex; align-items: baseline; gap: 14px; margin-bottom: calc({{HEIGHT}}px * 0.028); }
+  .head .title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc({{HEIGHT}}px * 0.052); color: var(--charcoal); letter-spacing: -0.5px;
+  }
+  .head .where {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: calc({{HEIGHT}}px * 0.022); color: var(--muted);
+  }
+  /* The terminal and its verdict centre as one block, so the verdict reads as this
+     command's result rather than as a footer pinned to the frame. */
+  .term {
+    flex: 0 1 auto; margin-top: auto; min-height: 0;
+    background: #0F0D0B; border-radius: calc({{HEIGHT}}px * 0.022);
+    box-shadow: 0 calc({{HEIGHT}}px * 0.022) calc({{HEIGHT}}px * 0.055) rgba(26,22,18,0.26);
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .term .bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: calc({{HEIGHT}}px * 0.016) calc({{HEIGHT}}px * 0.024);
+    background: rgba(255,251,245,0.05); border-bottom: 1px solid rgba(255,251,245,0.08);
+  }
+  .term .bar i { width: calc({{HEIGHT}}px * 0.013); height: calc({{HEIGHT}}px * 0.013); border-radius: 50%; display: block; }
+  .term .bar .r { background: var(--accent); } .term .bar .y { background: var(--golden); } .term .bar .g { background: #7FB069; }
+  .term .body {
+    padding: calc({{HEIGHT}}px * 0.024) calc({{HEIGHT}}px * 0.028);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: {{CODE_PX}}px; line-height: {{LINE_PX}}px; color: var(--code-fg);
+    white-space: pre-wrap; overflow: hidden;
+  }
+  .term .body .cmd { color: #F2E8DC; }
+  .term .body .cmd::before { content: "$ "; color: var(--accent); }
+  .term .body .out { color: var(--code-dim); }
+  .term .body .bad { color: var(--accent); }
+  .status {
+    flex: 0 0 auto; margin-top: calc({{HEIGHT}}px * 0.03); margin-bottom: auto;
+    display: flex; align-items: center; gap: 12px;
+    font-size: calc({{HEIGHT}}px * 0.028); color: var(--charcoal);
+  }
+  .status .pill {
+    padding: calc({{HEIGHT}}px * 0.008) calc({{HEIGHT}}px * 0.020); border-radius: 999px;
+    font-size: calc({{HEIGHT}}px * 0.022); font-weight: 700; color: var(--cream);
+    background: var(--accent);
+  }
+  .status .pill.ok { background: #5E8C4F; }
+  .status.empty { visibility: hidden; }
+  {{THEME_CSS}}
+</style></head>
+<body><div class="scene">
+  <div class="head"><div class="title">{{TITLE}}</div><div class="where">{{WHERE}}</div></div>
+  <div class="term">
+    <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+    <div class="body">{{LINES}}</div>
+  </div>
+  <div class="status {{STATUS_CLASS}}"><span class="pill {{STATUS_KIND}}">{{STATUS}}</span><span>{{NOTE}}</span></div>
+</div></body>
+</html>

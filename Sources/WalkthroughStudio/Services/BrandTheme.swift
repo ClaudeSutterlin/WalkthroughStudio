@@ -99,6 +99,10 @@ struct BrandTheme: Codable, Equatable, Hashable {
     func css() -> String {
         guard !isDefault else { return "" }
         var rules: [String] = []
+        // The scene templates (the code walk) read `--accent`; the slide and video-frame
+        // templates do not, so a project that already has a theme keeps exactly the
+        // appearance it has today and the new scenes follow the accent from the start.
+        rules.append(":root { --accent: \(accentColor); }")
         rules.append(".headline { color: \(headlineColor); font-family: \(headlineFontCSS); }")
         rules.append(".headline .accent { color: \(accentColor); }")
         rules.append(".sub { color: \(subColor); }")
@@ -172,7 +176,9 @@ extension Color {
 /// Loads frame templates, preferring user-edited copies in Application Support
 /// over the bundled defaults — the escape hatch for full HTML/CSS redesigns.
 enum TemplateStore {
-    static let templateNames = ["slide-template", "video-frame-template"]
+    static let templateNames = ["slide-template", "video-frame-template",
+                                "scene-code", "scene-title", "scene-card",
+                                "scene-terminal", "scene-table", "scene-diagram"]
 
     static var directory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -223,6 +229,9 @@ enum TemplateStore {
     | `slide-template.html` | App Store screenshots (portrait) | `{{WIDTH}}x{{HEIGHT}}` — 1290x2796 and 1284x2778 |
     | `video-frame-template.html` | The 16:9 framed video export | `{{WIDTH}}x{{HEIGHT}}` — 1920x1080 |
 
+    The six `scene-*.html` files in this folder belong to the onboarding code
+    walks and have their own contract, described further down.
+
     ## The contract — keep these placeholders
 
     The app fills these slots before rendering; everything else is yours.
@@ -258,6 +267,32 @@ enum TemplateStore {
       given by these values — restyle anything you like, but the `.phone`
       element must stay positioned by these placeholders or the video will
       land in the wrong place.
+
+    ## The six code-walk scenes
+
+    An onboarding package's narrated code walks are rendered from these, one
+    template per kind of shot. They share a `--accent` variable that the theme
+    editor sets, so an accent change follows through every scene.
+
+    | File | Shows | Its own slots |
+    |---|---|---|
+    | `scene-code.html` | a source file with a highlighted range | `{{PATH}} {{SHA}} {{ROWS}} {{CODE_PX}} {{LINE_PX}} {{CALLOUT}} {{CALLOUT_CLASS}}` |
+    | `scene-title.html` | the opening card | `{{TITLE}} {{SUB}} {{WHERE}}` |
+    | `scene-card.html` | one claim and its evidence | `{{KICKER}} {{CLAIM}} {{CHIPS}} {{HEDGE}} {{HEDGE_CLASS}}` |
+    | `scene-terminal.html` | a command and what it printed | `{{LINES}} {{STATUS}} {{STATUS_KIND}} {{NOTE}} {{CODE_PX}} {{LINE_PX}}` |
+    | `scene-table.html` | a register or a trace's concerns | `{{ROWS}} {{CELL_PX}}` |
+    | `scene-diagram.html` | a Mermaid diagram with focused nodes | `{{SVG}} {{FOCUS_COLOR}} {{CHIPS}} {{LEGEND_CLASS}}` |
+
+    All six also take `{{WIDTH}} {{HEIGHT}} {{THEME_CSS}} {{TITLE}} {{WHERE}}`.
+
+    Two rules are worth keeping if you restyle `scene-code.html`:
+
+    - **`{{CODE_PX}}` and `{{LINE_PX}}` are computed per shot**, so a nine-line
+      migration reads large and a forty-line file still fits. Derive your type
+      sizes from them rather than hard-coding a size.
+    - **`.gap` rows say how many lines are off screen.** The app picks a window
+      centred on the highlight when a file will not fit; hiding those rows would
+      show a file that looks complete and is not.
 
     ## Theme editor interplay
 

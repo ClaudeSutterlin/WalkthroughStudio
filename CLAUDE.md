@@ -139,6 +139,7 @@ every deliverable and serves the hub.
 ```sh
 scripts/build-onboarding-demo.sh          # then open http://127.0.0.1:8731/hub.html
 scripts/check-skill-sync.sh               # the skill's copies have not drifted
+scripts/check-scene-templates.py          # every {{SLOT}} a scene declares is filled
 swift build
 ./.build/debug/WalkthroughStudio --selftest-onboarding /tmp/onboarding-demo/fixture-repo /tmp/onboarding-out
 ./.build/debug/WalkthroughStudio --selftest /tmp/test-walkthrough.mov /tmp/out   # must still pass

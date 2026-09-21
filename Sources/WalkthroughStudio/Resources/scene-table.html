@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><style>
+  :root {
+    --cream: #FFFBF5; --warm: #FFF7EE; --soft: #FFF3E6;
+    --coral: #DA4F45; --accent: #DA4F45; --coral-glow: #FF6B5E; --peach: #FFB088; --golden: #F5A623;
+    --charcoal: #1A1612; --muted: #5C5549; --faded: #9B9286;
+    --line: #E3D5C3;
+    --code-bg: #1A1612; --code-fg: #F2E8DC; --code-dim: #8C8073;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #ccc; }
+  .scene {
+    position: relative; width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden;
+    background:
+      radial-gradient(1200px 900px at 85% -10%, rgba(255,176,136,0.24), transparent 60%),
+      radial-gradient(1000px 800px at -10% 20%, rgba(218,79,69,0.08), transparent 55%),
+      linear-gradient(180deg, var(--warm) 0%, var(--cream) 50%, var(--soft) 100%);
+    font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+    display: flex; flex-direction: column;
+    padding: calc({{HEIGHT}}px * 0.055) calc({{WIDTH}}px * 0.045);
+  }
+  .head { margin-bottom: calc({{HEIGHT}}px * 0.032); }
+  .head .title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc({{HEIGHT}}px * 0.058); color: var(--charcoal); letter-spacing: -0.5px;
+  }
+  .head .sub { margin-top: calc({{HEIGHT}}px * 0.012); font-size: calc({{HEIGHT}}px * 0.026); color: var(--muted); }
+  table {
+    flex: 0 1 auto; margin-top: auto; margin-bottom: auto;
+    border-collapse: collapse; width: 100%; font-size: {{CELL_PX}}px;
+    background: rgba(255,255,255,0.6); border-radius: calc({{HEIGHT}}px * 0.014); overflow: hidden;
+  }
+  th, td {
+    border-bottom: 1px solid var(--line); text-align: left; vertical-align: top;
+    padding: calc({{CELL_PX}}px * 0.62) calc({{CELL_PX}}px * 0.9);
+    line-height: 1.32; color: var(--charcoal);
+  }
+  th { background: var(--soft); font-weight: 700; font-size: calc({{CELL_PX}}px * 0.86); letter-spacing: 0.3px; }
+  tr:last-child td { border-bottom: none; }
+  td.mono, th.mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: calc({{CELL_PX}}px * 0.88); }
+  /* Colour carries the verdict: absent is the finding, partial is a caveat, present
+     is fine. Painting all three coral would make a clean row look like a problem. */
+  td .flag { font-weight: 700; color: var(--accent); }
+  td .flag.warn { color: #B07A16; }
+  td .flag.ok { color: #4F7A42; }
+  {{THEME_CSS}}
+</style></head>
+<body><div class="scene">
+  <div class="head"><div class="title">{{TITLE}}</div><div class="sub">{{SUB}}</div></div>
+  <table>{{ROWS}}</table>
+</div></body>
+</html>

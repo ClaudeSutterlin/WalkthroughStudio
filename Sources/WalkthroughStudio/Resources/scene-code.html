@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --cream: #FFFBF5;
+    --warm: #FFF7EE;
+    --soft: #FFF3E6;
+    --coral: #DA4F45; --accent: #DA4F45;
+    --coral-glow: #FF6B5E;
+    --peach: #FFB088;
+    --golden: #F5A623;
+    --charcoal: #1A1612;
+    --muted: #5C5549;
+    --faded: #9B9286;
+    /* Code tokens. Warm, low-saturation, readable at video bitrates: a blue that
+       survives H.264 chroma subsampling next to cream, not a neon IDE palette. */
+    --code-bg: #1A1612;
+    --code-fg: #F2E8DC;
+    --code-dim: #8C8073;
+    --tok-keyword: #FF9E8F;
+    --tok-string: #B8D4A0;
+    --tok-number: #F5C26B;
+    --tok-comment: #7E7468;
+    --tok-name: #F2E8DC;
+    --tok-type: #9EC7E8;
+    --tok-punct: #B7AC9F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #ccc; }
+
+  .scene {
+    position: relative;
+    width: {{WIDTH}}px;
+    height: {{HEIGHT}}px;
+    overflow: hidden;
+    background:
+      radial-gradient(1200px 900px at 85% -10%, rgba(255,176,136,0.24), transparent 60%),
+      radial-gradient(1000px 800px at -10% 20%, rgba(218,79,69,0.08), transparent 55%),
+      linear-gradient(180deg, var(--warm) 0%, var(--cream) 50%, var(--soft) 100%);
+    font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: calc({{HEIGHT}}px * 0.055) calc({{WIDTH}}px * 0.045);
+  }
+
+  /* Heading: what this shot is about, in the brand serif. */
+  .head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: calc({{HEIGHT}}px * 0.028);
+    flex: 0 0 auto;
+  }
+  .head .title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc({{HEIGHT}}px * 0.052);
+    color: var(--charcoal);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .head .where {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: calc({{HEIGHT}}px * 0.022);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* The code panel. A dark card on cream, the way a code block sits in a light
+     document — high contrast for video without inverting the whole frame. */
+  /* The panel sizes to its content and never past the frame: a nine-line migration
+     gets a nine-line panel, not nine lines floating in a screenful of charcoal. The
+     renderer picks the type size to fill what is left (SceneRenderer.codeMetrics), so
+     a short file reads large and a long one still fits. */
+  .panel {
+    flex: 0 1 auto;
+    margin-top: auto;
+    min-height: 0;
+    background: var(--code-bg);
+    border-radius: calc({{HEIGHT}}px * 0.022);
+    box-shadow: 0 calc({{HEIGHT}}px * 0.022) calc({{HEIGHT}}px * 0.055) rgba(26,22,18,0.22);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel .bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 10px;
+    padding: calc({{HEIGHT}}px * 0.018) calc({{HEIGHT}}px * 0.026);
+    background: rgba(255,251,245,0.06);
+    border-bottom: 1px solid rgba(255,251,245,0.10);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: calc({{HEIGHT}}px * 0.021);
+    color: var(--code-dim);
+  }
+  .panel .bar .path { color: var(--code-fg); }
+  .panel .bar .sha { color: var(--code-dim); }
+  .panel .bar .dot {
+    width: calc({{HEIGHT}}px * 0.014); height: calc({{HEIGHT}}px * 0.014);
+    border-radius: 50%; background: var(--accent); flex: 0 0 auto;
+  }
+
+  .code {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: calc({{HEIGHT}}px * 0.022) 0;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: {{CODE_PX}}px;
+    line-height: {{LINE_PX}}px;
+    color: var(--code-fg);
+  }
+  .code .row { display: flex; padding: 0 calc({{HEIGHT}}px * 0.026); white-space: pre; }
+  .code .row .n {
+    flex: 0 0 auto; width: calc({{CODE_PX}}px * 3.2);
+    text-align: right; margin-right: calc({{CODE_PX}}px * 1.4);
+    color: var(--code-dim); user-select: none;
+  }
+  .code .row .t { flex: 1 1 auto; min-width: 0; }
+
+  /* The highlighted range: a coral band and a warm wash, so the eye lands on it
+     before the narrator names it. */
+  .code .row.hi { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .code .row.hi .n { color: var(--accent); }
+  .code .row.hi-first { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 62%, transparent); }
+  .code .row.hi-last { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 62%, transparent); }
+  .code .row.hi-first.hi-last {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 62%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent) 62%, transparent);
+  }
+  .code .row.hi .t { border-left: none; }
+  /* Lines the panel could not hold. Saying so beats silently showing a file that
+     looks complete and is not — the failure this marker exists to prevent. */
+  .code .gap {
+    display: flex; align-items: center; gap: calc({{CODE_PX}}px * 0.9);
+    padding: calc({{LINE_PX}}px * 0.18) calc({{HEIGHT}}px * 0.026);
+    color: var(--code-dim);
+    font-size: calc({{CODE_PX}}px * 0.82);
+    font-style: italic;
+  }
+  .code .gap::before {
+    content: "⋮";
+    font-style: normal;
+    width: calc({{CODE_PX}}px * 3.2);
+    margin-right: calc({{CODE_PX}}px * 1.4);
+    text-align: right;
+  }
+
+  /* Token colours, emitted by SyntaxTokenizer as single-letter classes. */
+  .k { color: var(--tok-keyword); }
+  .s { color: var(--tok-string); }
+  .m { color: var(--tok-number); }
+  .c { color: var(--tok-comment); font-style: italic; }
+  .y { color: var(--tok-type); }
+  .p { color: var(--tok-punct); }
+
+  /* The callout: one sentence, what to notice. */
+  .callout {
+    flex: 0 0 auto;
+    margin-top: calc({{HEIGHT}}px * 0.03);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .callout .mark {
+    width: calc({{HEIGHT}}px * 0.036); height: calc({{HEIGHT}}px * 0.036);
+    border-radius: calc({{HEIGHT}}px * 0.010);
+    background: var(--accent); flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cream); font-size: calc({{HEIGHT}}px * 0.024); font-weight: 700;
+  }
+  .callout .text {
+    font-size: calc({{HEIGHT}}px * 0.028);
+    color: var(--charcoal);
+    line-height: 1.35;
+  }
+  .callout.empty { visibility: hidden; }
+  .callout { margin-bottom: auto; }
+
+  {{THEME_CSS}}
+</style>
+</head>
+<body>
+  <div class="scene">
+    <div class="head">
+      <div class="title">{{TITLE}}</div>
+      <div class="where">{{WHERE}}</div>
+    </div>
+    <div class="panel">
+      <div class="bar">
+        <span class="dot"></span>
+        <span class="path">{{PATH}}</span>
+        <span class="sha">@ {{SHA}}</span>
+      </div>
+      <div class="code">{{ROWS}}</div>
+    </div>
+    <div class="callout {{CALLOUT_CLASS}}">
+      <div class="mark">!</div>
+      <div class="text">{{CALLOUT}}</div>
+    </div>
+  </div>
+</body>
+</html>

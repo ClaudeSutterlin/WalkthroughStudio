@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><style>
+  :root {
+    --cream: #FFFBF5; --warm: #FFF7EE; --soft: #FFF3E6;
+    --coral: #DA4F45; --accent: #DA4F45; --coral-glow: #FF6B5E; --peach: #FFB088; --golden: #F5A623;
+    --charcoal: #1A1612; --muted: #5C5549; --faded: #9B9286;
+    --line: #E3D5C3;
+    --code-bg: #1A1612; --code-fg: #F2E8DC; --code-dim: #8C8073;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #ccc; }
+  .scene {
+    position: relative; width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden;
+    background:
+      radial-gradient(1200px 900px at 85% -10%, rgba(255,176,136,0.24), transparent 60%),
+      radial-gradient(1000px 800px at -10% 20%, rgba(218,79,69,0.08), transparent 55%),
+      linear-gradient(180deg, var(--warm) 0%, var(--cream) 50%, var(--soft) 100%);
+    font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+    display: flex; flex-direction: column;
+    padding: calc({{HEIGHT}}px * 0.055) calc({{WIDTH}}px * 0.045);
+  }
+  .scene { align-items: center; justify-content: center; text-align: center; }
+  .wordmark { display: inline-flex; align-items: center; gap: 14px; margin-bottom: calc({{HEIGHT}}px * 0.07); }
+  .wordmark .icon {
+    width: calc({{HEIGHT}}px * 0.052); height: calc({{HEIGHT}}px * 0.052);
+    border-radius: calc({{HEIGHT}}px * 0.015); background: var(--accent);
+  }
+  .wordmark .name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc({{HEIGHT}}px * 0.032); color: var(--charcoal); letter-spacing: -0.5px;
+  }
+  .headline {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: calc({{HEIGHT}}px * 0.085); line-height: 1.12; color: var(--charcoal);
+    letter-spacing: -1px; max-width: 78%;
+  }
+  .sub {
+    margin-top: calc({{HEIGHT}}px * 0.038);
+    font-size: calc({{HEIGHT}}px * 0.032); line-height: 1.45; color: var(--muted);
+    max-width: 62%;
+  }
+  .rule {
+    margin-top: calc({{HEIGHT}}px * 0.055);
+    width: calc({{HEIGHT}}px * 0.13); height: calc({{HEIGHT}}px * 0.006);
+    border-radius: 999px; background: var(--accent);
+  }
+  .where {
+    margin-top: calc({{HEIGHT}}px * 0.045);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: calc({{HEIGHT}}px * 0.022); color: var(--faded);
+  }
+  {{THEME_CSS}}
+</style></head>
+<body><div class="scene">
+  {{WORDMARK}}
+  <div class="headline">{{TITLE}}</div>
+  <div class="sub">{{SUB}}</div>
+  <div class="rule"></div>
+  <div class="where">{{WHERE}}</div>
+</div></body>
+</html>

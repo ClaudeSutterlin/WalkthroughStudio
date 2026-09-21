@@ -79,6 +79,10 @@ extension SelfTest {
             ("backlinkIndexProbe", { probeCtx in try await Self.backlinkIndexProbe(probeCtx) }),
             ("onboardSheetProbe", { probeCtx in try await Self.onboardSheetProbe(probeCtx) }),
             ("playerStageProbe", { probeCtx in try await Self.playerStageProbe(probeCtx) }),
+            ("syntaxTokenizerProbe", { probeCtx in try await Self.syntaxTokenizerProbe(probeCtx) }),
+            ("codeSceneProbe", { probeCtx in try await Self.codeSceneProbe(probeCtx) }),
+            ("sceneKindsProbe", { probeCtx in try await Self.sceneKindsProbe(probeCtx) }),
+            ("scriptValidatorProbe", { probeCtx in try await Self.scriptValidatorProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

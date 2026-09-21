@@ -24,7 +24,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M2 Package format, anchors, git, Research Packet contract | verified on the Mac | anchorRoundTripProbe, manifestRoundTripProbe, packageStoreProbe, gitRunnerProbe, packetValidateProbe | S3 |
 | M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | written, not yet compiled: package layer, three panes, hub in a web view | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | S6 |
-| M5 Narration, scene renderer, transcript, code-ref map | planned | timelineMathProbe, codeSceneProbe, sceneKindsProbe, transcriptMapProbe, videoBuildProbe, audioCacheProbe | |
+| M5 Narration, scene renderer, transcript, code-ref map | scene renderer and six templates written and rendered; narration and audio cache pending | syntaxTokenizerProbe, codeSceneProbe, sceneKindsProbe, scriptValidatorProbe (transcript/code-ref invariants already asserted by fixturePackageProbe; videoBuildProbe and audioCacheProbe pending) | S7 |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
 | M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
@@ -388,6 +388,56 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S7: 2026-09-21 — M5: the scenes, drawn and looked at
+Milestone(s): M5
+Built:
+- `SyntaxTokenizer` — a dependency-free highlighter (D14) covering eighteen file
+  extensions, scanning the whole file in one pass so a block comment or a template
+  literal keeps its colour on the next line. Escapes as it goes, because its output
+  goes straight into a template.
+- Six scene templates (`scene-code`, `-title`, `-card`, `-terminal`, `-table`,
+  `-diagram`) and `SceneRenderer`, which fills them. They read `--accent`, which
+  `BrandTheme.css()` now sets, so an accent change follows through every scene while
+  the two existing templates behave exactly as before.
+- `ScriptValidator` — every anchor, id, scene kind and highlight checked before a frame
+  is drawn, with silence a warning rather than an error.
+- `scripts/check-scene-templates.py`, which holds the templates and the renderer to the
+  same `{{SLOT}}` contract. No Swift, no network, runs in the verify loop.
+- Four probes: `syntaxTokenizerProbe`, `codeSceneProbe`, `sceneKindsProbe`,
+  `scriptValidatorProbe` — twenty in total now.
+Verified:
+- **The templates were rendered in headless Chromium with real fixture source and
+  looked at**, which is how every defect below was found.
+- `scripts/check-scene-templates.py`: six templates, every declared slot filled by its
+  builder, all six registered for editing.
+Broke / learned:
+- **A forty-line file was silently truncated at line 25.** `overflow: hidden` clipped it
+  and nothing said so — a viewer would see a file that looks complete and is not. The
+  renderer now picks a window centred on the highlight and marks what it left out
+  ("14 lines above"). This is the defect the whole look-at-the-picture rule exists for:
+  the HTML was correct, the CSS was correct, and the frame was a lie.
+- A nine-line migration filled a third of the panel and left the rest dead charcoal, and
+  a forty-line file overflowed. Type size is now computed per shot from the line count,
+  within bounds, and the panel sizes to its content.
+- A single-line highlight read "7-7" in the header. It reads "line 7".
+- In the concerns table every verdict was coral, so a clean row looked like a finding.
+  `absent` is coral, `partial` amber, `present` green.
+- A blank line in terminal output collapsed to nothing, losing the pause between a
+  command's output and the comment on it.
+- The mail template in the fixture repository is full of `{{ user.name }}`, which is a
+  live hazard: the scene templates are filled by `{{SLOT}}` substitution. Only
+  upper-case names are treated as slots, and `codeSceneProbe` renders that exact file
+  to prove the source's own braces survive.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, the twenty-probe onboarding selftest, the original
+   `--selftest`, and **look at the six `scene-*.png` files the probes dump**.
+2. The rest of M5: `ElevenLabsNarrator` with word alignment, `AudioCache` (a content
+   hash per shot so editing one line re-synthesizes one shot), and `VideoAssembler`,
+   which replaces the solid-colour stills in `FixturePackage` with these scenes.
+3. M6: the LLM runtime.
 
 ### S6: 2026-09-21 — M4: the player shell, and two grammars that were quietly one
 Milestone(s): M4
