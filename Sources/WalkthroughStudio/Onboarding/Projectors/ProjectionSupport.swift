@@ -85,8 +85,14 @@ enum ProjectionSupport {
         return String(path[path.startIndex...slash])
     }
 
+    /// Python's `round()` is banker's rounding (half to even) and Swift's `.rounded()`
+    /// is not, so a half value would silently break parity between the two projectors.
+    static func pyRound(_ value: Double) -> Int {
+        Int(value.rounded(.toNearestOrEven))
+    }
+
     static func minutes(forWordCount words: Int) -> Int {
-        max(1, Int((Double(words) / Double(wordsPerMinute)).rounded()))
+        max(1, pyRound(Double(words) / Double(wordsPerMinute)))
     }
 
     static func wordCount(_ text: String) -> Int {

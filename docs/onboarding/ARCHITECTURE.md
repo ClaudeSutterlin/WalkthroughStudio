@@ -713,6 +713,34 @@ Twelve behaviors implied by the design had no story. They were added to
 USER-STORIES.md as ON-1.8 to ON-1.10, ON-8.7 to ON-8.9, ON-9.8, ON-9.9,
 ON-10.4, ON-11.6, ON-12.4 and ON-12.5, and mapped to milestones there.
 
+## 16. D20: the hub renders in a web view (decided 2026-09-21)
+
+Decision: documents, diagrams, traces and the code view are rendered by the hub
+(`OnboardingResources/hub/{hub.html,hub.css,hub.js}`) inside a `WKWebView`. Native
+SwiftUI and AppKit are kept for what must be native: the `Window` scene and its
+menu command, the `AVPlayerView` video stage (landmine 1: SwiftUI's `VideoPlayer`
+SIGABRTs at first render), the OnboardSheet, the fleet progress view and the
+companion chat panel.
+
+Alternatives: native `DocView`, `DiagramView` and `CodeView` as section 7
+originally specified, with `MarkdownLite` rendering to attributed strings and an
+`NSTextView`-backed code view.
+
+Why: the static export (ON-8.6) needs the HTML hub whatever the app does, so
+building native equivalents means two renderers for the same three surfaces,
+forever, diverging quietly. This repository's own pre-publication review already
+lists duplication of exactly that shape (two `{{PLACEHOLDER}}` engines) as a
+mistake to consolidate. The hub was also verified by driving it in a browser,
+while native views would start unverified.
+
+Consequences: `MarkdownLite` in Swift produces HTML rather than attributed
+strings, which is what `project_packet.py` already does and what the parity
+fixture covers. The code view loses native find and selection; the hub's own
+search covers the common case and `onboardingEditorCommand` opens the real file.
+The playback agent reaches the web view through the existing JS bridge rather
+than through SwiftUI state. Section 7's three-pane layout is unchanged; only the
+renderer behind the centre pane differs.
+
 ## 15. Human decisions of 2026-09-19 and the Research Packet contract
 
 The human decided four things after reading sections 1 to 14. Each is recorded
