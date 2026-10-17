@@ -389,6 +389,50 @@ Next:
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
 
+### S9: 2026-10-17 — The six compile errors reading review cannot see
+Milestone(s): M4, M5, M8
+Built:
+- Nothing new. This session fixed what the Mac's first `swift build` of the M4/M5/M8
+  Swift found, so M6 starts from a compiling tree.
+- `ProjectionSupport.jsonOrNull(_:)` — the one new API: JSON null for an absent value.
+Verified:
+- Not compiled here (no Swift toolchain in the container). Checked instead: a
+  module-wide scan for duplicate top-level type names now returns nothing; no
+  `?? NSNull()` remains; `scripts/check-scene-templates.py` and
+  `scripts/check-skill-sync.sh` pass; the Python projection still matches the golden
+  byte-for-byte, which is what the Swift parity probe will be diffed against.
+Broke / learned:
+- **A name collision, not a bug in the new code.** `Models.swift` has had a
+  `TranscriptSegment` since the first version of the app — the *speech* transcript.
+  `VideoDocs.swift` declared a second one for the narration transcript. One ambiguity
+  cascaded into roughly forty errors in files that never mentioned either type:
+  `WalkthroughProject` lost its synthesized `Codable`, and `clock.segment?.text` in two
+  views resolved to SwiftUI's `Binding` dynamic-member subscript instead. The onboarding
+  one is now `NarrationSegment` (the JSON key stays `segments`); `Models.swift` and the
+  speech path were not touched.
+- `struct Failure: Equatable, CustomStringConvertible` used as `Result`'s failure type
+  compiles everywhere it is *written* and fails only where it is *used*: the type needs
+  `Error`. Worth remembering as a shape — a protocol conformance missing from a
+  declaration reads perfectly in review.
+- Two heterogeneous `[String: Any]` literals assigned straight into `Any?` (the
+  `OrderedJSONObject` subscript), each with a ternary or three `??` fallbacks nested
+  inside, defeated the type checker outright: *"unable to type-check this expression in
+  reasonable time."* Each value now lands in a typed local first. Key order inside a JSON
+  object is not meaningful, so the projection is unchanged — the golden diff confirms it.
+- `NSLock.lock()` is unavailable from an async context. `CountingNarrator` is now an
+  `actor`, which is what the probe wanted anyway; reading `count` is awaited.
+- The real lesson about this branch's method: transcribing algorithms into Python and
+  fuzzing them, and rendering every surface and looking at it, found twelve genuine
+  defects across S4–S8 that reading review missed. Neither technique can see any of the
+  six errors above. They are all *module-scope* facts — a name used twice, a conformance
+  absent, an expression too hard to infer — and only a compiler holds the whole module.
+  Budget a compile-fix pass per blind session rather than hoping for another clean build.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then `--selftest-onboarding` and `--selftest`.
+2. M6, the LLM runtime, which is what this session continues into.
+
 ### S8: 2026-09-21 — M5 finished: real narration, cached audio, and the assembler
 Milestone(s): M5
 Built:

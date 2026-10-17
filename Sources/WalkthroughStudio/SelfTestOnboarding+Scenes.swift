@@ -462,37 +462,41 @@ extension SelfTest {
 
         // 1. A cold cache synthesizes everything.
         var round = try await synthesizeAll()
-        guard round.fresh == 3, round.reused == 0, narrator.count == 3 else {
+        var calls = await narrator.count
+        guard round.fresh == 3, round.reused == 0, calls == 3 else {
             throw StudioError("audioCacheProbe: a cold cache made \(round.fresh) fresh clip(s) "
-                              + "with \(narrator.count) synthesis call(s); expected 3 and 3")
+                              + "with \(calls) synthesis call(s); expected 3 and 3")
         }
 
         // 2. An unchanged script synthesizes nothing.
         round = try await synthesizeAll()
-        guard round.reused == 3, narrator.count == 3 else {
+        calls = await narrator.count
+        guard round.reused == 3, calls == 3 else {
             throw StudioError("audioCacheProbe: an unchanged script re-synthesized "
-                              + "\(narrator.count - 3) clip(s)")
+                              + "\(calls - 3) clip(s)")
         }
 
         // 3. Editing one line re-synthesizes one clip — the promise the cache exists for.
         script.scenes[0].shots[1].narration = "The second line, rewritten."
         round = try await synthesizeAll()
-        guard round.fresh == 1, narrator.count == 4 else {
+        calls = await narrator.count
+        guard round.fresh == 1, calls == 4 else {
             throw StudioError("audioCacheProbe: editing one line made \(round.fresh) fresh clip(s) "
-                              + "(\(narrator.count - 3) synthesis calls)")
+                              + "(\(calls - 3) synthesis calls)")
         }
 
         // 4. Changing the voice, the model or the narrator re-synthesizes all of them:
         //    the old audio is still on disk and still plays, and it is the wrong voice.
         for (voice, model, name) in [("v2", "m1", "tone"), ("v1", "m2", "tone"), ("v1", "m1", "eleven")] {
-            let before = narrator.count
+            let before = await narrator.count
             for (_, shot) in script.shots {
                 _ = try await cache.clip(for: shot, voice: voice, model: model,
                                          narrator: narrator, narratorName: name)
             }
-            guard narrator.count - before == 3 else {
+            let after = await narrator.count
+            guard after - before == 3 else {
                 throw StudioError("audioCacheProbe: changing to (\(voice), \(model), \(name)) "
-                                  + "re-synthesized \(narrator.count - before) of 3 clips")
+                                  + "re-synthesized \(after - before) of 3 clips")
             }
         }
         // Back to the original settings: those clips are gone, because the last pass
@@ -573,20 +577,17 @@ extension SelfTest {
 }
 
 /// Counts synthesis calls, so a probe can say exactly how many happened.
-final class CountingNarrator: Narrating, @unchecked Sendable {
-    private let lock = NSLock()
+///
+/// An actor rather than a lock: `AudioCache` calls `synthesize` from an async context, and
+/// `NSLock.lock()` is unavailable there (it blocks a cooperative thread). Reading `count`
+/// is therefore `await`ed.
+actor CountingNarrator: Narrating {
     private var calls = 0
 
-    var count: Int {
-        lock.lock()
-        defer { lock.unlock() }
-        return calls
-    }
+    var count: Int { calls }
 
     func synthesize(_ text: String, to url: URL) async throws -> NarrationClip {
-        lock.lock()
         calls += 1
-        lock.unlock()
         return try await ToneNarrator().synthesize(text, to: url)
     }
 }

@@ -65,7 +65,7 @@ extension SelfTest {
         let result = try PackageProjector.project(packet: packet, into: store)
 
         // 1. Everything the golden holds must exist here and match.
-        let goldenFiles = try SelfTest.relativeFiles(under: goldenURL)
+        let goldenFiles = try SelfTest.relativeFilePaths(under: goldenURL)
             .filter { $0 != "README.md" }
             .sorted()
         guard !goldenFiles.isEmpty else {
@@ -199,7 +199,7 @@ extension SelfTest {
     // MARK: - diffing
 
     /// Every file under `root`, as paths relative to it, skipping dotfiles.
-    static func relativeFiles(under root: URL) throws -> [String] {
+    static func relativeFilePaths(under root: URL) throws -> [String] {
         let base = root.standardizedFileURL.path
         guard let walker = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { return [] }

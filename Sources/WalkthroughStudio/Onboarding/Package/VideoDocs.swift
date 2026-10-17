@@ -47,7 +47,7 @@ struct WordTiming: Codable, Equatable {
     }
 }
 
-struct TranscriptSegment: Codable, Equatable, Identifiable {
+struct NarrationSegment: Codable, Equatable, Identifiable {
     /// `seg-0007`, stable across a rebuild of the same script.
     var id: String
     var sceneId: String
@@ -160,12 +160,12 @@ struct TranscriptDoc: Codable, Equatable {
     var timingSource: String = "sentence-estimate"
     var summary: String = ""
     var chapters: [ChapterMarker] = []
-    var segments: [TranscriptSegment] = []
+    var segments: [NarrationSegment] = []
 
     init() {}
 
     init(videoId: String, sha: String, duration: Double, timingSource: String, summary: String,
-         chapters: [ChapterMarker], segments: [TranscriptSegment]) {
+         chapters: [ChapterMarker], segments: [NarrationSegment]) {
         self.videoId = videoId
         self.sha = sha
         self.duration = duration
@@ -188,7 +188,7 @@ struct TranscriptDoc: Codable, Equatable {
         timingSource = try c.decodeIfPresent(String.self, forKey: .timingSource) ?? "sentence-estimate"
         summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
         chapters = try c.decodeIfPresent([ChapterMarker].self, forKey: .chapters) ?? []
-        segments = try c.decodeIfPresent([TranscriptSegment].self, forKey: .segments) ?? []
+        segments = try c.decodeIfPresent([NarrationSegment].self, forKey: .segments) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -205,7 +205,7 @@ struct TranscriptDoc: Codable, Equatable {
 
     /// The caption line on screen at `t`. Segments tile the timeline, so this is the
     /// last segment that has started.
-    func segment(at t: Double) -> TranscriptSegment? {
+    func segment(at t: Double) -> NarrationSegment? {
         VideoDocs.last(in: segments, startingAtOrBefore: t, start: { $0.start })
     }
 
@@ -215,7 +215,7 @@ struct TranscriptDoc: Codable, Equatable {
 
     /// Everything narrated up to `t`, which is what the playback agent is allowed to
     /// treat as already said.
-    func segments(endingAtOrBefore t: Double) -> [TranscriptSegment] {
+    func segments(endingAtOrBefore t: Double) -> [NarrationSegment] {
         segments.filter { $0.end <= t }
     }
 }

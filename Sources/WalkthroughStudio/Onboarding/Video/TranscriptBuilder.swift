@@ -65,7 +65,7 @@ enum TranscriptBuilder {
         var byShot: [String: ShotTiming] = [:]
         for entry in timeline { byShot[entry.shotID] = entry }
 
-        var segments: [TranscriptSegment] = []
+        var segments: [NarrationSegment] = []
         var intervals: [CodeRefInterval] = []
         var index = 0
         var usesProviderWords = false
@@ -78,7 +78,7 @@ enum TranscriptBuilder {
 
             for piece in sentenceTimes(shot: shot, timing: timing) {
                 index += 1
-                segments.append(TranscriptSegment(
+                segments.append(NarrationSegment(
                     id: String(format: "seg-%04d", index),
                     sceneId: scene.id, shotId: shot.id,
                     start: piece.start, end: piece.end, text: piece.text, words: piece.words))
@@ -200,7 +200,7 @@ enum TranscriptBuilder {
     /// an empty segment is a blank caption cue, and a hole makes `segment(at:)` return
     /// nil so the caption line flickers off mid-video. Extending a real line is the
     /// least visible of the three.
-    private static func tile(_ segments: [TranscriptSegment], to duration: Double) -> [TranscriptSegment] {
+    private static func tile(_ segments: [NarrationSegment], to duration: Double) -> [NarrationSegment] {
         guard !segments.isEmpty else { return segments }
         var out = segments
         out[0].start = 0

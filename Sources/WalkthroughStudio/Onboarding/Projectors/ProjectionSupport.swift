@@ -102,6 +102,16 @@ enum ProjectionSupport {
         text.split(whereSeparator: { $0.isWhitespace }).count
     }
 
+    /// JSON null for an absent value.
+    ///
+    /// `??` cannot bridge a typed optional to `NSNull`: `String? ?? NSNull()` asks Swift to
+    /// unify `String` and `NSNull` and it refuses. `JSONSerialization` needs `NSNull()` for
+    /// a null, so every "present, or null" field in a projected payload goes through here.
+    static func jsonOrNull<T>(_ value: T?) -> Any {
+        if let value { return value }
+        return NSNull()
+    }
+
     /// Deterministic JSON: sorted keys and pretty printing, so a diff against the golden
     /// projection shows real changes rather than dictionary ordering.
     static func encodeJSON(_ value: Any) throws -> Data {

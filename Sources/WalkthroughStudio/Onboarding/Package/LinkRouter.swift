@@ -49,7 +49,7 @@ struct LinkRouter {
         case external(URL)
     }
 
-    struct Failure: Equatable, CustomStringConvertible {
+    struct Failure: Error, Equatable, CustomStringConvertible {
         let anchor: String
         /// The anchor's kind, so a report can group failures by what broke.
         let kind: String

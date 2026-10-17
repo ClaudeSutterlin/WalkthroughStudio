@@ -16,7 +16,7 @@ final class PlaybackClock: ObservableObject {
     @Published private(set) var t: Double = 0
     @Published private(set) var isPlaying = false
     @Published private(set) var interval: CodeRefInterval?
-    @Published private(set) var segment: TranscriptSegment?
+    @Published private(set) var segment: NarrationSegment?
     @Published private(set) var chapter: ChapterMarker?
 
     // `deinit` is nonisolated and must still hand the time observer back, so these two

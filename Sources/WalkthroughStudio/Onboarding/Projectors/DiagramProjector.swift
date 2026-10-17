@@ -83,8 +83,8 @@ enum DiagramProjector {
             lines.append("  \(nid)[\"\(ProjectionSupport.mermaidLabel(label))\"]")
             lines.append("  system -->|\"\(ProjectionSupport.mermaidLabel(proto))\"| \(nid)")
             let anchor = packet.primaryAnchor(fact)
-            nodes[nid] = ["anchor": anchor ?? NSNull(), "owner": NSNull(), "factIds": [fact.id]]
-            edges["system->\(nid)"] = ["protocol": proto, "contract": anchor ?? NSNull(), "factIds": [fact.id]]
+            nodes[nid] = ["anchor": ProjectionSupport.jsonOrNull(anchor), "owner": NSNull(), "factIds": [fact.id]]
+            edges["system->\(nid)"] = ["protocol": proto, "contract": ProjectionSupport.jsonOrNull(anchor), "factIds": [fact.id]]
         }
         lines.append("  classDef sys fill:#DA4F45,stroke:#1A1612,color:#FFFBF5;")
         lines.append("  class system sys;")
@@ -165,11 +165,20 @@ enum DiagramProjector {
             if let author = own?.authors.first {
                 bits.append("\(ProjectionSupport.mermaidLabel(author.name)) \(Int((author.share * 100).rounded()))%")
             }
-            nodes[nid] = [
-                "anchor": path == "." ? "code:./@\(packet.sha7)" : "code:\(path)@\(packet.sha7)",
-                "owner": own?.authors.first?.name ?? NSNull(),
-                "factIds": Array((factsByDir[path] ?? factsByDir[ProjectionSupport.topDir(path)] ?? []).prefix(8)),
+            // Each value lands in a typed local before the literal. A heterogeneous
+            // dictionary literal assigned into `Any?`, with a ternary and a chain of `??`
+            // inside it, is what makes the type checker give up ("unable to type-check
+            // this expression in reasonable time") — see the ERD nodes below.
+            let dirFactIds = factsByDir[path] ?? factsByDir[ProjectionSupport.topDir(path)] ?? []
+            let anchor: String = path == "."
+                ? "code:./@\(packet.sha7)"
+                : "code:\(path)@\(packet.sha7)"
+            let containerNode: [String: Any] = [
+                "anchor": anchor,
+                "owner": ProjectionSupport.jsonOrNull(own?.authors.first?.name),
+                "factIds": Array(dirFactIds.prefix(8)),
             ]
+            nodes[nid] = containerNode
             return "\(indent)\(nid)[\"\(bits.joined(separator: "<br/>"))\"]"
         }
 
@@ -259,17 +268,27 @@ enum DiagramProjector {
                 lines.append("    \(base.isEmpty ? "unknown" : base) \(cname) \"\(comment)\"")
             }
             lines.append("  }")
-            nodes[nid] = [
-                "anchor": packet.primaryAnchor(fact) ?? NSNull(),
-                "owner": NSNull(),
-                "factIds": [fact.id] + fields.filter { $0.subject.contains("\(table).") }.map { $0.id },
-                "attributes": [
-                    "rows": fact.attributes["rows"]?.jsonObject ?? "unknown",
-                    "retention": fact.attributes["retention"]?.jsonObject ?? "unknown",
-                    "pii": fact.attributes["pii"]?.jsonObject ?? "unknown",
-                    "piiNote": fact.attributes["piiNote"]?.jsonObject ?? NSNull(),
-                ],
+            // One literal with a nested dictionary and three `??` fallbacks, assigned into
+            // `Any?`, defeated the type checker outright. Typed locals make each piece
+            // unambiguous; key order inside a JSON object is not meaningful, so the
+            // projection is unchanged.
+            let fieldIds = fields.filter { $0.subject.contains("\(table).") }.map { $0.id }
+            let rows: Any = fact.attributes["rows"]?.jsonObject ?? "unknown"
+            let retention: Any = fact.attributes["retention"]?.jsonObject ?? "unknown"
+            let pii: Any = fact.attributes["pii"]?.jsonObject ?? "unknown"
+            let tableAttributes: [String: Any] = [
+                "rows": rows,
+                "retention": retention,
+                "pii": pii,
+                "piiNote": ProjectionSupport.jsonOrNull(fact.attributes["piiNote"]?.jsonObject),
             ]
+            let tableNode: [String: Any] = [
+                "anchor": ProjectionSupport.jsonOrNull(packet.primaryAnchor(fact)),
+                "owner": NSNull(),
+                "factIds": [fact.id] + fieldIds,
+                "attributes": tableAttributes,
+            ]
+            nodes[nid] = tableNode
         }
 
         for fact in entities {
@@ -287,7 +306,7 @@ enum DiagramProjector {
                         lines.append("  \(other) ||--o{ \(nid) : has")
                         edges["\(other)->\(nid)"] = [
                             "protocol": "foreign key",
-                            "contract": packet.primaryAnchor(fact) ?? NSNull(),
+                            "contract": ProjectionSupport.jsonOrNull(packet.primaryAnchor(fact)),
                             "factIds": [fact.id],
                         ]
                         break
@@ -340,9 +359,9 @@ enum DiagramProjector {
                 let nid = ProjectionSupport.mermaidID("ci_" + fact.id)
                 lines.append("  \(nid)[\"CI<br/>\(ProjectionSupport.mermaidLabel(ProjectionSupport.clip(fact.claim, 60)))\"]")
                 lines.append("  \(nid) -.->|\"does not deploy\"| h1")
-                nodes[nid] = ["anchor": packet.primaryAnchor(fact) ?? NSNull(), "owner": NSNull(), "factIds": [fact.id]]
+                nodes[nid] = ["anchor": ProjectionSupport.jsonOrNull(packet.primaryAnchor(fact)), "owner": NSNull(), "factIds": [fact.id]]
                 edges["\(nid)->h1"] = [
-                    "protocol": "no link", "contract": packet.primaryAnchor(fact) ?? NSNull(), "factIds": [fact.id],
+                    "protocol": "no link", "contract": ProjectionSupport.jsonOrNull(packet.primaryAnchor(fact)), "factIds": [fact.id],
                 ]
                 lines.append("  classDef gap stroke:#DA4F45,stroke-width:3px,stroke-dasharray:4 3;")
                 lines.append("  class \(nid) gap;")
@@ -357,7 +376,7 @@ enum DiagramProjector {
             for (index, fact) in steps.prefix(10).enumerated() {
                 let nid = "s\(index + 1)"
                 lines.append("  \(nid)[\"\(ProjectionSupport.mermaidLabel(ProjectionSupport.clip(fact.claim, 70)))\"]")
-                nodes[nid] = ["anchor": packet.primaryAnchor(fact) ?? NSNull(), "owner": NSNull(), "factIds": [fact.id]]
+                nodes[nid] = ["anchor": ProjectionSupport.jsonOrNull(packet.primaryAnchor(fact)), "owner": NSNull(), "factIds": [fact.id]]
             }
         }
         return Diagram(
