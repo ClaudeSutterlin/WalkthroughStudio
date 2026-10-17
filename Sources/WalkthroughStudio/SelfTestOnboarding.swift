@@ -85,6 +85,11 @@ extension SelfTest {
             ("scriptValidatorProbe", { probeCtx in try await Self.scriptValidatorProbe(probeCtx) }),
             ("audioCacheProbe", { probeCtx in try await Self.audioCacheProbe(probeCtx) }),
             ("elevenAlignmentProbe", { probeCtx in try await Self.elevenAlignmentProbe(probeCtx) }),
+            ("sseParseProbe", { probeCtx in try await Self.sseParseProbe(probeCtx) }),
+            ("toolLoopProbe", { probeCtx in try await Self.toolLoopProbe(probeCtx) }),
+            ("agentResumeProbe", { probeCtx in try await Self.agentResumeProbe(probeCtx) }),
+            ("backoffProbe", { probeCtx in try await Self.backoffProbe(probeCtx) }),
+            ("spendMeterProbe", { probeCtx in try await Self.spendMeterProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

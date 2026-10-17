@@ -201,7 +201,11 @@ struct BuildLog {
         }
     }
 
-    private static func warn(_ message: String) {
+    /// A line on stderr, for the cases where failing to log must not fail the run.
+    /// Internal rather than private: the agent runtime warns the same way (a stale
+    /// fixture, an unpriced model) and a second mechanism for the same thing would
+    /// just mean two places to look.
+    static func warn(_ message: String) {
         let line = "buildlog: \(message)\n"
         try? FileHandle.standardError.write(contentsOf: Data(line.utf8))
     }

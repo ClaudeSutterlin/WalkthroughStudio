@@ -20,7 +20,7 @@ import Foundation
 // MARK: - Free-form JSON
 
 /// A generic JSON value for `Fact.attributes` and any other free-form object.
-indirect enum JSONValue: Codable, Equatable {
+indirect enum JSONValue: Codable, Equatable, Sendable {
     case string(String)
     case number(Double)
     case bool(Bool)

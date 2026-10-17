@@ -25,7 +25,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M3 Claude Code producer skill and the fixture packet | verified, standalone and via fixturePacketProbe on the Mac | fixturePacketProbe (plus scripts/validate-packet.py with zero errors) | S2 |
 | M4 Player shell on the fixture package | written, not yet compiled: package layer, three panes, hub in a web view | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | S6 |
 | M5 Narration, scene renderer, transcript, code-ref map | complete, not yet compiled: scenes, tokenizer, narrator, audio cache, Mermaid renderer, assembler | syntaxTokenizerProbe, codeSceneProbe, sceneKindsProbe, scriptValidatorProbe, audioCacheProbe, elevenAlignmentProbe (the transcript and code-ref invariants are asserted by fixturePackageProbe, which now builds through the real assembler) | S8 |
-| M6 LLM runtime (tool loop, SSE, retries, spend, resume) | planned | sseParseProbe, toolLoopProbe, agentResumeProbe, backoffProbe, spendMeterProbe | |
+| M6 LLM runtime (tool loop, SSE, retries, spend, resume) | complete, not yet compiled: wire model, SSE, transport seam, tool loop, transcript and resume, retries and breaker, spend meter | sseParseProbe, toolLoopProbe (which also covers the streamed path and every stop reason), agentResumeProbe, backoffProbe, spendMeterProbe | S10 |
 | M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
 | M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
@@ -388,6 +388,89 @@ Next:
    /tmp/fixture-repo`; `./.build/debug/WalkthroughStudio --selftest-onboarding
    /tmp/fixture-repo /tmp/onboarding-out`; then the existing `--selftest`; look
    at stills-probe.mp4.
+
+### S10: 2026-10-17 — M6: the tool loop, and the stream fuzzed at every byte boundary
+Milestone(s): M6
+Built (`Sources/WalkthroughStudio/Onboarding/Agent/`, ~2,700 lines):
+- `MessagesAPI.swift` — the wire model. One decision shapes it: a `ContentBlock` is its
+  raw JSON object with typed accessors over the top, not a closed enum. An assistant turn
+  goes back to the API verbatim (a thinking block's `signature` is verified server-side),
+  and a block type this build has never heard of has to survive the round trip, so
+  modelling only what we recognize would silently drop the rest. `StopReason` is parsed,
+  never string-matched at a call site, so a value we do not know lands in `.other` and is
+  handled rather than mistaken for success.
+- `SSEParser.swift` — framing and accumulation, deliberately separate. The parser splits
+  lines on *bytes*: a chunk can end mid-character, and decoding chunk-at-a-time would put
+  a replacement glyph inside a JSON string. 0x0A and 0x0D never appear inside a UTF-8
+  multi-byte sequence, so byte splitting is both safe and necessary.
+- `Transport.swift` — the one seam (D9). `URLSessionTransport`, `FixtureTransport` (which
+  is also the scripted server: a recording carries any status and any headers, so
+  "429 with retry-after, then 500, then 200" is a three-line fixture), and
+  `RecordingTransport` to refresh fixtures from a real run.
+- `RateLimiter.swift` — the retry decisions as pure arithmetic with injectable jitter and
+  an injectable sleep, plus `CircuitBreaker`. A retry policy that can only be tested by
+  waiting is a retry policy nobody tests.
+- `SpendMeter.swift` + `PriceTable` — prices, totals, per-model totals, the cache hit rate,
+  and the optional cap (off by default, per the human's 2026-09-19 decision).
+- `AgentTools.swift` — the tool seam and the shared `finish` tool. `run` cannot throw: a
+  `tool_use` with no matching `tool_result` is rejected by the API, so a failure has to
+  *become* a result and be sent. The signature makes dropping one impossible.
+- `AgentTranscript.swift` — `transcript.jsonl` and `AgentResume`, the resume rules as one
+  pure function over the recorded entries.
+- `AgentRun.swift` — the loop: build, send, append, branch, run tools, repeat.
+- `TokenCounter.swift` — `count_tokens` with a four-characters-per-token fallback, biased
+  high on purpose (under-counting the context cap kills a unit with its findings unwritten).
+- Settings: `onboardingPlannerModel`, `onboardingWorkerModel`, `onboardingMaxParallel`,
+  `onboardingSpendCapUSD`, `onboardingGatewayCompat`, `onboardingRecordFixtures`,
+  `onboardingPriceTable`; `Defaults.int`/`Defaults.double` that distinguish "absent" from 0.
+Verified (no Swift toolchain here; the probes are written and wait for the Mac):
+- **The SSE stream, fuzzed.** The parser and accumulator were transcribed into Python and a
+  realistic turn fed at 209 different chunkings — one chunk, one byte at a time, every
+  prime size up to 97, 200 random splits, and the whole thing again with CRLF endings.
+  All 209 produced a byte-identical response. `sseParseProbe` runs the same sweep in Swift.
+- The backoff ladder and the spend arithmetic checked against an independent implementation
+  written from the stated rules (not transcribed), so agreement means the rules are
+  implemented rather than that two copies share a mistake: 32 assertions pass.
+- The loop itself transcribed and simulated for all seven scenarios the probes assert —
+  history shape, transcript kinds, request counts, tool-call counts. 34 assertions pass,
+  which is also what proved the probes' expected numbers before a Mac ever sees them.
+- `scripts/check-scene-templates.py`, `scripts/check-skill-sync.sh`, and the Python
+  projection still matching the golden byte-for-byte.
+Broke / learned:
+- **A resumed `finish` would have paid for a turn to be told it was over.** The resume path
+  re-runs a unit's pending tools; if the pending tool *was* `finish` (a session killed
+  between the call and the finish line), the loop fell through to the request builder.
+  Found by reading the resume switch against the simulation, not by the simulation.
+- `pause_turn` is recorded as a note, not a reply. Writing the empty assistant turn as a
+  reply would have made `plan` rebuild history with an invalid message in it — the resume
+  reader and the resume writer have to agree about what counts as history.
+- The streaming usage merge is the subtle one. `message_start` carries the input and cache
+  numbers with `output_tokens: 1`; `message_delta` carries the real output tokens and
+  nothing else. Overwriting wholesale makes every streamed turn look free; ignoring the
+  delta loses the output. Non-zero fields win, and the probe asserts the exact numbers.
+- An unpriced model is billed at the table's worst case and its name is collected. A
+  missing price that read as free would silently disable the cap — the one thing a cap
+  exists to prevent. The worst case is built field by field (highest input, highest
+  output) rather than picked as a row: deterministic, and an actual upper bound.
+- `retry-after` is a floor, never a ceiling. Waiting less than the server asked for is how
+  a client earns a longer ban; honoring it past two minutes without saying so is how a run
+  looks hung.
+- No watchdog for the stream idle timeout: `URLRequest.timeoutInterval` *is* an idle
+  timeout (URLSession restarts it on every byte), which is exactly the 120 s between
+  events the architecture asks for. The hand-rolled version was written and thrown away.
+- Deviation recorded in ARCHITECTURE 4.6 point 2: the transcript's request line stores the
+  envelope and the body hash, not the body. The body is the history and the history is
+  already recorded; writing it per turn makes the file quadratic.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then `--selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out`
+   (27 probes now) and the original `--selftest`.
+2. M7: the playback chat agent. `CompanionPanel` is already shaped to hold it, `AgentRun`
+   and `ClosureTools` are what it runs on, and `PackageTools` (ARCHITECTURE 4.3) is the
+   tool set to write — `get_transcript_range` is the one that makes the agent know where
+   the video is.
+3. M9/M10/M11 unchanged.
 
 ### S9: 2026-10-17 — The six compile errors reading review cannot see
 Milestone(s): M4, M5, M8

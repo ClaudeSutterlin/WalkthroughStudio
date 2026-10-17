@@ -201,6 +201,16 @@ enum SettingsKeys {
     static let didCompleteSetup = "didCompleteSetup"       // first-run setup sheet shown
     static let onboardingRecents = "onboardingRecents"     // onboarding packages opened before, newest first
     static let onboardingEditorCommand = "onboardingEditorCommand" // blank = `open`; e.g. "code --goto {path}:{line}"
+    // The research fleet's runtime (M6). Models are split by role because the two
+    // warm separate prompt caches and the planner's reasoning is what a plan, a
+    // trace and a script are worth paying for.
+    static let onboardingPlannerModel = "onboardingPlannerModel"   // default claude-opus-5
+    static let onboardingWorkerModel = "onboardingWorkerModel"     // default claude-sonnet-5
+    static let onboardingMaxParallel = "onboardingMaxParallel"     // LLM units in flight; default 4
+    static let onboardingSpendCapUSD = "onboardingSpendCapUSD"     // 0 or blank = off (the default)
+    static let onboardingGatewayCompat = "onboardingGatewayCompat" // no betas, no output schema; prompt-described instead
+    static let onboardingRecordFixtures = "onboardingRecordFixtures" // write selftest fixtures during a real run
+    static let onboardingPriceTable = "onboardingPriceTable"       // {"<model>": [inputPerMTok, outputPerMTok]}
 }
 
 enum Defaults {
@@ -209,6 +219,11 @@ enum Defaults {
     /// "Rachel" — a prebuilt, neutral/warm narrator voice from the ElevenLabs Voice Library.
     static let elevenVoiceID = "21m00Tcm4TlvDq8ikWAM"
     static let transcribeLocale = "en-US"
+    /// The onboarding fleet's two models (ARCHITECTURE 4.2, D10). `anthropicModelOverride`,
+    /// when set, replaces both: a gateway's ids are opaque and nothing is derived from them.
+    static let onboardingPlannerModel = "claude-opus-5"
+    static let onboardingWorkerModel = "claude-sonnet-5"
+    static let onboardingMaxParallel = 4
 
     static func string(_ key: String, _ fallback: String) -> String {
         let v = UserDefaults.standard.string(forKey: key) ?? ""
@@ -216,5 +231,16 @@ enum Defaults {
     }
     static func bool(_ key: String) -> Bool {
         UserDefaults.standard.bool(forKey: key)
+    }
+    /// An unset key reads as the fallback, not as zero — `UserDefaults.integer(forKey:)`
+    /// returns 0 for "absent", and 0 means something different for every one of
+    /// these settings (no parallelism, no cap, free).
+    static func int(_ key: String, _ fallback: Int) -> Int {
+        guard UserDefaults.standard.object(forKey: key) != nil else { return fallback }
+        return UserDefaults.standard.integer(forKey: key)
+    }
+    static func double(_ key: String, _ fallback: Double) -> Double {
+        guard UserDefaults.standard.object(forKey: key) != nil else { return fallback }
+        return UserDefaults.standard.double(forKey: key)
     }
 }
