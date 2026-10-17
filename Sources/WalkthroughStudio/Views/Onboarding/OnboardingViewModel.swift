@@ -57,6 +57,21 @@ final class OnboardingViewModel: ObservableObject {
     // MARK: Review
 
     @Published private(set) var bookmarks: [OnboardingBookmark] = []
+    /// What the playback agent flagged (ON-9.6), from `review/flags.json`.
+    @Published private(set) var flags: [ContradictionFlag] = []
+    private var review: ReviewFiles?
+
+    // MARK: Chat
+
+    @Published var companionTab: CompanionTab = .chat
+    /// The conversation about the video on the stage (or the last one played).
+    @Published private(set) var chat: ChatSession?
+    /// Bumped to ask the chat input for focus ("?").
+    @Published private(set) var chatFocusRequest = 0
+    /// True when typing a question paused the video, so the panel offers Resume.
+    @Published private(set) var pausedForChat = false
+    /// One conversation per video, kept while the package is open.
+    private var chats: [String: ChatSession] = [:]
 
     // MARK: Status
 
@@ -90,6 +105,10 @@ final class OnboardingViewModel: ObservableObject {
             self.backlinks = try BacklinkIndex.load(from: store)
             self.packageName = root.deletingPathExtension().lastPathComponent
             self.bookmarks = (try? store.readJSON([OnboardingBookmark].self, from: "review/bookmarks.json")) ?? []
+            self.review = ReviewFiles(store: store)
+            self.chats = [:]
+            self.chat = nil
+            await reloadFlags()
             self.items = OnboardingViewModel.readingOrder(hub: hub, manifest: manifest)
             LinkRouter.invalidateCache(for: store.root)
             OnboardingViewModel.remember(root)
@@ -101,7 +120,8 @@ final class OnboardingViewModel: ObservableObject {
 
     /// Videos first — they are the way in — then the projected order, renumbered so the
     /// navigator's numbers run 1..n without a gap.
-    static func readingOrder(hub: HubIndex, manifest: OnboardingManifest) -> [HubIndex.Item] {
+    /// Nonisolated: the playback agent's package digest lists the same order.
+    nonisolated static func readingOrder(hub: HubIndex, manifest: OnboardingManifest) -> [HubIndex.Item] {
         var out: [HubIndex.Item] = []
         for deliverable in manifest.deliverables where deliverable.kind == .video {
             var item = HubIndex.Item()
@@ -234,6 +254,7 @@ final class OnboardingViewModel: ObservableObject {
             }
             player.replaceCurrentItem(with: AVPlayerItem(url: store.url("\(folder)/video.mp4")))
             clock.attach(to: player, transcript: transcript, coderefs: coderefs)
+            openChat(videoID: videoID)
         }
         stage = .video(videoID)
         isDocked = false
@@ -299,6 +320,61 @@ final class OnboardingViewModel: ObservableObject {
         persistBookmarks()
     }
 
+    func reloadFlags() async {
+        guard let review else { return }
+        flags = await review.flags()
+    }
+
+    func clearFlag(_ flag: ContradictionFlag) {
+        guard let review else { return }
+        Task {
+            do {
+                try await review.removeFlag(id: flag.id)
+            } catch {
+                note("Could not clear that flag", error)
+            }
+            await reloadFlags()
+        }
+    }
+
+    /// A flag becomes a review item on its video in `review/status.json` (ON-9.9),
+    /// and leaves the Flags list: it is the author's to act on now.
+    func promoteFlag(_ flag: ContradictionFlag, note text: String) {
+        guard let review else { return }
+        var line = "[\(PlaybackAgent.timecode(flag.t))] The narration says \"\(flag.claim)\"; "
+            + "[[\(flag.anchor)]] shows: \(flag.reason)"
+        let extra = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !extra.isEmpty { line += " Note: \(extra)" }
+        Task {
+            do {
+                try await review.promote(deliverableId: "video:\(flag.videoId)", note: line)
+                try await review.removeFlag(id: flag.id)
+            } catch {
+                note("Could not add that flag to the review list", error)
+            }
+            await reloadFlags()
+        }
+    }
+
+    /// A bookmark becomes a review item too; the bookmark itself stays, because it
+    /// is the viewer's way back to the moment.
+    func promoteBookmark(_ bookmark: OnboardingBookmark, note text: String) {
+        guard let review else { return }
+        var line = "[\(PlaybackAgent.timecode(bookmark.t))] "
+        let combined = [bookmark.note, text.trimmingCharacters(in: .whitespacesAndNewlines)]
+            .filter { !$0.isEmpty }.joined(separator: " ")
+        line += combined.isEmpty ? "Marked for review." : combined
+        if let anchor = bookmark.anchor { line += " [[\(anchor)]]" }
+        Task {
+            do {
+                try await review.promote(deliverableId: "video:\(bookmark.videoID)", note: line)
+                notices.append(OnboardingNotice(message: "Added to the review list for video:\(bookmark.videoID)."))
+            } catch {
+                note("Could not add that bookmark to the review list", error)
+            }
+        }
+    }
+
     private func persistBookmarks() {
         guard let store else { return }
         do {
@@ -306,6 +382,61 @@ final class OnboardingViewModel: ObservableObject {
         } catch {
             note("Could not save your bookmarks", error)
         }
+    }
+
+    // MARK: - Chat
+
+    /// Starts (or returns to) the conversation about `videoID`. A chat that cannot
+    /// start degrades to a notice; the video still plays.
+    func openChat(videoID: String) {
+        if let existing = chats[videoID] {
+            chat = existing
+            return
+        }
+        guard let store, let review else { return }
+        guard let settings = AgentRuntimeSettings.current(role: .planner) else {
+            notices.append(OnboardingNotice(message: "The chat is off: the API endpoint in Settings "
+                                            + "is not a URL."))
+            chat = nil
+            return
+        }
+        do {
+            let agent = try PlaybackAgent.load(store: store, videoId: videoID, settings: settings)
+            let session = ChatSession(agent: agent, review: review)
+            session.onFlagsChanged = { [weak self] in
+                Task { await self?.reloadFlags() }
+            }
+            chats[videoID] = session
+            chat = session
+        } catch {
+            note("The chat for this video could not start", error)
+            chat = nil
+        }
+    }
+
+    /// "?": the chat tab, with the cursor in the input.
+    func focusChat() {
+        companionTab = .chat
+        chatFocusRequest += 1
+    }
+
+    /// Typing a question pauses the video (ON-9.4): an answer about a moment that
+    /// has scrolled past is an answer to a different question.
+    func pauseForTyping() {
+        guard clock.isPlaying else { return }
+        player.pause()
+        pausedForChat = true
+    }
+
+    func resumeAfterChat() {
+        pausedForChat = false
+        player.play()
+    }
+
+    func ask(_ question: String) {
+        guard let chat else { return }
+        let t = clock.t
+        Task { await chat.ask(question, at: t) }
     }
 
     // MARK: - Notices
@@ -320,6 +451,15 @@ final class OnboardingViewModel: ObservableObject {
     func dismiss(_ notice: OnboardingNotice) {
         notices.removeAll { $0.id == notice.id }
     }
+}
+
+/// The companion's lower half.
+enum CompanionTab: String, CaseIterable, Identifiable {
+    case chat = "Chat"
+    case bookmarks = "Bookmarks"
+    case flags = "Flags"
+
+    var id: String { rawValue }
 }
 
 /// Which pane owns the centre of the onboarding window.

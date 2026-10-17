@@ -230,9 +230,12 @@ struct MessageStreamAccumulator {
 
         case "error":
             let error = object["error"]?.objectValue ?? [:]
+            let type = error["type"]?.stringValue ?? "stream_error"
+            // The HTTP status was 200 when the stream opened; the event's type is
+            // the real status, and it decides whether the retry policy re-sends.
             throw MessagesAPIError(
-                status: 200,
-                type: error["type"]?.stringValue ?? "stream_error",
+                status: MessageStreamAccumulator.status(forErrorType: type),
+                type: type,
                 message: error["message"]?.stringValue ?? "The stream reported an error.")
 
         default:
@@ -312,6 +315,22 @@ struct MessageStreamAccumulator {
         }
     }
 
+    /// The HTTP status an in-stream `error` event stands for.
+    static func status(forErrorType type: String) -> Int {
+        switch type {
+        case "overloaded_error": return 529
+        case "rate_limit_error": return 429
+        case "api_error": return 500
+        case "timeout_error": return 504
+        case "invalid_request_error": return 400
+        case "authentication_error": return 401
+        case "permission_error": return 403
+        case "not_found_error": return 404
+        case "request_too_large": return 413
+        default: return 500
+        }
+    }
+
     /// The finished response.
     ///
     /// A tool_use block the stream never closed is incomplete, whatever its
@@ -323,8 +342,16 @@ struct MessageStreamAccumulator {
         for index in toolBlocks.sorted() where !closed.contains(index) {
             markIncomplete(index)
         }
-        if response.content.isEmpty, !sawMessageStop {
-            throw StudioError("The stream ended before any content arrived.")
+        // No `message_stop` means the connection dropped mid-reply, however much
+        // arrived first. A transport error, so the retry policy re-sends it: a
+        // half reply accepted as whole ends a unit on a sentence fragment.
+        if !sawMessageStop {
+            throw MessagesAPIError(
+                status: 0, type: "stream_incomplete",
+                message: response.content.isEmpty
+                    ? "The stream ended before any content arrived."
+                    : "The stream ended before message_stop.",
+                isTransport: true)
         }
         return response
     }

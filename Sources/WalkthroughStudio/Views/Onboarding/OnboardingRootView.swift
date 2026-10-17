@@ -84,7 +84,7 @@ struct OnboardingRootView: View {
             }
             Spacer()
             if case .video = vm.stage {
-                Text("J K L  transport   [ ]  chapter   C  captions   ⌘B  bookmark")
+                Text("J K L  transport   [ ]  chapter   C  captions   ?  ask   ⌘B  bookmark")
                     .font(.caption2)
                     .foregroundStyle(Brand.muted)
             }
@@ -112,6 +112,7 @@ struct OnboardingRootView: View {
         case "[": vm.step(chapters: -1)
         case "]": vm.step(chapters: 1)
         case "c": vm.showCaptions.toggle()
+        case "?": vm.focusChat()
         default: return .ignored
         }
         return .handled

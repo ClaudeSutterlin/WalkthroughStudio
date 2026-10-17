@@ -280,7 +280,11 @@ struct MessagesRequest: Equatable, Sendable {
             object["output_config"] = .object(outputConfig)
         }
         if stream { object["stream"] = .bool(true) }
-        if serverSideFallback { object["fallbacks"] = .string("default") }
+        // The field is rejected without its beta header, so the one cannot be
+        // sent without the other however the request was assembled.
+        if serverSideFallback, betas.contains(AgentRuntimeSettings.fallbackBeta) {
+            object["fallbacks"] = .string("default")
+        }
         return .object(object)
     }
 

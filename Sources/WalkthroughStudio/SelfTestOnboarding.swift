@@ -90,6 +90,11 @@ extension SelfTest {
             ("agentResumeProbe", { probeCtx in try await Self.agentResumeProbe(probeCtx) }),
             ("backoffProbe", { probeCtx in try await Self.backoffProbe(probeCtx) }),
             ("spendMeterProbe", { probeCtx in try await Self.spendMeterProbe(probeCtx) }),
+            ("chatContextProbe", { probeCtx in try await Self.chatContextProbe(probeCtx) }),
+            ("citationParserProbe", { probeCtx in try await Self.citationParserProbe(probeCtx) }),
+            ("chatToolLoopProbe", { probeCtx in try await Self.chatToolLoopProbe(probeCtx) }),
+            ("contradictionFlagProbe", { probeCtx in try await Self.contradictionFlagProbe(probeCtx) }),
+            ("chatPanelProbe", { probeCtx in try await Self.chatPanelProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]

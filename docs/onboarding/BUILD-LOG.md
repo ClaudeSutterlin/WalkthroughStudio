@@ -26,7 +26,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M4 Player shell on the fixture package | written, not yet compiled: package layer, three panes, hub in a web view | fixturePackageProbe, coderefsLookupProbe, linkRouterProbe, backlinkIndexProbe, onboardSheetProbe, playerStageProbe (markdownLiteProbe landed early, in M8) | S6 |
 | M5 Narration, scene renderer, transcript, code-ref map | complete, not yet compiled: scenes, tokenizer, narrator, audio cache, Mermaid renderer, assembler | syntaxTokenizerProbe, codeSceneProbe, sceneKindsProbe, scriptValidatorProbe, audioCacheProbe, elevenAlignmentProbe (the transcript and code-ref invariants are asserted by fixturePackageProbe, which now builds through the real assembler) | S8 |
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | complete, not yet compiled: wire model, SSE, transport seam, tool loop, transcript and resume, retries and breaker, spend meter | sseParseProbe, toolLoopProbe (which also covers the streamed path and every stop reason), agentResumeProbe, backoffProbe, spendMeterProbe | S10 |
-| M7 Playback chat agent | planned | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | |
+| M7 Playback chat agent | complete, not yet compiled: context builder, ten package tools, citation parser, session log and rollover, chat panel, Flags and Bookmarks tabs | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | S11 |
 | M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
 | M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
 | M10 Hub, cross-links, search, export, coverage tracker | hub built and driven in a browser; Swift wiring pending | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
@@ -56,6 +56,80 @@ Next:
 ```
 
 ## Entries
+### S11: 2026-10-17 — M7: the playback chat, and six M6 gaps it would have fallen into
+Milestone(s): M7 (and fixes to M6)
+Built:
+- `Onboarding/Chat/PlaybackAgent.swift` — the request at time t (ARCHITECTURE 8). Three
+  system blocks (role and citation rules; the package digest; the video's summary,
+  chapters and top facts) with the breakpoint after the third, then the history, then one
+  user turn: `<narrated_so_far>` (last 40 segments verbatim, earlier ones one line per
+  chapter, the in-progress segment marked), `<on_screen>` (anchors, highlight, callout, the
+  highlighted source with 20 lines of context read at the pinned commit, or the diagram's
+  Mermaid and focused nodes, or the command output, plus the shot's facts), `<coming_up>`
+  (next two segments, marked not yet narrated), `<viewer_question>`. `PlaybackContext`
+  carries the same content as data so the probe asserts ids, not substrings.
+- Shot facts: the fixture's shots name no `factIds`, so facts are matched by evidence that
+  overlaps the shot's code (Jaccard over line ranges, closest first, at most 8). Verified
+  and unknown only: the refuted `F-map-src-001` covers the same lines as the code shot and
+  must never reach the on-screen block.
+- `Onboarding/Agent/PackageTools.swift` — the ten chat tools of ARCHITECTURE 4.3, strict,
+  with nullable types for optional inputs. `PinnedSource` reads `git show <sha>:<path>`
+  when the package has a checkout, else the package's `code/` snapshot, so a working-tree
+  edit can never reach an answer (ON-9.3). `seek_video` changes nothing; the panel shows a
+  Jump button.
+- `Onboarding/Package/ReviewFiles.swift` — `review/flags.json` and `review/status.json`
+  behind one actor, because two `flag_contradiction` calls in one turn run concurrently.
+- `Onboarding/Chat/CitationParser.swift` — the package's one citation grammar, plus what a
+  stream needs: an unterminated `[[` is held back until it closes (or a newline or 400
+  characters prove it never will), and every chip is resolved as it is parsed.
+- `Onboarding/Chat/ChatSession.swift` — one conversation per video, persisted to
+  `chat/<videoId>/<sessionId>.jsonl` with every message (thinking included, unchanged); the
+  panel's rows are derived from the log. A question that fails (error, cap, breaker) is not
+  logged and goes back in the input. After 30 questions the next session starts with a
+  summary built from the log, not by the model.
+- `Onboarding/Agent/AgentSettings.swift` — `AgentRuntimeSettings`: model, endpoint, gateway
+  and cap from Settings in one place, so chat and the fleet make the same beta decision.
+- `AgentRun` gained an optional stream observer (`.attempt` before every send so a retry
+  discards its half-streamed text, then each delta) and a static `request(config:history:tools:)`
+  so the probe asserts the bytes the run will send.
+- Views: `ChatPanel` (chips, tool rows, Jump chip, amber flag card, pause-on-typing with
+  Resume); `CompanionPanel` now has Chat / Bookmarks / Flags tabs, with clear and promote to
+  `review/status.json` with a note (ON-9.9); `?` focuses the chat.
+Fixed in M6 (from the review of c3cae35; chat would have hit every one):
+- An unknown or missing stop reason ended as `.endTurn`, which counts as success;
+  `model_context_window_exceeded` arrives that way. New ending `.unrecognized(raw)`, not a
+  success. `toolLoopProbe` part 3 now asserts it.
+- A stream that dropped before `message_stop` was accepted as a complete reply when any
+  content had arrived. It now throws a transport error the retry policy re-sends.
+- An in-stream `error` event carried status 200, so an `overloaded_error` mid-stream was
+  never retried. The event type now maps to its status (529, 429, 500, ...).
+- The refusal reason now reads `stop_details.explanation`, then `category`.
+- An assistant turn with no content is no longer appended to the history (the API rejects
+  it when the history is re-sent).
+- `fallbacks: "default"` can no longer be sent without its beta header.
+- The fallback price table is current (opus-5-5 added).
+Verified:
+- not verified: no Swift toolchain in this container. The five probes are written and
+  registered after spendMeterProbe (32 probes now). `scripts/check-scene-templates.py` and
+  `scripts/check-skill-sync.sh` pass.
+Broke / learned:
+- A chat stream is retried from its first byte, so a watcher that only appends deltas
+  shows the failed attempt's half answer followed by the whole answer. Hence `.attempt`.
+- Every question is its own `AgentRun`, so the fixture key is `playback-chat-q<n>#<turn>`:
+  the per-run turn index restarts at 0 each question.
+- Left for later (from the same review): `pause_turn` re-sends the history unchanged where
+  the API expects the paused assistant turn appended; there is no `build-log.jsonl` record
+  per request yet.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then `--selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out`
+   and the original `--selftest`. Look at `chat-panel.png`, `companion-flags.png`,
+   `companion-chat.png` and `chat-context-inside.txt` in the out directory.
+2. Ask the fixture video a real question with a key set, and record it with
+   `onboardingRecordFixtures` so the chat probes can replay a real reply.
+3. M9: video scripts and the series.
+
 
 ### S1: 2026-09-19 — Planning: user stories, architecture, build log
 Milestone(s): M0

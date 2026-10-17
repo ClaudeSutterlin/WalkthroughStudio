@@ -67,12 +67,13 @@ enum PriceTable {
     /// `SettingsKeys.onboardingPriceTable` (JSON: `{"<model>": [input, output]}`)
     /// when the numbers need to be right.
     static let fallback: [String: ModelPrice] = [
-        "claude-opus-5": ModelPrice(input: 15, output: 75),
-        "claude-opus-4-8": ModelPrice(input: 15, output: 75),
-        "claude-fable-5-1": ModelPrice(input: 15, output: 75),
-        "claude-sonnet-5": ModelPrice(input: 3, output: 15),
-        "claude-sonnet-5-5": ModelPrice(input: 3, output: 15),
-        "claude-haiku-5-5": ModelPrice(input: 0.8, output: 4),
+        "claude-opus-5-5": ModelPrice(input: 4, output: 20),
+        "claude-opus-5": ModelPrice(input: 5, output: 25),
+        "claude-opus-4-8": ModelPrice(input: 5, output: 25),
+        "claude-fable-5-1": ModelPrice(input: 10, output: 50),
+        "claude-sonnet-5": ModelPrice(input: 2, output: 10),
+        "claude-sonnet-5-5": ModelPrice(input: 2, output: 10),
+        "claude-haiku-5-5": ModelPrice(input: 0.10, output: 0.50),
     ]
 
     /// The table in force: the defaults, with any override merged over them.

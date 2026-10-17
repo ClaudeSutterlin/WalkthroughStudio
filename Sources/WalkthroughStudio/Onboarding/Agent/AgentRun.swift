@@ -71,6 +71,10 @@ struct AgentOutcome: Sendable, Equatable {
         case turnLimit
         case capReached
         case breakerTripped
+        /// A stop reason this build does not know, or none at all (the raw value,
+        /// empty when missing). `model_context_window_exceeded` lands here too.
+        /// Not a success: nothing says the model meant to stop.
+        case unrecognized(String)
     }
 
     var ending: Ending
@@ -94,6 +98,19 @@ struct AgentOutcome: Sendable, Equatable {
     }
 }
 
+/// What a watcher of a streaming run sees, in order (the playback chat, M7).
+///
+/// `attempt` comes before the first delta of every send, retries included, so a
+/// watcher that has been showing a half-written reply knows to throw it away: the
+/// retried turn streams again from its first byte, and appending it to the failed
+/// one would show the viewer a sentence that starts twice.
+enum AgentStreamEvent: Sendable, Equatable {
+    case attempt(turn: Int, attempt: Int)
+    case delta(StreamDelta)
+}
+
+typealias AgentStreamObserver = @Sendable (AgentStreamEvent) -> Void
+
 /// Thrown inside the retry ladder when the circuit breaker opens, so `run` can turn
 /// it into an outcome that still carries the history and the spend.
 struct AgentBreakerOpen: Error, Equatable {
@@ -113,6 +130,8 @@ actor AgentRun {
     private let counter: TokenCounting
     private let sleep: AgentSleep
     private let jitter: @Sendable () -> Double
+    /// Nil for the fleet, which has nobody watching a turn being written.
+    private let observer: AgentStreamObserver?
 
     /// Requests sent in this run. The fixture key: a retry is the same turn.
     private var requestIndex = 0
@@ -129,7 +148,8 @@ actor AgentRun {
         transcript: AgentTranscript? = nil,
         counter: TokenCounting = EstimatingTokenCounter(),
         sleep: AgentSleep = agentRealSleep,
-        jitter: @escaping @Sendable () -> Double = { Double.random(in: 0...1) }
+        jitter: @escaping @Sendable () -> Double = { Double.random(in: 0...1) },
+        observer: AgentStreamObserver? = nil
     ) {
         self.config = config
         self.transport = transport
@@ -143,6 +163,7 @@ actor AgentRun {
         self.counter = counter
         self.sleep = sleep
         self.jitter = jitter
+        self.observer = observer
     }
 
     // MARK: - The loop
@@ -236,7 +257,9 @@ actor AgentRun {
                 try record(.reply, message: response.assistantTurn, state: state,
                            turn: turnIndex, stopReason: response.stopReason,
                            usage: priced, ms: elapsed)
-                state.history.append(response.assistantTurn)
+                if !response.assistantTurn.content.isEmpty {
+                    state.history.append(response.assistantTurn)
+                }
                 state.notices.append("refused: \(reason)")
                 try? note("refused: \(reason)", state: state)
                 return outcome(.refused(reason), state)
@@ -257,7 +280,12 @@ actor AgentRun {
             try record(.reply, message: response.assistantTurn, state: state,
                        turn: turnIndex, stopReason: response.stopReason,
                        usage: priced, ms: elapsed)
-            state.history.append(response.assistantTurn)
+            // An assistant message with no content is rejected when the history is
+            // sent back, so an empty reply (an `end_turn` with nothing in it, or a
+            // `max_tokens` cut before the first block) is never appended.
+            if !response.assistantTurn.content.isEmpty {
+                state.history.append(response.assistantTurn)
+            }
             state.text += response.joinedText
 
             let calls = response.toolUses.map {
@@ -292,14 +320,16 @@ actor AgentRun {
             case .other(let raw):
                 // A stop reason this build does not know. Ending the turn is the
                 // conservative read: looping on it could spend the whole budget.
+                // It is not counted as success, though: nothing says the model meant
+                // to stop, and `model_context_window_exceeded` arrives this way.
                 state.notices.append("unrecognized stop reason \"\(raw)\"; the turn was ended")
                 try? note(state.notices.last ?? "", state: state)
-                return outcome(.endTurn, state)
+                return outcome(.unrecognized(raw), state)
 
             case .missing:
                 state.notices.append("the reply carried no stop reason; the turn was ended")
                 try? note(state.notices.last ?? "", state: state)
-                return outcome(.endTurn, state)
+                return outcome(.unrecognized(""), state)
 
             case .refusal, .pauseTurn:
                 break   // handled above
@@ -342,13 +372,21 @@ actor AgentRun {
     // MARK: - Requests
 
     private func buildRequest(_ history: [AgentMessage]) -> MessagesRequest {
+        AgentRun.request(config: config, history: history, tools: tools.specs)
+    }
+
+    /// The request a run sends for `history`. Static and nonisolated so the playback
+    /// chat's context probe asserts the very bytes the run will send, rather than a
+    /// second assembly that could drift from it.
+    static func request(config: AgentRunConfig, history: [AgentMessage],
+                        tools: [ToolSpec]) -> MessagesRequest {
         var request = MessagesRequest(promptName: config.promptName,
                                       model: config.model,
                                       maxTokens: config.maxTokens,
                                       stream: config.stream)
         request.system = config.system
         request.messages = history
-        request.tools = tools.specs
+        request.tools = tools
         request.effort = config.effort
         request.outputFormat = config.outputFormat
         request.betas = config.betas
@@ -378,6 +416,7 @@ actor AgentRun {
                 promptName: request.promptName,
                 turn: turn,
                 bodyHash: PackageStore.sha256Hex(body))
+            observer?(.attempt(turn: turn, attempt: attempt))
             do {
                 let response = try await send(call, streaming: request.stream)
                 await breaker.recordReachable()
@@ -421,11 +460,11 @@ actor AgentRun {
         var accumulator = MessageStreamAccumulator()
         for try await chunk in stream.chunks {
             for event in parser.feed(chunk) {
-                try accumulator.apply(event)
+                if let delta = try accumulator.apply(event) { observer?(.delta(delta)) }
             }
         }
         for event in parser.finish() {
-            try accumulator.apply(event)
+            if let delta = try accumulator.apply(event) { observer?(.delta(delta)) }
         }
         return try accumulator.finalize()
     }
@@ -488,12 +527,14 @@ actor AgentRun {
         return Double(measured) >= Double(config.contextCapTokens) * 0.8
     }
 
-    /// `stop_details.reason` when there is one, and a usable sentence when there is
-    /// not — `stop_details` may be absent or null on a refusal.
+    /// `stop_details.explanation`, then its `category`, when there are any, and a
+    /// usable sentence when there are not: `stop_details` may be absent or null on
+    /// a refusal. `reason` and `message` are read last, for older gateways.
     static func refusalReason(_ response: MessagesResponse) -> String {
         if let details = response.stopDetails?.objectValue {
-            if let reason = details["reason"]?.stringValue, !reason.isEmpty { return reason }
-            if let message = details["message"]?.stringValue, !message.isEmpty { return message }
+            for key in ["explanation", "category", "reason", "message"] {
+                if let value = details[key]?.stringValue, !value.isEmpty { return value }
+            }
         }
         let text = response.joinedText.trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? "the model declined to answer and gave no reason" : text

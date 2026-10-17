@@ -1,27 +1,70 @@
 import SwiftUI
 
-/// The right pane. Today: the "on screen now" card, the docked mini-player and
-/// bookmarks. M7 adds the chat transcript under them, which is why this is native —
-/// a streaming conversation with tool rows does not belong in the package's web view.
+/// The right pane: the "on screen now" card, the docked mini-player and where the
+/// file is covered, above three tabs — the playback chat, bookmarks and the flags the
+/// chat raised. Native, because a streaming conversation with tool rows does not
+/// belong in the package's web view.
 struct CompanionPanel: View {
     @ObservedObject var vm: OnboardingViewModel
     @ObservedObject var clock: PlaybackClock
 
     @State private var bookmarkNote = ""
+    /// The note typed for a promotion, per item id.
+    @State private var promoteNotes: [String: String] = [:]
+    @State private var promoting: String?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if vm.isDocked {
-                    MiniPlayer(vm: vm, clock: clock)
+        VStack(spacing: 0) {
+            if vm.companionTab == .chat {
+                ScrollView { topCards.padding(16) }
+                    .frame(maxHeight: 260)
+                tabPicker
+                if let chat = vm.chat {
+                    ChatPanel(vm: vm, session: chat)
+                } else {
+                    Text(vm.currentVideoID == nil
+                         ? "Play a video to ask about it while you watch."
+                         : "The chat for this video is not available.")
+                        .font(.caption)
+                        .foregroundStyle(Brand.muted)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
-                onScreenCard
-                coveredCard
-                bookmarksCard
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        topCards
+                        tabPicker
+                        if vm.companionTab == .bookmarks { bookmarksCard } else { flagsCard }
+                    }
+                    .padding(16)
+                }
             }
-            .padding(16)
         }
         .background(Brand.cream)
+    }
+
+    private var topCards: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if vm.isDocked {
+                MiniPlayer(vm: vm, clock: clock)
+            }
+            onScreenCard
+            coveredCard
+        }
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $vm.companionTab) {
+            ForEach(CompanionTab.allCases) { tab in
+                Text(tab == .flags && !vm.flags.isEmpty ? "Flags (\(vm.flags.count))" : tab.rawValue)
+                    .tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal, vm.companionTab == .chat ? 12 : 0)
+        .padding(.vertical, vm.companionTab == .chat ? 8 : 0)
     }
 
     // MARK: On screen now
@@ -168,12 +211,17 @@ struct CompanionPanel: View {
                             .foregroundStyle(Brand.charcoal)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
+                        promoteButton(id: bookmark.id)
                         Button {
                             vm.removeBookmark(bookmark)
                         } label: {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(Brand.muted)
                         }
                         .buttonStyle(.plain)
+                        .help("Remove this bookmark")
+                    }
+                    if promoting == bookmark.id {
+                        promoteField(id: bookmark.id) { note in vm.promoteBookmark(bookmark, note: note) }
                     }
                 }
                 if vm.currentVideoID != nil {
@@ -187,6 +235,86 @@ struct CompanionPanel: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: Flags
+
+    /// What the chat flagged as narration the code contradicts (ON-9.6). Each can be
+    /// cleared, or promoted to the video's review item with a note (ON-9.9).
+    @ViewBuilder
+    private var flagsCard: some View {
+        card("Flags") {
+            VStack(alignment: .leading, spacing: 10) {
+                if vm.flags.isEmpty {
+                    Text("When the chat reads code that contradicts the narration, it flags it here "
+                         + "for the package author.")
+                        .font(.caption)
+                        .foregroundStyle(Brand.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(vm.flags) { flag in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Button(PlaybackClock.timecode(flag.t)) {
+                                vm.open(anchor: "video:\(flag.videoId)#t=\(PackageTools.seconds(flag.t))")
+                            }
+                            .buttonStyle(.link)
+                            .font(.system(.caption, design: .monospaced))
+                            Text(flag.claim)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Brand.charcoal)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 4)
+                            promoteButton(id: flag.id)
+                            Button {
+                                vm.clearFlag(flag)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill").foregroundStyle(Brand.muted)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Clear this flag")
+                        }
+                        Text(flag.reason)
+                            .font(.caption)
+                            .foregroundStyle(Brand.charcoal)
+                            .fixedSize(horizontal: false, vertical: true)
+                        chip(flag.anchor)
+                        if promoting == flag.id {
+                            promoteField(id: flag.id) { note in vm.promoteFlag(flag, note: note) }
+                        }
+                    }
+                    .padding(8)
+                    .background(ChatPanel.amber.opacity(0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+            }
+        }
+    }
+
+    private func promoteButton(id: String) -> some View {
+        Button {
+            promoting = promoting == id ? nil : id
+        } label: {
+            Image(systemName: "arrow.up.doc").foregroundStyle(Brand.coral)
+        }
+        .buttonStyle(.plain)
+        .help("Add to the review list with a note")
+    }
+
+    private func promoteField(id: String, action: @escaping (String) -> Void) -> some View {
+        HStack(spacing: 6) {
+            TextField("Note for the author", text: Binding(
+                get: { promoteNotes[id] ?? "" },
+                set: { promoteNotes[id] = $0 }))
+                .textFieldStyle(.roundedBorder)
+                .font(.caption)
+            Button("Add to review") {
+                action(promoteNotes[id] ?? "")
+                promoteNotes[id] = nil
+                promoting = nil
+            }
+            .font(.caption)
         }
     }
 

@@ -717,7 +717,8 @@ extension SelfTest {
                                                content: [SelfTest.textBlock("hmm")])
         let (strangeRun, strangeTransport) = makeRun("strange", [strange])
         let strangeOutcome = try await strangeRun.run(instructions: .user("Hello."))
-        guard case .endTurn = strangeOutcome.ending,
+        guard case .unrecognized("something_new_2027") = strangeOutcome.ending,
+              !strangeOutcome.succeeded,
               strangeOutcome.notices.contains(where: { $0.contains("something_new_2027") }),
               await strangeTransport.sent.count == 1 else {
             throw StudioError("toolLoopProbe: an unknown stop reason ended "
