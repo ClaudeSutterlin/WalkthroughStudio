@@ -224,3 +224,20 @@ final class PackageStore {
         return hex
     }
 }
+
+// MARK: - Recorded command output
+
+extension PackageStore {
+    /// The recorded output behind a `cmd:<unit>/<n>` anchor: the unit's own copy
+    /// (`units/<unit>/cmd/<n>.txt`) when the fleet ran it, else the imported packet's
+    /// (`packet/commands/<unit>/<n>.txt`). Nil when neither exists or the anchor is
+    /// not a `cmd:` anchor.
+    func commandOutput(_ anchor: String) -> String? {
+        guard case .cmd(let unit, let n)? = Anchor(string: anchor) else { return nil }
+        for relative in ["units/\(unit)/cmd/\(n).txt", "packet/commands/\(unit)/\(n).txt"]
+        where exists(relative) {
+            if let text = try? readString(relative) { return text }
+        }
+        return nil
+    }
+}

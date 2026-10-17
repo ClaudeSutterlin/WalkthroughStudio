@@ -88,6 +88,13 @@ struct OnboardingRootView: View {
                     .font(.caption2)
                     .foregroundStyle(Brand.muted)
             }
+            if case .video = vm.stage {
+                Button("Regenerate from script") { Task { await vm.regenerateCurrentVideo() } }
+                    .buttonStyle(.link)
+                    .font(.caption)
+                    .disabled(!vm.busyMessage.isEmpty)
+                    .help("Re-render this video from videos/<id>/script.json after editing it")
+            }
             Button("Open another…") { vm.showOnboardSheet = true }
                 .buttonStyle(.link)
                 .font(.caption)

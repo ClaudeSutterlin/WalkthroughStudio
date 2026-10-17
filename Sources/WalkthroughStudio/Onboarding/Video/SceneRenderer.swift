@@ -39,6 +39,12 @@ enum SceneRenderer {
         /// Subtitle for a title or table shot.
         var subtitle: String = ""
         var hedge: String = ""
+        /// The card's variant (`tldr`, `chapter`, `confessional`), from its scene.
+        var variant: String = ""
+        /// A tldr card's three to five lines.
+        var bullets: [String] = []
+        /// A tldr card's chapter list: title and start time, from the laid-out timeline.
+        var chapterList: [(title: String, start: Double)] = []
     }
 
     struct TerminalLine {
@@ -241,17 +247,45 @@ enum SceneRenderer {
         ], input: input)
     }
 
+    /// A card: the claim, its evidence chips, and — on a tldr — bullets and the
+    /// chapter list. With bullets the headline is the caption, not the narration: the
+    /// narration is heard, and printing all of it under its own summary says it twice.
     static func cardHTML(_ input: Input) throws -> String {
         let chips = input.evidence
             .map { "<span class=\"chip\">\(MarkdownLite.esc(MarkdownLite.anchorLabel($0)))</span>" }
             .joined()
+        let bullets = input.bullets.prefix(5)
+            .map { "<li>\(MarkdownLite.esc($0))</li>" }.joined()
+        let chapters = input.chapterList
+            .map { "<li><span class=\"t\">\(SceneRenderer.timecode($0.start))</span>"
+                + "\(MarkdownLite.esc($0.title))</li>" }
+            .joined()
+        let headline: String
+        if !input.bullets.isEmpty {
+            headline = input.shot.caption.isEmpty ? input.scene.title : input.shot.caption
+        } else {
+            headline = input.claim.isEmpty ? input.shot.narration : input.claim
+        }
+        let variant = VideoScript.cardVariants.contains(input.variant) ? input.variant : ""
         return fill(try template("scene-card"), [
+            "VARIANT": variant,
             "KICKER": MarkdownLite.esc(input.kicker.isEmpty ? input.scene.title : input.kicker),
-            "CLAIM": MarkdownLite.esc(input.claim.isEmpty ? input.shot.narration : input.claim),
+            "CLAIM": MarkdownLite.esc(headline),
+            "BULLETS": bullets,
+            "BULLETS_CLASS": bullets.isEmpty ? "empty" : "",
+            "CHAPTERS": chapters,
+            "CHAPTERS_CLASS": chapters.isEmpty ? "empty" : "",
             "CHIPS": chips,
             "HEDGE": MarkdownLite.esc(input.hedge),
             "HEDGE_CLASS": input.hedge.isEmpty ? "empty" : "",
         ], input: input)
+    }
+
+    /// `1:05`. PlaybackClock has the same formatter, but it lives on the main actor and
+    /// this enum renders from anywhere.
+    static func timecode(_ seconds: Double) -> String {
+        let whole = Int(max(0, seconds))
+        return String(format: "%d:%02d", whole / 60, whole % 60)
     }
 
     static func terminalHTML(_ input: Input) throws -> String {

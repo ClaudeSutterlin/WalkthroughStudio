@@ -439,6 +439,58 @@ final class OnboardingViewModel: ObservableObject {
         Task { await chat.ask(question, at: t) }
     }
 
+    // MARK: - Regenerating a video (ON-6.6)
+
+    /// Re-renders the video on stage from its `videos/<id>/script.json`, as the author
+    /// edited it, and nothing else in the package. Shots whose narration did not change
+    /// keep their audio, so fixing one sentence re-synthesizes one sentence.
+    func regenerateCurrentVideo() async {
+        guard let store, let videoID = currentVideoID, busyMessage.isEmpty else { return }
+        busyMessage = "Regenerating \(videoID)…"
+        defer { busyMessage = "" }
+        let resumeAt = clock.t
+        do {
+            let narrator = try OnboardingViewModel.narrator(for: manifest)
+            var options = VideoAssembler.Options()
+            options.voiceID = manifest.narration.voiceID
+            options.modelID = manifest.narration.modelID
+            options.narratorName = manifest.narration.modelID == "tone" ? "tone" : "elevenlabs"
+            // The mp4 is about to be replaced under the player.
+            player.pause()
+            player.replaceCurrentItem(with: nil)
+            let runner = SeriesRunner(store: store, repo: nil, narrator: narrator, options: options)
+            let built = try await runner.regenerate(videoId: videoID)
+            for notice in built.notices {
+                notices.append(OnboardingNotice(message: "\(videoID): \(notice)"))
+            }
+            manifest = try store.readManifest()
+            items = OnboardingViewModel.readingOrder(hub: hub, manifest: manifest)
+            // The chat read the old transcript; the next question starts from the new one.
+            chats[videoID] = nil
+            stage = .hub
+            await play(videoID: videoID, seconds: min(resumeAt, built.duration))
+        } catch {
+            note("That video was not regenerated", error)
+        }
+    }
+
+    /// The voice the package was built with: the offline tone for a fixture package,
+    /// ElevenLabs otherwise. Read from the Keychain here, on a click, never while a view
+    /// is being built (CLAUDE.md landmine 5).
+    static func narrator(for manifest: OnboardingManifest) throws -> Narrating {
+        if manifest.narration.modelID == "tone" || manifest.narration.modelID.isEmpty {
+            return ToneNarrator()
+        }
+        let key = Keychain.elevenLabsKey
+        guard !key.isEmpty else {
+            throw StudioError("this package was narrated with ElevenLabs; add your ElevenLabs key in "
+                              + "Settings to regenerate it")
+        }
+        return ElevenLabsNarrator(client: ElevenLabsClient(apiKey: key),
+                                  voiceID: manifest.narration.voiceID,
+                                  modelID: manifest.narration.modelID)
+    }
+
     // MARK: - Notices
 
     /// The feature degrades with a notice rather than failing the window, the way the

@@ -28,7 +28,7 @@ Milestones are defined in ARCHITECTURE.md. Status: `planned`, `in-progress`,
 | M6 LLM runtime (tool loop, SSE, retries, spend, resume) | complete, not yet compiled: wire model, SSE, transport seam, tool loop, transcript and resume, retries and breaker, spend meter | sseParseProbe, toolLoopProbe (which also covers the streamed path and every stop reason), agentResumeProbe, backoffProbe, spendMeterProbe | S10 |
 | M7 Playback chat agent | complete, not yet compiled: context builder, ten package tools, citation parser, session log and rollover, chat panel, Flags and Bookmarks tabs | chatContextProbe, citationParserProbe, chatToolLoopProbe, contradictionFlagProbe, chatPanelProbe | S11 |
 | M8 Projectors: Mermaid diagrams, registers, traces | Python verified; Swift port complete, parity probe written, not yet compiled | markdownLiteProbe, projectorParityProbe (these supersede the six planned per-deliverable probes: one diffs every projected file against the golden projection, the other holds the converter to an adversarial corpus) | S5 |
-| M9 Video scripts and the series | planned | scriptInvariantsProbe, traceVideoChaptersProbe, regenerateOneProbe, seriesSmokeProbe | |
+| M9 Video scripts and the series | complete, not yet compiled: series rules in the validator, trace and confessional scripts, the tighten loop, the script planner unit, the series runner and regenerate-one | scriptInvariantsProbe, scriptPlannerProbe, seriesSmokeProbe, traceVideoChaptersProbe, regenerateOneProbe | S12 |
 | M10 Hub, cross-links, search, export, coverage tracker | hub built and driven in a browser; Swift wiring pending | hubLinkProbe, searchIndexProbe, hubExportProbe, hubViewProbe, coverageTrackerProbe | |
 | M11 In-app research fleet (second producer) | planned | checkpointResumeProbe, gitMiningProbe, buildRunnerProbe, toolSandboxProbe, orphanFactProbe, fleetProgressProbe, fleetSmokeProbe, verifierRejectProbe, traceConcernsProbe, spendCapProbe | |
 | M12 Review, staleness, end-to-end smoke, hardening | planned | smokeEndToEndProbe, stalenessProbe, reviewStateProbe, secretLeakProbe | |
@@ -56,6 +56,84 @@ Next:
 ```
 
 ## Entries
+### S12: 2026-10-17 — M9: video scripts and the series
+Milestone(s): M9
+Built:
+- `ScriptValidator.Rules`: the series rules of ARCHITECTURE 2.6 and 5, opt-in so the
+  handwritten fixture script keeps its looser shape. `Rules.series` adds a first scene
+  that is a narrated `card` with variant `tldr` (at most 30 s), cards held at least 4 s,
+  6 to 14 scenes (a warning), and for a trace video exactly one scene per hop in order.
+  Every caller now gets the 900 s cap, no cited fact that is refuted, proposed or
+  unknown to the packet (the assembler loads the packet's facts itself), a 40-line limit
+  on `visibleLines`, and a `table` shot with a header row and rows of the same width.
+- `VideoScript`: `kind` and `targetSeconds` on the script, `variant` and `traceHop` on a
+  scene, `table` and `bullets` on a shot, all decoded tolerantly and encoded only when set.
+- `scene-card.html` and `SceneRenderer.cardHTML`: the three card variants. A tldr shows
+  its caption, three to five bullets and the chapter list with start times (filled by the
+  assembler from the timeline); a confessional is the one charcoal card.
+- `Onboarding/Video/TraceScript.swift`: a trace video written from the packet with no
+  model. A tldr, then one code scene per hop (`h01`…, `traceHop` set, the hop's anchor and
+  `trace:<id>#hop<n>` on the shot, the hop's lines highlighted with a "called from"
+  callout, usable facts only), and at full length the path diagram, the ten-concern table
+  and the "what scares me" card. `NarrationFit` shortens a line one step at a time
+  (first sentence, then first clause, then a word cap) so a cut never ends mid-thought.
+- `Onboarding/Video/SeriesPlanner.swift`: the video list by scope. Smoke is one hops-only
+  trace video of the rank-1 path at 60 s; preview is the overview plus three traces;
+  complete is the ten series videos, a trace per traced path and a confessional per
+  subsystem. A confessional is written from the subsystem's usable landmine and risk facts
+  (a subsystem is the top-level directory of a fact's first code evidence; generated
+  directories and the root are not subsystems; fewer than two facts is no video). The
+  tighten loop shortens the longest line until the script fits, holds cards at 4 s by
+  raising their pad, and drops only framing scenes, never a hop.
+- `Onboarding/Units/ScriptPlannerUnit.swift`: the planner unit for the ten series videos.
+  Read tools from `PackageTools` plus `emit_script`, which validates with the series rules.
+  The first invalid script comes back as an `is_error` result listing every error; the
+  second ends the unit with no video and a notice. Effort high, 32k max tokens (so it
+  streams), prompt name `script-planner-<videoId>`.
+- `Onboarding/Video/SeriesRunner.swift`: plan, write, tighten, validate, render, and add
+  or replace only that video's manifest entry. A video that cannot be made is a notice and
+  the series goes on. `regenerate(videoId:)` re-renders one video from its edited
+  `script.json` and throws with the validator's reasons when the edit is invalid, before
+  anything is written.
+- The player's status bar has "Regenerate from script" while a video is on stage (ON-6.6).
+  It reads the ElevenLabs key on the click, never while the view is built.
+- Fixed: the assembler read a terminal shot's output from `units/<cmd>.txt`, which no
+  producer writes. `PackageStore.commandOutput` reads `units/<unit>/cmd/<n>.txt`, then
+  `packet/commands/<unit>/<n>.txt`, and the chat uses the same helper.
+Decided:
+- ON-5.4 says the chapter list equals the hop list, and section 5 says scene 1 is a tldr
+  card. Both hold if the hop chapters (the scenes with `traceHop`) are the hop list in
+  order and framing chapters sit before and after them. `traceVideoChaptersProbe` asserts
+  exactly that, and that the smoke video's only framing chapter is the tldr.
+- Traces and confessionals are deterministic; only the ten series videos need a model.
+  The trace is already the most evidenced thing in a packet, and a reproducible script is
+  one a probe can hold to ON-5.4. Without a model set up, planned videos are skipped with
+  a notice and the rest of the series still renders.
+- Section 5 calls the depth presets `smoke`, `preview` and `complete` since the 2026-09-19
+  scope decision, so `SeriesScope` uses those names, not the older quick and standard.
+Verified:
+- not verified: no Swift toolchain in this container. Five probes are written and
+  registered after chatPanelProbe (37 probes now). `scripts/check-scene-templates.py` and
+  `scripts/check-skill-sync.sh` pass. The tighten loop was simulated in Python on the
+  fixture trace: the hops-only script goes from about 139 s to 54 s, and every hop keeps
+  a whole first clause.
+Broke / learned:
+- `await` cannot sit to the right of `?:`, so "read the file if there is a path" is an
+  `if`, not a ternary.
+- The milestone demo also asks for a terminal shot. The fixture packet has no `commands/`, so
+  the fixture trace video has none; the terminal path is covered by `sceneKindsProbe`.
+Limits hit:
+- none.
+Next:
+1. On the Mac: `swift build`, then `--selftest-onboarding /tmp/fixture-repo /tmp/onboarding-out`
+   and the original `--selftest`. Watch `series-package.onboarding/videos/trace-order-creation/video.mp4`
+   and look at `series-tldr.png`, `series-concerns.png` and `series-scares.png` in the
+   out directory: the tldr's bullets and chapter list, the ten-row concern table at 720p,
+   and the charcoal confessional.
+2. Run the planner for the overview with a key set and record it with
+   `onboardingRecordFixtures`, so `scriptPlannerProbe` can replay a real script.
+3. M10: hub, cross-links, search, export, coverage tracker.
+
 ### S11: 2026-10-17 — M7: the playback chat, and six M6 gaps it would have fallen into
 Milestone(s): M7 (and fixes to M6)
 Built:

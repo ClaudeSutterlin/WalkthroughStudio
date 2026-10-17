@@ -46,11 +46,40 @@
     font-size: calc({{HEIGHT}}px * 0.024); color: var(--muted); font-style: italic;
   }
   .hedge.empty { display: none; }
+  .bullets, .chapters { list-style: none; margin-top: calc({{HEIGHT}}px * 0.035); }
+  .bullets.empty, .chapters.empty { display: none; }
+  .bullets li {
+    font-size: calc({{HEIGHT}}px * 0.032); line-height: 1.35; color: var(--charcoal);
+    padding-left: calc({{HEIGHT}}px * 0.032); position: relative; max-width: 88%;
+    margin-bottom: calc({{HEIGHT}}px * 0.010);
+  }
+  .bullets li::before {
+    content: ""; position: absolute; left: 0; top: 0.55em;
+    width: calc({{HEIGHT}}px * 0.012); height: calc({{HEIGHT}}px * 0.012);
+    border-radius: 50%; background: var(--accent);
+  }
+  .chapters { display: flex; flex-wrap: wrap; gap: calc({{HEIGHT}}px * 0.010) calc({{HEIGHT}}px * 0.028); }
+  .chapters li { font-size: calc({{HEIGHT}}px * 0.022); color: var(--muted); }
+  .chapters .t {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: var(--accent);
+    margin-right: calc({{HEIGHT}}px * 0.008);
+  }
+  /* What scares me: the one card that is not cream, so it reads as a different voice. */
+  .scene.confessional { background: var(--charcoal); }
+  .scene.confessional .claim { color: var(--cream); font-size: calc({{HEIGHT}}px * 0.050); }
+  .scene.confessional .kicker { color: var(--coral-glow); }
+  .scene.confessional .evidence .chip {
+    color: var(--cream); background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18);
+  }
+  .scene.confessional .hedge { color: var(--faded); }
+  .scene.tldr .claim { font-size: calc({{HEIGHT}}px * 0.056); }
   {{THEME_CSS}}
 </style></head>
-<body><div class="scene">
+<body><div class="scene {{VARIANT}}">
   <div class="kicker">{{KICKER}}</div>
   <div class="claim">{{CLAIM}}</div>
+  <ul class="bullets {{BULLETS_CLASS}}">{{BULLETS}}</ul>
+  <ol class="chapters {{CHAPTERS_CLASS}}">{{CHAPTERS}}</ol>
   <div class="evidence">{{CHIPS}}</div>
   <div class="hedge {{HEDGE_CLASS}}">{{HEDGE}}</div>
 </div></body>

@@ -23,6 +23,9 @@ enum VideoAssembler {
         var theme = BrandTheme()
         /// Diagrams are rendered once per video and reused across shots.
         var renderDiagrams = true
+        /// What the script is held to. Facts left nil are read from the package's
+        /// packet, so a script citing a refuted fact never renders.
+        var rules = ScriptValidator.Rules()
 
         init() {}
     }
@@ -48,7 +51,9 @@ enum VideoAssembler {
         // 1. Refuse a script that names something the package does not have, before
         //    anything expensive happens.
         let router = LinkRouter(store: store, headSHA: script.sha)
-        let report = ScriptValidator.validate(script, router: router)
+        var rules = options.rules
+        if rules.facts == nil { rules.facts = VideoAssembler.packetFacts(in: store) }
+        let report = ScriptValidator.validate(script, router: router, rules: rules)
         guard report.ok else {
             throw StudioError("VideoAssembler: \(ScriptValidator.message(for: report))")
         }
@@ -81,7 +86,8 @@ enum VideoAssembler {
             var input = try await sceneInput(for: pair.shot, scene: pair.scene, script: script,
                                              store: store, repo: repo, git: git,
                                              options: options, diagrams: &diagrams,
-                                             notices: &notices)
+                                             notices: &notices,
+                                             chapters: output.transcript.chapters)
             input.size = options.size
             let html = try SceneRenderer.html(for: input)
             let image = try await renderer.render(html: html,
@@ -126,6 +132,13 @@ enum VideoAssembler {
                      notices: notices)
     }
 
+    /// Every fact the package's packet carries, by id, or nil when the package has no
+    /// readable packet (then the fact check is skipped rather than failing every id).
+    static func packetFacts(in store: PackageStore) -> [String: PacketFact]? {
+        guard let packet = try? PacketReader.load(store.url("packet")) else { return nil }
+        return Dictionary(packet.facts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     /// `StillsVideoWriter` appends a trailing hold so the asset is never shorter than
     /// the sum of the shots, which makes the mp4 slightly longer than the timeline.
     /// Rather than let the last caption end before the video does — the desync
@@ -157,10 +170,17 @@ enum VideoAssembler {
                            script: VideoScript, store: PackageStore, repo: URL?,
                            git: GitRunner, options: Options,
                            diagrams: inout [String: String],
-                           notices: inout [String]) async throws -> SceneRenderer.Input {
+                           notices: inout [String],
+                           chapters: [ChapterMarker] = []) async throws -> SceneRenderer.Input {
         var input = SceneRenderer.Input(shot: shot, scene: scene, sha7: script.sha,
                                         theme: options.theme, size: options.size)
         input.subtitle = script.summary
+        input.variant = scene.variant ?? ""
+        input.bullets = shot.bullets ?? []
+        // The tldr lists what is coming, so it lists every chapter but its own.
+        if scene.variant == "tldr" {
+            input.chapterList = chapters.filter { $0.id != scene.id }.map { ($0.title, $0.start) }
+        }
 
         switch shot.sceneType {
         case "code":
@@ -208,10 +228,17 @@ enum VideoAssembler {
             }
 
         case "terminal":
-            if let cmd = shot.cmd, let recorded = try? store.readString("units/\(cmd).txt") {
+            if let cmd = shot.cmd, let recorded = store.commandOutput(cmd) {
                 input.terminal = terminalLines(recorded)
             } else {
                 notices.append("\(shot.id): no recorded output for \(shot.cmd ?? "its command")")
+                input.shot.sceneType = "card"
+            }
+
+        case "table":
+            input.tableRows = shot.table ?? []
+            if input.tableRows.first?.isEmpty ?? true {
+                notices.append("\(shot.id): a table with no rows renders as a card")
                 input.shot.sceneType = "card"
             }
 

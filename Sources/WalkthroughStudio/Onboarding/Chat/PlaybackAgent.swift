@@ -456,8 +456,7 @@ struct PlaybackAgent: @unchecked Sendable {
 
     private func terminalExcerpt(_ interval: CodeRefInterval) -> String {
         guard let raw = interval.cmd ?? interval.anchors.first(where: { $0.hasPrefix("cmd:") }),
-              case .cmd(let unit, let n)? = Anchor(string: raw),
-              let output = try? store.readString("packet/commands/\(unit)/\(n).txt") else { return "" }
+              let output = store.commandOutput(raw) else { return "" }
         let lines = output.components(separatedBy: "\n")
         var out = "command output [[\(raw)]]:\n```\n" + lines.prefix(60).joined(separator: "\n") + "\n```\n"
         if lines.count > 60 { out += "(\(lines.count - 60) more lines)\n" }

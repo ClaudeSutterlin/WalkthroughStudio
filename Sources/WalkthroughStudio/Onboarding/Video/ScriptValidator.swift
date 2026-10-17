@@ -7,6 +7,9 @@ import Foundation
 /// file existence, anchor resolution, id shape — and it runs on every build.
 enum ScriptValidator {
 
+    /// Section 5: a code panel shows at most this many lines.
+    static let maxWindowLines = 40
+
     struct Problem: Equatable, CustomStringConvertible {
         /// The shot or scene it belongs to, for a message that names a place.
         var at: String
@@ -34,10 +37,51 @@ enum ScriptValidator {
         }
     }
 
+    /// The limits a script is held to beyond "everything it names exists".
+    ///
+    /// Two sets, because two kinds of script reach the validator. A handwritten one
+    /// (the fixture's, or one a user edited) gets the defaults: the runtime cap and,
+    /// when the caller has the facts, the rule that nothing cites a refuted claim. A
+    /// planned one — every video in a series (ARCHITECTURE 5) — gets `series`, which
+    /// adds the shape a viewer can rely on: a tldr card first and short, cards held
+    /// long enough to read, and a scene count that is a walk rather than a slideshow
+    /// or a lecture.
+    struct Rules {
+        /// Hard cap on the estimated runtime.
+        var budgetSeconds: Double = 900
+        /// The first scene must be a narrated `card` with variant `tldr`.
+        var requireTLDR = false
+        var tldrMaxSeconds: Double = 30
+        /// A card is text on screen; shorter than this and it cannot be read.
+        var cardMinSeconds: Double? = nil
+        /// Outside this range is a warning: a planner aims for it, a user may not.
+        var sceneRange: ClosedRange<Int>? = nil
+        /// Facts by id. Nil skips the fact check (a caller with no packet at hand);
+        /// an empty map means "no facts", so every cited id is unknown.
+        var facts: [String: PacketFact]? = nil
+        /// For a trace video: how many hops the trace has. The scenes carrying
+        /// `traceHop` must then be exactly 1 through this, in order.
+        var traceHops: Int? = nil
+
+        init() {}
+
+        /// The rules every planned video in a series is held to.
+        static func series(budgetSeconds: Double = 900, facts: [String: PacketFact]?) -> Rules {
+            var rules = Rules()
+            rules.budgetSeconds = budgetSeconds
+            rules.requireTLDR = true
+            rules.cardMinSeconds = 4
+            rules.sceneRange = 6...14
+            rules.facts = facts
+            return rules
+        }
+    }
+
     /// `narrator` supplies the runtime estimate, so the number matches what will
     /// actually be synthesized rather than a second guess at speaking rate.
     static func validate(_ script: VideoScript, router: LinkRouter,
-                         narrator: ToneNarrator = ToneNarrator()) -> Report {
+                         narrator: ToneNarrator = ToneNarrator(),
+                         rules: Rules = Rules()) -> Report {
         var report = Report()
         var problems: [Problem] = []
 
@@ -71,6 +115,12 @@ enum ScriptValidator {
             }
             if let docAnchor = scene.docAnchor {
                 problems.append(contentsOf: check(docAnchor, at: scene.id, router: router))
+            }
+            if let variant = scene.variant, !VideoScript.cardVariants.contains(variant) {
+                problems.append(Problem(at: scene.id,
+                                        message: "has an unknown variant \"\(variant)\"; known: "
+                                            + VideoScript.cardVariants.joined(separator: ", "),
+                                        isError: false))
             }
 
             for shot in scene.shots {
@@ -111,14 +161,99 @@ enum ScriptValidator {
                     problems.append(contentsOf: check(cmd, at: shot.id, router: router))
                 }
                 problems.append(contentsOf: checkKind(shot, at: shot.id, router: router))
+                if let facts = rules.facts {
+                    problems.append(contentsOf: checkFacts(shot, facts: facts))
+                }
 
+                let seconds = narrator.estimatedDuration(of: shot.narration) + max(0, shot.pad)
+                if let minimum = rules.cardMinSeconds, shot.sceneType == "card", seconds < minimum {
+                    problems.append(Problem(at: shot.id,
+                                            message: String(format: "is a card held %.1fs; a card needs at "
+                                                            + "least %.0fs on screen to be read", seconds, minimum),
+                                            isError: true))
+                }
                 report.shotCount += 1
-                report.estimatedSeconds += narrator.estimatedDuration(of: shot.narration) + max(0, shot.pad)
+                report.estimatedSeconds += seconds
             }
         }
 
+        problems.append(contentsOf: checkShape(script, narrator: narrator, rules: rules,
+                                               estimatedSeconds: report.estimatedSeconds))
         report.problems = problems
         return report
+    }
+
+    /// Runtime, the tldr and the scene count: what a script is as a whole.
+    private static func checkShape(_ script: VideoScript, narrator: ToneNarrator, rules: Rules,
+                                   estimatedSeconds: Double) -> [Problem] {
+        var problems: [Problem] = []
+        if estimatedSeconds > rules.budgetSeconds {
+            problems.append(Problem(at: script.id,
+                                    message: String(format: "runs about %.0fs, over its %.0fs budget",
+                                                    estimatedSeconds, rules.budgetSeconds),
+                                    isError: true))
+        }
+        if rules.requireTLDR, let first = script.scenes.first {
+            if first.variant == "tldr", let shot = first.shots.first, shot.sceneType == "card",
+               !shot.narration.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let seconds = narrator.estimatedDuration(of: shot.narration)
+                if seconds > rules.tldrMaxSeconds {
+                    problems.append(Problem(at: shot.id,
+                                            message: String(format: "the tldr runs %.0fs; it must say what the "
+                                                            + "video is in %.0fs or less",
+                                                            seconds, rules.tldrMaxSeconds),
+                                            isError: true))
+                }
+            } else {
+                problems.append(Problem(at: first.id,
+                                        message: "does not open with a tldr: the first scene must be a "
+                                            + "narrated card with variant tldr saying what the video covers",
+                                        isError: true))
+            }
+        }
+        if let hops = rules.traceHops {
+            let walked = script.scenes.compactMap { $0.traceHop }
+            if walked != Array(1...max(1, hops)) || hops < 1 {
+                problems.append(Problem(at: script.id,
+                                        message: "walks hops \(walked.map { String($0) }.joined(separator: ", ")) "
+                                            + "but the trace has \(hops); a trace video has one scene per hop, "
+                                            + "in order",
+                                        isError: true))
+            }
+        }
+        if let range = rules.sceneRange, !script.scenes.isEmpty, !range.contains(script.scenes.count) {
+            problems.append(Problem(at: script.id,
+                                    message: "has \(script.scenes.count) scenes; a video aims for "
+                                        + "\(range.lowerBound) to \(range.upperBound)",
+                                    isError: false))
+        }
+        return problems
+    }
+
+    /// Content may cite only what the verifiers let stand (ARCHITECTURE 3: verified or
+    /// unknown). A refuted fact narrated as true is the single worst thing a package
+    /// can teach, so it is an error rather than a warning.
+    private static func checkFacts(_ shot: VideoScript.Shot, facts: [String: PacketFact]) -> [Problem] {
+        var problems: [Problem] = []
+        for id in shot.factIds {
+            guard let fact = facts[id] else {
+                problems.append(Problem(at: shot.id, message: "cites \(id), which is not in the packet",
+                                        isError: true))
+                continue
+            }
+            switch fact.status {
+            case "verified", "unknown":
+                break
+            case "refuted":
+                problems.append(Problem(at: shot.id,
+                                        message: "cites \(id), which the verifiers refuted", isError: true))
+            default:
+                problems.append(Problem(at: shot.id,
+                                        message: "cites \(id), which is still \(fact.status) and so not "
+                                            + "usable in content", isError: true))
+            }
+        }
+        return problems
     }
 
     // MARK: - Individual checks
@@ -140,6 +275,12 @@ enum ScriptValidator {
                             isError: false)]
         }
         guard let visible = shot.visibleLines, visible.count >= 2 else { return [] }
+        if visible[1] - visible[0] + 1 > ScriptValidator.maxWindowLines {
+            return [Problem(at: shot.id,
+                            message: "shows lines \(visible[0])-\(visible[1]), more than the "
+                                + "\(ScriptValidator.maxWindowLines)-line window a panel holds",
+                            isError: true)]
+        }
         guard visible[0] <= lines.lowerBound, lines.upperBound <= visible[1] else {
             return [Problem(at: shot.id,
                             message: "highlights lines \(lines.lowerBound)-\(lines.upperBound) but shows "
@@ -179,6 +320,15 @@ enum ScriptValidator {
             guard shot.cmd != nil else {
                 return [Problem(at: place, message: "is a terminal scene with no cmd: anchor to replay",
                                 isError: true)]
+            }
+        case "table":
+            guard let table = shot.table, let header = table.first, !header.isEmpty else {
+                return [Problem(at: place, message: "is a table scene with no header row", isError: true)]
+            }
+            if let ragged = table.firstIndex(where: { $0.count != header.count }) {
+                return [Problem(at: place,
+                                message: "row \(ragged) has \(table[ragged].count) cells but the header has "
+                                    + "\(header.count)", isError: true)]
             }
         default:
             break

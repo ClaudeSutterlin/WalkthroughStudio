@@ -19,19 +19,37 @@ struct VideoScript: Codable, Equatable {
     var summary: String = ""
     /// The commit every anchor in the script is pinned to.
     var sha: String = ""
+    /// One of `VideoScript.kinds` for a planned video; empty for a handwritten one.
+    var kind: String = ""
+    /// What the planner aimed for. The validator holds the script to its own budget,
+    /// not to this; it is here so a regenerated script keeps the length it was given.
+    var targetSeconds: Double? = nil
     var scenes: [Scene] = []
+
+    /// ARCHITECTURE 2.6: the ten series kinds, one per trace, one per subsystem.
+    static let kinds: [String] = [
+        "overview", "domain", "codeTour", "devEnv", "deploy", "data", "observability",
+        "security", "integrations", "migrations", "trace", "confessional",
+    ]
+    /// Card variants (section 5): the opening summary, a chapter title, the fragility card.
+    static let cardVariants: [String] = ["tldr", "chapter", "confessional"]
 
     init() {}
 
-    init(id: String, title: String, summary: String, sha: String, scenes: [Scene]) {
+    init(id: String, title: String, summary: String, sha: String, kind: String = "",
+         targetSeconds: Double? = nil, scenes: [Scene]) {
         self.id = id
         self.title = title
         self.summary = summary
         self.sha = sha
+        self.kind = kind
+        self.targetSeconds = targetSeconds
         self.scenes = scenes
     }
 
-    private enum CodingKeys: String, CodingKey { case version, id, title, summary, sha, scenes }
+    private enum CodingKeys: String, CodingKey {
+        case version, id, title, summary, sha, kind, targetSeconds, scenes
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -40,6 +58,8 @@ struct VideoScript: Codable, Equatable {
         title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
         summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
         sha = try c.decodeIfPresent(String.self, forKey: .sha) ?? ""
+        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? ""
+        targetSeconds = try c.decodeIfPresent(Double.self, forKey: .targetSeconds)
         scenes = try c.decodeIfPresent([Scene].self, forKey: .scenes) ?? []
     }
 
@@ -50,6 +70,8 @@ struct VideoScript: Codable, Equatable {
         try c.encode(title, forKey: .title)
         try c.encode(summary, forKey: .summary)
         try c.encode(sha, forKey: .sha)
+        if !kind.isEmpty { try c.encode(kind, forKey: .kind) }
+        try c.encodeIfPresent(targetSeconds, forKey: .targetSeconds)
         try c.encode(scenes, forKey: .scenes)
     }
 
@@ -80,22 +102,32 @@ struct VideoScript: Codable, Equatable {
         var title: String
         /// The register section this scene narrates, for the "read the doc" chip.
         var docAnchor: String? = nil
+        /// For a card scene: `tldr`, `chapter` or `confessional` (`cardVariants`).
+        var variant: String? = nil
+        /// For a trace video: the hop this scene walks (1-based). One scene per hop, in
+        /// order, is what makes the chapter list the hop list (ON-5.4).
+        var traceHop: Int? = nil
         var shots: [Shot] = []
 
-        init(id: String, title: String, docAnchor: String? = nil, shots: [Shot]) {
+        init(id: String, title: String, docAnchor: String? = nil, variant: String? = nil,
+             traceHop: Int? = nil, shots: [Shot]) {
             self.id = id
             self.title = title
             self.docAnchor = docAnchor
+            self.variant = variant
+            self.traceHop = traceHop
             self.shots = shots
         }
 
-        private enum CodingKeys: String, CodingKey { case id, title, docAnchor, shots }
+        private enum CodingKeys: String, CodingKey { case id, title, docAnchor, variant, traceHop, shots }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
             title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
             docAnchor = try c.decodeIfPresent(String.self, forKey: .docAnchor)
+            variant = try c.decodeIfPresent(String.self, forKey: .variant)
+            traceHop = try c.decodeIfPresent(Int.self, forKey: .traceHop)
             shots = try c.decodeIfPresent([Shot].self, forKey: .shots) ?? []
         }
 
@@ -104,6 +136,8 @@ struct VideoScript: Codable, Equatable {
             try c.encode(id, forKey: .id)
             try c.encode(title, forKey: .title)
             try c.encodeIfPresent(docAnchor, forKey: .docAnchor)
+            try c.encodeIfPresent(variant, forKey: .variant)
+            try c.encodeIfPresent(traceHop, forKey: .traceHop)
             try c.encode(shots, forKey: .shots)
         }
     }
@@ -126,6 +160,11 @@ struct VideoScript: Codable, Equatable {
         var focusNodes: [String]? = nil
         var cmd: String? = nil
         var factIds: [String] = []
+        /// Header row then body rows, for a `table` shot. The second column is read as
+        /// a verdict (absent, partial, present) and coloured as one.
+        var table: [[String]]? = nil
+        /// Three to five short lines, for a tldr card.
+        var bullets: [String]? = nil
         /// Headline drawn on the still, when the scene type shows one.
         var caption: String = ""
         /// Extra seconds held after the narration ends, so a shot change never lands on
@@ -136,7 +175,8 @@ struct VideoScript: Codable, Equatable {
         init(id: String, sceneType: String, narration: String, anchors: [String] = [],
              highlight: CodeRefHighlight? = nil, visibleLines: [Int]? = nil,
              diagram: String? = nil, focusNodes: [String]? = nil, cmd: String? = nil,
-             factIds: [String] = [], caption: String = "", pad: Double = 0.6) {
+             factIds: [String] = [], caption: String = "", pad: Double = 0.6,
+             table: [[String]]? = nil, bullets: [String]? = nil) {
             self.id = id
             self.sceneType = sceneType
             self.narration = narration
@@ -149,11 +189,13 @@ struct VideoScript: Codable, Equatable {
             self.factIds = factIds
             self.caption = caption
             self.pad = pad
+            self.table = table
+            self.bullets = bullets
         }
 
         private enum CodingKeys: String, CodingKey {
             case id, sceneType, narration, anchors, highlight, visibleLines, diagram,
-                 focusNodes, cmd, factIds, caption, pad
+                 focusNodes, cmd, factIds, caption, pad, table, bullets
         }
 
         init(from decoder: Decoder) throws {
@@ -170,6 +212,8 @@ struct VideoScript: Codable, Equatable {
             factIds = try c.decodeIfPresent([String].self, forKey: .factIds) ?? []
             caption = try c.decodeIfPresent(String.self, forKey: .caption) ?? ""
             pad = try c.decodeIfPresent(Double.self, forKey: .pad) ?? 0.6
+            table = try c.decodeIfPresent([[String]].self, forKey: .table)
+            bullets = try c.decodeIfPresent([String].self, forKey: .bullets)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -186,6 +230,8 @@ struct VideoScript: Codable, Equatable {
             try c.encode(factIds, forKey: .factIds)
             try c.encode(caption, forKey: .caption)
             try c.encode(pad, forKey: .pad)
+            try c.encodeIfPresent(table, forKey: .table)
+            try c.encodeIfPresent(bullets, forKey: .bullets)
         }
     }
 }

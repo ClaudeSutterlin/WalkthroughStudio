@@ -95,6 +95,12 @@ extension SelfTest {
             ("chatToolLoopProbe", { probeCtx in try await Self.chatToolLoopProbe(probeCtx) }),
             ("contradictionFlagProbe", { probeCtx in try await Self.contradictionFlagProbe(probeCtx) }),
             ("chatPanelProbe", { probeCtx in try await Self.chatPanelProbe(probeCtx) }),
+            // M9: scripts and the series. seriesSmokeProbe builds the package the two after it read.
+            ("scriptInvariantsProbe", { probeCtx in try await Self.scriptInvariantsProbe(probeCtx) }),
+            ("scriptPlannerProbe", { probeCtx in try await Self.scriptPlannerProbe(probeCtx) }),
+            ("seriesSmokeProbe", { probeCtx in try await Self.seriesSmokeProbe(probeCtx) }),
+            ("traceVideoChaptersProbe", { probeCtx in try await Self.traceVideoChaptersProbe(probeCtx) }),
+            ("regenerateOneProbe", { probeCtx in try await Self.regenerateOneProbe(probeCtx) }),
         ]
 
         let selected: [(name: String, run: OnboardingProbe)]
