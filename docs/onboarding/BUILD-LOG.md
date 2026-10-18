@@ -461,6 +461,11 @@ Broke / learned:
 - Deviation recorded in ARCHITECTURE 4.6 point 2: the transcript's request line stores the
   envelope and the body hash, not the body. The body is the history and the history is
   already recorded; writing it per turn makes the file quadratic.
+- First Mac compile of M6: **one** error, in `AgentRun.init` — `sleep: AgentSleep` was
+  stored without `@escaping`, which the sibling `jitter` parameter had. A closure parameter
+  is non-escaping by default and a typealias does not change that; `@Sendable` in the alias
+  reads like it covers the lifetime question and does not. The emit-module phase failed, so
+  the remaining function bodies had not all been type-checked when the build stopped.
 Limits hit:
 - none.
 Next:

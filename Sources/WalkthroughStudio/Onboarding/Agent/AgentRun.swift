@@ -128,7 +128,7 @@ actor AgentRun {
         limiter: RateLimiter = RateLimiter(),
         transcript: AgentTranscript? = nil,
         counter: TokenCounting = EstimatingTokenCounter(),
-        sleep: AgentSleep = agentRealSleep,
+        sleep: @escaping AgentSleep = agentRealSleep,
         jitter: @escaping @Sendable () -> Double = { Double.random(in: 0...1) }
     ) {
         self.config = config
