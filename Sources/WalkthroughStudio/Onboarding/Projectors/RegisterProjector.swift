@@ -89,21 +89,6 @@ enum RegisterProjector {
                                    + packet.usableFacts(kind: "hotspot"))) + "\n"
         add("ownership", "Ownership and bus factor", 4, packet.usableFacts(kind: "owner"), body)
 
-        // architecture decisions
-        var parts = ["# Architecture decisions\n"]
-        for d in packet.decisions?.decisions ?? [] {
-            parts.append("## \(d.title)\n")
-            parts.append("**Decision.** \(d.decision)\n")
-            if let alternatives = d.alternatives, !alternatives.isEmpty {
-                parts.append("**Alternatives.** " + alternatives.joined(separator: "; ") + "\n")
-            }
-            parts.append("**Consequences.** \(d.consequences)\n")
-            if let wouldRepeat = d.wouldRepeat {
-                parts.append("**Would repeat.** \(wouldRepeat ? "yes" : "no")\n")
-            }
-            parts.append("**Evidence.** " + d.evidence.map { "[[\($0)]]" }.joined(separator: " ") + "\n")
-        }
-        add("adrs", "Architecture decisions", 5, packet.usableFacts(kind: "decision"), joined(parts))
 
         // dependency register
         rows = ["| Package | Version | License | End of life | Known CVEs |", "|---|---|---|---|---|"]
@@ -175,6 +160,22 @@ enum RegisterProjector {
             }) + "\n"
         }
         add("incident-patterns", "Incident patterns", 12, packet.usableFacts(kind: "incidentPattern"), body)
+
+        // architecture decisions
+        var parts = ["# Architecture decisions\n"]
+        for d in packet.decisions?.decisions ?? [] {
+            parts.append("## \(d.title)\n")
+            parts.append("**Decision.** \(d.decision)\n")
+            if let alternatives = d.alternatives, !alternatives.isEmpty {
+                parts.append("**Alternatives.** " + alternatives.joined(separator: "; ") + "\n")
+            }
+            parts.append("**Consequences.** \(d.consequences)\n")
+            if let wouldRepeat = d.wouldRepeat {
+                parts.append("**Would repeat.** \(wouldRepeat ? "yes" : "no")\n")
+            }
+            parts.append("**Evidence.** " + d.evidence.map { "[[\($0)]]" }.joined(separator: " ") + "\n")
+        }
+        add("adrs", "Architecture decisions", 5, packet.usableFacts(kind: "decision"), joined(parts))
 
         // glossary
         body = "# Glossary\n\n" + joined((packet.glossary?.terms ?? []).map { t in

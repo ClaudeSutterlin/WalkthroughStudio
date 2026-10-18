@@ -466,6 +466,42 @@ Broke / learned:
   is non-escaping by default and a typealias does not change that; `@Sendable` in the alias
   reads like it covers the lifetime question and does not. The emit-module phase failed, so
   the remaining function bodies had not all been type-checked when the build stopped.
+- **`projectorParityProbe` ran for the first time and earned its keep immediately.** It was
+  written in S5 and had never executed. The original `--selftest` is green and 9 of the 27
+  onboarding probes passed; the parity probe found two real divergences between the Swift
+  port and the reference projector, both of them silent:
+  1. **The ERD grouped field facts by a looser rule than the reference.** Swift filtered
+     `subject.contains("<table>.")`; the reference keys fields by the *last*
+     whitespace-separated token of the subject cut at its *first* dot. The fixture's PII
+     inventory fact — subject `PII inventory (users.address, addresses.*, orders.user_id)` —
+     names three tables, so `contains` filed it under all three. Three of three ERD nodes
+     listed evidence that is not about them (USERS 4 facts against 3, ORDERS 7 against 5,
+     ADDRESSES 2 against 1). Fixed by porting the reference's grouping exactly, and the
+     foreign-key loop's table derivation was aligned with the node loop's at the same time.
+  2. **The register array was built in a tidier order than the reference's.** The Swift
+     added `adrs` third (its `order:` field is 5); the reference builds it tenth, after
+     incidents, because of where `parts` is computed. `build_backlinks` walks that order and
+     its output is a JSON *array*, so every anchor cited by two registers came out in a
+     different order. Fixed by matching the insertion order; the `order:` field, not the
+     array, is what sorts the reader's view, and the two had been conflated.
+  Also closed a latent one found while auditing for the same shapes: `c4Container` iterated
+  `containers` in Swift dictionary order (nondeterministic per run) where the reference
+  iterates insertion order. Nothing depended on it — both sides are read sorted — but it was
+  a divergence waiting for the next person who read `children[parent]` unsorted.
+- **The probe's failure message cost the round trip, not the bugs.** It reported the *first*
+  difference per file, so one divergent grouping rule showed up as a single ADDRESSES count
+  mismatch — one symptom of a cause with six. On a loop where each attempt needs a build on
+  the human's machine, that is expensive. It now collects up to six differences per file and
+  lists twelve files, and `firstJSONDifference` is gone rather than kept beside the
+  collecting walker to drift.
+- Verified here before handing it back: the new grouping rule transcribed and run against
+  the real fixture facts, agreeing with the reference *and* with the checked-in
+  `erd.links.json` for all three nodes and both edges; the two register insertion orders
+  extracted by regex from both files and compared element by element; the two citation
+  scanners read against each other (identical, which is what makes the register order the
+  only cause of the anchors.json divergence); the diagram and trace orders confirmed to
+  match, the latter guaranteed by the contract's `traces/<pathId>.json` naming; and the
+  Python projection still byte-identical to the golden, since every change was Swift-side.
 Limits hit:
 - none.
 Next:

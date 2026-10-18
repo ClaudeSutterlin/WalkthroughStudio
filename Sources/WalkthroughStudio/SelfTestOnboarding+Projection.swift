@@ -95,7 +95,7 @@ extension SelfTest {
         }
         guard differing.isEmpty else {
             throw StudioError("projectorParityProbe: \(differing.count) file(s) differ from the golden "
-                              + "projection:\n  " + differing.prefix(4).joined(separator: "\n  "))
+                              + "projection:\n  " + differing.prefix(12).joined(separator: "\n  "))
         }
 
         // 2. The derived files the golden omits are still produced, for every doc and trace.
@@ -231,11 +231,26 @@ extension SelfTest {
 
     /// Compares two JSON documents as values. Object key order is not meaningful and the
     /// two languages emit it differently; array order is meaningful and is compared.
-    static func jsonDifference(produced: Data, expected: Data, at relative: String) throws -> String? {
+    /// Up to `limit` differences in one file, not just the first.
+    ///
+    /// It reported only the first for its whole life, and that cost a round trip the
+    /// first time it ever ran: one divergent grouping rule produced six differences in
+    /// two files, the probe named one, and the fix for it was the same fix for all six.
+    /// On a loop where each attempt needs a build on someone else's machine, a failure
+    /// message that shows one symptom of a shared cause is worth a lot less than one
+    /// that shows the shape.
+    static func jsonDifference(produced: Data, expected: Data, at relative: String,
+                               limit: Int = 6) throws -> String? {
         let mine = try JSONSerialization.jsonObject(with: produced)
         let theirs = try JSONSerialization.jsonObject(with: expected)
-        guard let diff = SelfTest.firstJSONDifference(mine, theirs, at: "") else { return nil }
-        return "\(relative) at \(diff.location):\n      swift: \(diff.mine)\n      python: \(diff.theirs)"
+        var found: [JSONDifference] = []
+        SelfTest.collectJSONDifferences(mine, theirs, at: "", into: &found, limit: limit)
+        guard !found.isEmpty else { return nil }
+        let rendered = found.map {
+            "\(relative) at \($0.location):\n      swift: \($0.mine)\n      python: \($0.theirs)"
+        }
+        let more = found.count >= limit ? "\n  (\(relative): stopped after \(limit) differences)" : ""
+        return rendered.joined(separator: "\n  ") + more
     }
 
     struct JSONDifference {
@@ -244,35 +259,46 @@ extension SelfTest {
         let theirs: String
     }
 
-    static func firstJSONDifference(_ a: Any, _ b: Any, at location: String) -> JSONDifference? {
+    /// Walks two JSON trees and collects differences, depth first, in key order.
+    ///
+    /// Numbers compare through `describe`, so Swift's Int and Python's Double agree. A
+    /// container whose counts differ is reported and not descended into: every element
+    /// after a single insertion would otherwise be reported as a difference of its own.
+    static func collectJSONDifferences(_ a: Any, _ b: Any, at location: String,
+                                       into found: inout [JSONDifference], limit: Int) {
+        guard found.count < limit else { return }
         let here = location.isEmpty ? "(root)" : location
         switch (a, b) {
         case let (x as [String: Any], y as [String: Any]):
             for key in Set(x.keys).union(y.keys).sorted() {
+                guard found.count < limit else { return }
+                let child = location.isEmpty ? key : "\(location).\(key)"
                 guard let xv = x[key] else {
-                    return JSONDifference(location: "\(here).\(key)", mine: "(absent)", theirs: describe(y[key]!))
+                    found.append(JSONDifference(location: child, mine: "(absent)",
+                                                theirs: describe(y[key]!)))
+                    continue
                 }
                 guard let yv = y[key] else {
-                    return JSONDifference(location: "\(here).\(key)", mine: describe(xv), theirs: "(absent)")
+                    found.append(JSONDifference(location: child, mine: describe(xv),
+                                                theirs: "(absent)"))
+                    continue
                 }
-                if let inner = firstJSONDifference(xv, yv, at: location.isEmpty ? key : "\(location).\(key)") {
-                    return inner
-                }
+                collectJSONDifferences(xv, yv, at: child, into: &found, limit: limit)
             }
-            return nil
         case let (x as [Any], y as [Any]):
             if x.count != y.count {
-                return JSONDifference(location: here, mine: "\(x.count) element(s)", theirs: "\(y.count) element(s)")
+                found.append(JSONDifference(location: here, mine: "\(x.count) element(s)",
+                                            theirs: "\(y.count) element(s)"))
+                return
             }
             for index in 0..<x.count {
-                if let inner = firstJSONDifference(x[index], y[index], at: "\(location)[\(index)]") {
-                    return inner
-                }
+                guard found.count < limit else { return }
+                collectJSONDifferences(x[index], y[index], at: "\(location)[\(index)]",
+                                       into: &found, limit: limit)
             }
-            return nil
         default:
-            guard describe(a) != describe(b) else { return nil }
-            return JSONDifference(location: here, mine: describe(a), theirs: describe(b))
+            guard describe(a) != describe(b) else { return }
+            found.append(JSONDifference(location: here, mine: describe(a), theirs: describe(b)))
         }
     }
 

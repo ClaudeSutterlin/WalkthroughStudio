@@ -148,7 +148,13 @@ enum DiagramProjector {
             endpoints.insert(containerOf(edge.to))
         }
         var children: [String: [String]] = [:]
-        for (c, meta) in containers {
+        // Sorted keys, not the dictionary's own order. Both sides of this list are read
+        // sorted below, so nothing depends on it today — but a Swift dictionary iterates
+        // in a different order every run, and the reference iterates in insertion order,
+        // so leaving it would be a parity divergence waiting for someone to read
+        // `children[parent]` without sorting it first.
+        for c in containers.keys.sorted() {
+            guard let meta = containers[c] else { continue }
             guard let parent = meta.parent, dirPaths.contains(parent), parent != c,
                   !endpoints.contains(parent) else { continue }
             children[parent, default: []].append(c)
@@ -246,9 +252,32 @@ enum DiagramProjector {
         }
         let fields = packet.usableFacts(kind: "dataField")
 
+        // Field facts grouped by table the way the reference projector groups them: the
+        // LAST whitespace-separated token of the subject, cut at its FIRST dot
+        // ("db/schema.sql users.email" -> "users").
+        //
+        // This used to be a `subject.contains("<table>.")` filter at the point of use,
+        // which is a looser rule and silently over-collects. The PII inventory fact whose
+        // subject reads "PII inventory (users.address, addresses.*, orders.user_id)" names
+        // three tables, so `contains` filed it under all three; the reference files it
+        // under one. Three ERD nodes listed evidence that is not about them.
+        var fieldsByTable: [String: [PacketFact]] = [:]
+        for field in fields {
+            guard let token = field.subject.split(whereSeparator: { $0.isWhitespace }).last,
+                  token.contains(".") else { continue }
+            // `omittingEmptySubsequences: false` matters: Python's "".split(".")[0] is "",
+            // and Swift's default would drop the empty piece and take the wrong one.
+            let key = String(token.split(separator: ".", maxSplits: 1,
+                                         omittingEmptySubsequences: false)[0])
+            fieldsByTable[key, default: []].append(field)
+        }
+
         for fact in entities {
-            let table = String(fact.subject.split(separator: " ").last ?? "").split(separator: ".").last.map(String.init)
-                ?? fact.subject
+            // Last whitespace token, then everything after its LAST dot — the mirror of
+            // the field key above, which is why a field keyed "users" meets an entity
+            // named "db/schema.sql users".
+            let lastToken = String(fact.subject.split(whereSeparator: { $0.isWhitespace }).last ?? "")
+            let table = lastToken.split(separator: ".").last.map(String.init) ?? lastToken
             let nid = ProjectionSupport.mermaidID(table).uppercased()
             let columns = fact.attributes["columns"]?.arrayValue ?? []
             lines.append("  \(nid) {")
@@ -272,7 +301,7 @@ enum DiagramProjector {
             // `Any?`, defeated the type checker outright. Typed locals make each piece
             // unambiguous; key order inside a JSON object is not meaningful, so the
             // projection is unchanged.
-            let fieldIds = fields.filter { $0.subject.contains("\(table).") }.map { $0.id }
+            let fieldIds = (fieldsByTable[table] ?? []).map { $0.id }
             let rows: Any = fact.attributes["rows"]?.jsonObject ?? "unknown"
             let retention: Any = fact.attributes["retention"]?.jsonObject ?? "unknown"
             let pii: Any = fact.attributes["pii"]?.jsonObject ?? "unknown"
@@ -292,8 +321,10 @@ enum DiagramProjector {
         }
 
         for fact in entities {
-            let table = String(fact.subject.split(separator: " ").last ?? "").split(separator: ".").last.map(String.init)
-                ?? fact.subject
+            // The same derivation as the node loop above; the two must agree or an edge
+            // points at a node id that does not exist and Mermaid invents a phantom box.
+            let lastToken = String(fact.subject.split(whereSeparator: { $0.isWhitespace }).last ?? "")
+            let table = lastToken.split(separator: ".").last.map(String.init) ?? lastToken
             let nid = ProjectionSupport.mermaidID(table).uppercased()
             for fk in fact.attributes["foreignKeys"]?.arrayValue ?? [] {
                 guard let raw = fk.stringValue else { continue }
